@@ -5,6 +5,9 @@
 * For players:
   * Fixed `log_context` command not disabling the extra logs when run again.
 
+* For mod authors:
+  * Fixed the game's `Data/ChairTiles` logic not handling unique string IDs like `Maps/Author.ModName` correctly.
+
 * For external tools:
   * Added toolkit method to read the compatibility list from a local copy of its Git repo.
 

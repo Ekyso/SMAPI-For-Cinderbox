@@ -419,15 +419,21 @@ internal sealed class ModContentManager : BaseContentManager
             // load best match
             try
             {
-                if (!this.TryGetTilesheetAssetName(relativeMapFolder, imageSource, out IAssetName? assetName, out string? error))
+                if (!this.TryGetTilesheetAssetName(relativeMapFolder, imageSource, out IAssetName? assetName, out bool isInternalAssetKey, out string? error))
                     throw new SContentLoadException(ContentLoadErrorType.InvalidData, $"{errorPrefix} {error}");
 
                 if (assetName is not null)
                 {
-                    if (!assetName.IsEquivalentTo(tilesheet.ImageSource))
-                        this.Monitor.VerboseLog($"   Mapped tilesheet '{tilesheet.ImageSource}' to '{assetName}'.");
+                    // Some game code is hardcoded to expect a file extension, which results in issues like the
+                    // `Data/ChairTiles` key for `Author.ModName_Tilesheet` being `Author`.
+                    string newImageSource = !isInternalAssetKey && Path.GetExtension(assetName.Name).ToLowerInvariant() is not (".xnb" or ".png")
+                        ? assetName.Name + ".xnb"
+                        : assetName.Name;
 
-                    tilesheet.ImageSource = assetName.Name;
+                    // set path
+                    if (this.Monitor.IsVerbose && PathUtilities.NormalizeAssetName(tilesheet.ImageSource) != PathUtilities.NormalizePath(newImageSource))
+                        this.Monitor.VerboseLog($"   Mapped tilesheet '{tilesheet.ImageSource}' to '{assetName}'.");
+                    tilesheet.ImageSource = newImageSource;
                 }
             }
             catch (Exception ex)
@@ -444,10 +450,11 @@ internal sealed class ModContentManager : BaseContentManager
     /// <param name="modRelativeMapFolder">The folder path containing the map, relative to the mod folder.</param>
     /// <param name="relativePath">The tilesheet path to load.</param>
     /// <param name="assetName">The found asset name.</param>
+    /// <param name="isInternalAssetKey">Whether the <paramref name="assetName"/> is an internal asset key which points to a file in the mod folder, rather than an asset name in the game's normal content pipeline.</param>
     /// <param name="error">A message indicating why the file couldn't be loaded.</param>
     /// <returns>Returns whether the asset name was found.</returns>
     /// <remarks>See remarks on <see cref="FixTilesheetPaths"/>.</remarks>
-    private bool TryGetTilesheetAssetName(string modRelativeMapFolder, string relativePath, out IAssetName? assetName, out string? error)
+    private bool TryGetTilesheetAssetName(string modRelativeMapFolder, string relativePath, out IAssetName? assetName, out bool isInternalAssetKey, out string? error)
     {
         error = null;
 
@@ -455,6 +462,7 @@ internal sealed class ModContentManager : BaseContentManager
         if (string.IsNullOrWhiteSpace(relativePath))
         {
             assetName = null;
+            isInternalAssetKey = false;
             return true;
         }
 
@@ -473,6 +481,7 @@ internal sealed class ModContentManager : BaseContentManager
             if (this.GetModFile<Texture2D>(localKey).Exists)
             {
                 assetName = this.GetInternalAssetKey(localKey);
+                isInternalAssetKey = true;
                 return true;
             }
         }
@@ -483,6 +492,7 @@ internal sealed class ModContentManager : BaseContentManager
         {
             this.GameContentManager.LoadLocalized<Texture2D>(contentKey, this.GameContentManager.Language, useCache: true); // no need to bypass cache here, since we're not storing the asset
             assetName = contentKey;
+            isInternalAssetKey = false;
             return true;
         }
         catch
@@ -500,6 +510,7 @@ internal sealed class ModContentManager : BaseContentManager
 
         // not found
         assetName = null;
+        isInternalAssetKey = false;
         error = "The tilesheet couldn't be found relative to either the map file or the game's content folder.";
         return false;
     }
