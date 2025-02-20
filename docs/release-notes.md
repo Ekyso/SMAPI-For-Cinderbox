@@ -12,6 +12,7 @@
   * Added toolkit method to read the compatibility list from a local copy of its Git repo.
 
 * For the web UI:
+  * You can now link to a mod in the compatibility list by its unique ID, like [smapi.io/mods#Pathoschild.ContentPatcher](https://smapi.io/mods#Pathoschild.ContentPatcher).
   * Fixed search engines able to index uploaded logs and JSON files via the raw download option.
   * Improved Content Patcher JSON schema:
     * Updated for Content Patcher 2.5.0.
