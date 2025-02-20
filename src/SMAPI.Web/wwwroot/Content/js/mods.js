@@ -111,7 +111,7 @@ smapi.modList = function (mods) {
                     mod.Visible = this.matchesFilters(mod, words);
                     if (mod.Visible) {
                         stats.total++;
-                        stats[this.getCompatibilityGroup(mod.Compatibility.Status)]++;
+                        stats[this.getCompatibilityGroup(mod.Compatibility.Status, !!mod.SourceUrl)]++;
                     }
                 }
 
@@ -196,10 +196,11 @@ smapi.modList = function (mods) {
 
             /**
              * Get a mod's compatibility group for mod metrics.
-             * @param {string} mod The mod status for which to get the group.
+             * @param {string} status The mod status for which to get the group.
+             * @param {boolean} hasSourceUrl Whether the mod has a source code URL.
              * @returns {string} The compatibility group (one of 'compatible', 'workaround', 'soon', 'broken', 'abandoned', or 'invalid').
              */
-            getCompatibilityGroup: function (status) {
+            getCompatibilityGroup: function (status, hasSourceUrl) {
                 switch (status) {
                     // obsolete
                     case "abandoned":
@@ -218,7 +219,7 @@ smapi.modList = function (mods) {
 
                     // soon/broken
                     case "broken":
-                        if (mod.SourceUrl)
+                        if (hasSourceUrl)
                             return "soon";
                         else
                             return "broken";
