@@ -456,6 +456,11 @@
             "~0.1.0 | Status": "AssumeBroken",
             "~0.1.0 | StatusReasonDetails": "Harmony patches fail at runtime"
         },
+        "Melons to Watermelons": {
+            "ID": "kingliamb.MelonsToWatermelons",
+            "~1.0.2 | Status": "AssumeBroken",
+            "~1.0.2 | StatusReasonDetails": "removes newer object sprites due to Maps/springobjects load"
+        },
         "Misophonia Accessibility": {
             "ID": "TheFluffyRobot.MisophoniaAccessibility",
             "~3.0.1 | Status": "AssumeBroken",

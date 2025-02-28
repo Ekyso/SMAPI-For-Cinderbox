@@ -5,6 +5,7 @@
 * For players:
   * Fixed `log_context` command not disabling the extra logs when run again.
   * Fixed update alerts when using an unofficial port of SMAPI with a four-part version number.
+  * Updated compatibility list.
 
 * For mod authors:
   * Fixed the game's `Data/ChairTiles` logic not handling unique string IDs like `Maps/Author.ModName` correctly.
