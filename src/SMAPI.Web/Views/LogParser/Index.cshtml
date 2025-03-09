@@ -15,9 +15,9 @@
 
     // detect suggested fixes
     LogModInfo[] outdatedMods = log?.Mods.Where(mod => mod.HasUpdate).ToArray() ?? [];
-    bool isPyTkCompatibilityMode = log?.ApiVersionParsed?.IsBetween("3.15.0", "3.19.0") is true && log.Mods.Any(p => p.IsCodeMod && p.Name == "PyTK" && p.GetParsedVersion()?.IsOlderThan("1.24.0") is true);
+    bool isPyTkCompatibilityMode = log?.ApiVersionParsed?.IsBetween("3.15.0", "3.19.0") is true && log.Mods.Any(p => p is { IsCodeMod: true, Name: "PyTK" } && p.GetParsedVersion()?.IsOlderThan("1.24.0") is true);
 
-    LogModInfo? errorHandler = log?.Mods.FirstOrDefault(p => p.IsCodeMod && p.Name == "Error Handler");
+    LogModInfo? errorHandler = log?.Mods.FirstOrDefault(p => p is { IsCodeMod: true, Name: "Error Handler" });
     bool errorHandlerNeeded = log?.ApiVersionParsed?.IsOlderThan("4.0.0-alpha") == true && log.OperatingSystem?.Contains("Android Unix", StringComparison.OrdinalIgnoreCase) != true;
     bool missingErrorHandler = errorHandlerNeeded && errorHandler is null;
     bool hasOlderErrorHandler = errorHandlerNeeded && errorHandler?.GetParsedVersion() is not null && log?.ApiVersionParsed is not null && log.ApiVersionParsed.IsNewerThan(errorHandler.GetParsedVersion());
@@ -86,7 +86,7 @@
                     logStarted: new Date(@this.ForJson(log?.Timestamp)),
                     dataElement: "script#serializedData",
                     showPopup: @this.ForJson(log == null),
-                    showMods: @this.ForJson(log?.Mods.Where(p => p.Loaded && !p.IsContentPack).Select(p => Model.GetSlug(p.Name)).Distinct().ToDictionary(slug => slug, _ => true)),
+                    showMods: @this.ForJson(log?.Mods.Where(p => p is { Loaded: true, IsContentPack: false }).Select(p => Model.GetSlug(p.Name)).Distinct().ToDictionary(slug => slug, _ => true)),
                     showSections: @this.ForJson(Enum.GetNames(typeof(LogSection)).ToDictionary(section => section, _ => false)),
                     showLevels: @this.ForJson(defaultFilters),
                     enableFilters: @this.ForJson(!Model.ShowRaw),
@@ -288,7 +288,7 @@ else if (log?.IsValid == true)
                         Consider updating these mods to fix problems:
 
                         <table id="updates" class="table">
-                            @foreach (LogModInfo mod in log.Mods.Where(mod => (mod.HasUpdate && !mod.IsContentPack) || (contentPacks.TryGetValue(mod.Name, out LogModInfo[]? contentPackList) && contentPackList.Any(pack => pack.HasUpdate))))
+                            @foreach (LogModInfo mod in log.Mods.Where(mod => mod is { HasUpdate: true, IsContentPack: false } || (contentPacks.TryGetValue(mod.Name, out LogModInfo[]? contentPackList) && contentPackList.Any(pack => pack.HasUpdate))))
                             {
                                 <tr class="mod-entry">
                                     <td>
@@ -388,7 +388,7 @@ else if (log?.IsValid == true)
 
             @{
                 var modsWithContentPacks = log.Mods
-                    .Where(mod => mod.Loaded && !mod.IsContentPack)
+                    .Where(mod => mod is { Loaded: true, IsContentPack: false })
                     .Select(mod => (
                         Mod: mod,
                         ContentPacks: contentPacks?.TryGetValue(mod.Name, out LogModInfo[]? contentPackList) == true ? contentPackList : []

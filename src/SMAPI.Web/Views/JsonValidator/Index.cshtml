@@ -62,7 +62,7 @@ else if (Model.ParseError != null)
         <small v-pre>Error details: @Model.ParseError</small>
     </div>
 }
-else if (!Model.IsEditView && Model.PasteId != null)
+else if (Model is { IsEditView: false, PasteId: not null })
 {
     <div class="banner success">
         <strong>Share this link to let someone else see this page:</strong> <code>@curPageUrl</code><br />

@@ -163,7 +163,7 @@ internal class ModResolver
             {
                 foreach (IModMetadata mod in group)
                 {
-                    if (mod.Status == ModMetadataStatus.Failed && mod.FailReason is not (ModFailReason.InvalidManifest or ModFailReason.LoadFailed or ModFailReason.MissingDependencies))
+                    if (mod is { Status: ModMetadataStatus.Failed, FailReason: not (ModFailReason.InvalidManifest or ModFailReason.LoadFailed or ModFailReason.MissingDependencies) })
                         continue;
 
                     string folderList = string.Join(", ", group.Select(p => p.GetRelativePathWithRoot()).OrderBy(p => p));
@@ -307,8 +307,7 @@ internal class ModResolver
                 (
                     from entry in dependencies
                     where
-                        entry.Mod != null
-                        && entry.MinVersion != null
+                        entry is { Mod: not null, MinVersion: not null }
                         && entry.MinVersion.IsNewerThan(entry.Mod.Manifest.Version)
                     select $"{entry.Mod!.DisplayName} (needs {entry.MinVersion} or later)"
                 )

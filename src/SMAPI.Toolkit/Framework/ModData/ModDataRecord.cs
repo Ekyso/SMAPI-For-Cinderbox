@@ -76,7 +76,7 @@ public class ModDataRecord
     /// <summary>Get the default update key for this mod, if any.</summary>
     public string? GetDefaultUpdateKey()
     {
-        string? updateKey = this.Fields.FirstOrDefault(p => p.Key == ModDataFieldKey.UpdateKey && p.IsDefault)?.Value;
+        string? updateKey = this.Fields.FirstOrDefault(p => p is { Key: ModDataFieldKey.UpdateKey, IsDefault: true })?.Value;
         return !string.IsNullOrWhiteSpace(updateKey)
             ? updateKey
             : null;
