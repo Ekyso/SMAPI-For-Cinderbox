@@ -517,7 +517,7 @@ internal class SMultiplayer : Multiplayer
                 {
                     ModMessageModel newModel = new(model)
                     {
-                        ToPlayerIds = new[] { peer.PlayerID }
+                        ToPlayerIds = [peer.PlayerID]
                     };
 
                     this.Monitor.VerboseLog($"  Forwarding message to player {peer.PlayerID}.");
@@ -560,7 +560,7 @@ internal class SMultiplayer : Multiplayer
                 .ToArray()
         );
 
-        return new object[] { this.JsonHelper.Serialize(model, Formatting.None) };
+        return [this.JsonHelper.Serialize(model, Formatting.None)];
     }
 
     /// <summary>Get the fields to include in a context sync message sent to other players.</summary>
@@ -568,7 +568,7 @@ internal class SMultiplayer : Multiplayer
     private object[] GetContextSyncMessageFields(IMultiplayerPeer peer)
     {
         if (!peer.HasSmapi)
-            return new object[] { "{}" };
+            return ["{}"];
 
         RemoteContextModel model = new(
             isHost: peer.IsHost,
@@ -584,6 +584,6 @@ internal class SMultiplayer : Multiplayer
                 .ToArray()
         );
 
-        return new object[] { this.JsonHelper.Serialize(model, Formatting.None) };
+        return [this.JsonHelper.Serialize(model, Formatting.None)];
     }
 }

@@ -297,13 +297,12 @@ public static class Constants
         targetAssemblies.Add(typeof(StardewModdingAPI.IManifest).Assembly);
 
         // XNA Framework before Stardew Valley 1.5.5
-        removeAssemblyReferences.AddRange(new[]
-        {
+        removeAssemblyReferences.AddRange([
             "Microsoft.Xna.Framework",
             "Microsoft.Xna.Framework.Game",
             "Microsoft.Xna.Framework.Graphics",
             "Microsoft.Xna.Framework.Xact"
-        });
+        ]);
         targetAssemblies.Add(
             typeof(Microsoft.Xna.Framework.Vector2).Assembly
         );

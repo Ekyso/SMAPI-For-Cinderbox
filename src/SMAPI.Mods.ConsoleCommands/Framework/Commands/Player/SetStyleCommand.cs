@@ -21,7 +21,7 @@ internal class SetStyleCommand : ConsoleCommand
     public override void Handle(IMonitor monitor, string command, ArgumentParser args)
     {
         // parse arguments
-        if (!args.TryGet(0, "target", out string? target, oneOf: new[] { "hair", "shirt", "acc", "skin", "shoe", "swim", "gender" }))
+        if (!args.TryGet(0, "target", out string? target, oneOf: ["hair", "shirt", "acc", "skin", "shoe", "swim", "gender"]))
             return;
         if (!args.TryGet(1, "style ID", out string? styleId))
             return;

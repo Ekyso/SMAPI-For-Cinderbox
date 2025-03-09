@@ -46,7 +46,7 @@ internal class ListItemsCommand : ConsoleCommand
             .ToArray();
         string summary = "Searching...\n";
         if (matches.Any())
-            monitor.Log(summary + this.GetTableString(matches, new[] { "name", "id" }, val => new[] { val.Name, val.QualifiedItemId }), LogLevel.Info);
+            monitor.Log(summary + this.GetTableString(matches, ["name", "id"], val => [val.Name, val.QualifiedItemId]), LogLevel.Info);
         else
             monitor.Log(summary + "No items found", LogLevel.Info);
     }

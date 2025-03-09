@@ -430,15 +430,15 @@ internal class LogManager : IDisposable
                     match: mod => mod.HasWarnings(ModWarning.AccessesFilesystem, ModWarning.AccessesShell),
                     level: LogLevel.Debug,
                     heading: "Direct system access",
-                    blurb: new[]
-                    {
-                            "You enabled paranoid warnings and these mods directly access the filesystem, shells/processes, or",
-                            "SMAPI console. (This is usually legitimate and innocent usage; this warning is only useful for",
-                            "further investigation.)"
-                    },
+                    blurb:
+                    [
+                        "You enabled paranoid warnings and these mods directly access the filesystem, shells/processes, or",
+                        "SMAPI console. (This is usually legitimate and innocent usage; this warning is only useful for",
+                        "further investigation.)"
+                    ],
                     modLabel: mod =>
                     {
-                        List<string> labels = new List<string>();
+                        List<string> labels = [];
                         if (mod.HasWarnings(ModWarning.AccessesFilesystem))
                             labels.Add("files");
                         if (mod.HasWarnings(ModWarning.AccessesShell))
@@ -516,12 +516,7 @@ internal class LogManager : IDisposable
         }
 
         // return groups
-        return new[]
-        {
-                failedRootDependencies,
-                failedOtherDependencies,
-                failedOthers
-            };
+        return [failedRootDependencies, failedOtherDependencies, failedOthers];
     }
 
     /// <summary>Filter matching items from one list and add them to the other.</summary>

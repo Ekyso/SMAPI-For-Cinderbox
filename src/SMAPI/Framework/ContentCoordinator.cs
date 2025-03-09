@@ -60,7 +60,7 @@ internal class ContentCoordinator : IDisposable
     private readonly Func<IAssetInfo, AssetOperationGroup?> RequestAssetOperations;
 
     /// <summary>The loaded content managers (including the <see cref="MainContentManager"/>).</summary>
-    private readonly List<IContentManager> ContentManagers = new();
+    private readonly List<IContentManager> ContentManagers = [];
 
     /// <summary>Whether the content coordinator has been disposed.</summary>
     private bool IsDisposed;
@@ -157,7 +157,7 @@ internal class ContentCoordinator : IDisposable
 
         this.VanillaContentManager = new LocalizedContentManager(serviceProvider, rootDirectory);
         this.CoreAssets = new CoreAssetPropagator(this.MainContentManager, contentManagerForAssetPropagation, this.Monitor, multiplayer, reflection, name => this.ParseAssetName(name, allowLocales: true));
-        this.LocaleCodes = new Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>>(() => this.GetLocaleCodes(customLanguages: Enumerable.Empty<ModLanguage>()));
+        this.LocaleCodes = new Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>>(() => this.GetLocaleCodes(customLanguages: []));
     }
 
     /// <summary>Get a new content manager which handles reading files from the game content folder with support for interception.</summary>
@@ -497,7 +497,7 @@ internal class ContentCoordinator : IDisposable
     {
         return this.ContentManagerLock.InReadLock(() =>
         {
-            List<object> values = new List<object>();
+            List<object> values = [];
             foreach (IContentManager content in this.ContentManagers.Where(p => !p.IsNamespaced && p.IsLoaded(assetName)))
             {
                 object value = content.LoadExact<object>(assetName, useCache: true);
@@ -521,7 +521,7 @@ internal class ContentCoordinator : IDisposable
             this.VanillaContentManager.Unload();
         }
 
-        return tilesheets ?? Array.Empty<TilesheetReference>();
+        return tilesheets ?? [];
     }
 
     /// <summary>Get the locale code which corresponds to a language enum (e.g. <c>fr-FR</c> given <see cref="LocalizedContentManager.LanguageCode.fr"/>).</summary>

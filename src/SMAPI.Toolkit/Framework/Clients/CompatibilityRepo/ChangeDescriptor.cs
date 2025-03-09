@@ -74,7 +74,7 @@ public class ChangeDescriptor
                 where value.Length > 0
                 select value
             )
-            : new List<string>();
+            : [];
 
         // apply changes
         this.Apply(values);
@@ -148,7 +148,7 @@ public class ChangeDescriptor
         // parse each change in the descriptor
         if (!string.IsNullOrWhiteSpace(descriptor))
         {
-            List<string> rawErrors = new List<string>();
+            List<string> rawErrors = [];
             foreach (string rawEntry in descriptor.Split(','))
             {
                 // normalize entry
@@ -159,7 +159,7 @@ public class ChangeDescriptor
                 // parse as replace (old value → new value)
                 if (entry.Contains('→'))
                 {
-                    string[] parts = entry.Split(new[] { '→' }, 2);
+                    string[] parts = entry.Split(['→'], 2);
                     string oldValue = parts[0].Trim();
                     string newValue = parts[1].Trim();
 

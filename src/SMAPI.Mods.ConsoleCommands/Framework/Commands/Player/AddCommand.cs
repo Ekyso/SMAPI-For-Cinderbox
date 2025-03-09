@@ -156,8 +156,8 @@ internal class AddCommand : ConsoleCommand
         // handle ambiguous results
         string options = this.GetTableString(
             data: matches,
-            header: new[] { "type", "name", "command" },
-            getRow: item => new[] { item.Type.ToString(), item.DisplayName, $"player_add {item.QualifiedItemId}" }
+            header: ["type", "name", "command"],
+            getRow: item => [item.Type.ToString(), item.DisplayName, $"player_add {item.QualifiedItemId}"]
         );
         monitor.Log($"Multiple items have a name containing '{name}'. Do you mean one of these?\n\n{options}", LogLevel.Info);
         return null;

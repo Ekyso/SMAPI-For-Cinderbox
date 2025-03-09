@@ -13,7 +13,7 @@ internal class ModRegistry
     ** Fields
     *********/
     /// <summary>The registered mod data.</summary>
-    private readonly List<IModMetadata> Mods = new();
+    private readonly List<IModMetadata> Mods = [];
 
     /// <summary>An assembly full name => mod lookup.</summary>
     private readonly IDictionary<string, IModMetadata> ModNamesByAssembly = new Dictionary<string, IModMetadata>();

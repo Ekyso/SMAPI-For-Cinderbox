@@ -67,7 +67,7 @@ public class ModDataRecord
     public IEnumerable<string> GetIds()
     {
         return this.FormerIDs
-            .Concat(new[] { this.ID })
+            .Concat([this.ID])
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .Select(p => p.Trim())
             .Distinct();

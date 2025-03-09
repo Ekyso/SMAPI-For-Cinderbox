@@ -145,7 +145,7 @@ internal class SCore : IDisposable
     private readonly CommandQueue RawCommandQueue = new();
 
     /// <summary>A list of commands to execute on each screen.</summary>
-    private readonly PerScreen<List<QueuedCommand>> ScreenCommandQueue = new(() => new List<QueuedCommand>());
+    private readonly PerScreen<List<QueuedCommand>> ScreenCommandQueue = new(() => []);
 
     /// <summary>The last <see cref="ProcessTicksElapsed"/> for which display events were raised.</summary>
     private readonly PerScreen<uint> LastRenderEventTick = new();
@@ -235,13 +235,14 @@ internal class SCore : IDisposable
         // initialize SMAPI
         try
         {
-            JsonConverter[] converters = {
+            JsonConverter[] converters =
+            [
                 new ColorConverter(),
                 new KeybindConverter(),
                 new PointConverter(),
                 new Vector2Converter(),
                 new RectangleConverter()
-            };
+            ];
             foreach (JsonConverter converter in converters)
                 this.Toolkit.JsonHelper.JsonSettings.Converters.Add(converter);
 
@@ -1519,7 +1520,7 @@ internal class SCore : IDisposable
 
         try
         {
-            string[] registryKeys = { @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall", @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" };
+            string[] registryKeys = [@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall", @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"];
 
             string[] installedNames = registryKeys
                 .SelectMany(registryKey =>
@@ -1582,7 +1583,7 @@ internal class SCore : IDisposable
                 {
                     // fetch update check
                     IDictionary<string, ModEntryModel> response = await client.GetModInfoAsync(
-                        mods: new[] { new ModSearchEntryModel("Pathoschild.SMAPI", Constants.ApiVersion, new[] { $"GitHub:{this.Settings.GitHubProjectName}" }) },
+                        mods: [new ModSearchEntryModel("Pathoschild.SMAPI", Constants.ApiVersion, [$"GitHub:{this.Settings.GitHubProjectName}"])],
                         apiVersion: Constants.ApiVersion,
                         gameVersion: Constants.GameVersion,
                         platform: Constants.Platform
@@ -1626,7 +1627,7 @@ internal class SCore : IDisposable
                     HashSet<string> suppressUpdateChecks = this.Settings.SuppressUpdateChecks;
 
                     // prepare search model
-                    List<ModSearchEntryModel> searchMods = new List<ModSearchEntryModel>();
+                    List<ModSearchEntryModel> searchMods = [];
                     foreach (IModMetadata mod in mods)
                     {
                         if (!mod.HasId() || suppressUpdateChecks.Contains(mod.Manifest.UniqueID))
@@ -1753,7 +1754,7 @@ internal class SCore : IDisposable
                     string hash = FileUtilities.GetFileHash(md5, assetPath);
                     if (!string.Equals(hash, expectedHash, StringComparison.OrdinalIgnoreCase))
                     {
-                        modifiedFiles ??= new();
+                        modifiedFiles ??= [];
                         modifiedFiles.Add(relativePath);
                     }
 
@@ -1765,7 +1766,7 @@ internal class SCore : IDisposable
         // log missing files
         if (hashes.Count > 0)
         {
-            modifiedFiles ??= new();
+            modifiedFiles ??= [];
 
             foreach (string remainingFile in hashes.Keys)
                 modifiedFiles.Add($"{remainingFile} (missing)");
@@ -1885,7 +1886,7 @@ internal class SCore : IDisposable
                 }
 
                 // validate mod doesn't implement both GetApi() and GetApi(mod)
-                if (metadata.Api != null && mod.GetType().GetMethod(nameof(Mod.GetApi), new[] { typeof(IModInfo) })!.DeclaringType != typeof(Mod))
+                if (metadata.Api != null && mod.GetType().GetMethod(nameof(Mod.GetApi), [typeof(IModInfo)])!.DeclaringType != typeof(Mod))
                     metadata.LogAsMod($"Mod implements both {nameof(Mod.GetApi)}() and {nameof(Mod.GetApi)}({nameof(IModInfo)}), which isn't allowed. The latter will be ignored.", LogLevel.Error);
             }
             Context.HeuristicModsRunningCode.TryPop(out _);

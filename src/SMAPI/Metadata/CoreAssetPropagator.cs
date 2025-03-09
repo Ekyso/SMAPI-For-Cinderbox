@@ -154,8 +154,8 @@ internal class CoreAssetPropagator
         // should avoid iterating their assets if possible. So here we just check for the current localized name
         // and base name, which should cover normal cases.
         IAssetName[] assetNames = assetName.LocaleCode != null
-            ? new[] { assetName, assetName.GetBaseAssetName() }
-            : new[] { assetName };
+            ? [assetName, assetName.GetBaseAssetName()]
+            : [assetName];
 
         // update textures in-place
         {
@@ -264,7 +264,7 @@ internal class CoreAssetPropagator
                     {
                         static ISet<string> GetWarpSet(GameLocation location)
                         {
-                            HashSet<string> targetNames = new();
+                            HashSet<string> targetNames = [];
 
                             foreach (Warp warp in location.warps)
                                 targetNames.Add(warp.TargetName);
@@ -720,7 +720,7 @@ internal class CoreAssetPropagator
             nameof(this.GetCharacters),
             () =>
             {
-                List<NPC> characters = new();
+                List<NPC> characters = [];
 
                 foreach (NPC character in this.GetLocations().SelectMany(p => p.characters))
                     characters.Add(character);
@@ -743,7 +743,7 @@ internal class CoreAssetPropagator
             nameof(this.GetFarmAnimals),
             () =>
             {
-                List<FarmAnimal> animals = new();
+                List<FarmAnimal> animals = [];
 
                 foreach (GameLocation location in this.GetLocations())
                 {
@@ -777,7 +777,7 @@ internal class CoreAssetPropagator
             $"{nameof(this.GetLocationsWithInfo)}_{buildingInteriors}",
             () =>
             {
-                List<LocationInfo> locations = new();
+                List<LocationInfo> locations = [];
 
                 // get root locations
                 foreach (GameLocation location in Game1.locations)

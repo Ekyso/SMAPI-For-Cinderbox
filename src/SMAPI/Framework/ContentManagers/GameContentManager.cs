@@ -24,7 +24,7 @@ internal class GameContentManager : BaseContentManager
     ** Fields
     *********/
     /// <summary>The assets currently being intercepted by <see cref="AssetLoadOperation"/> instances. This is used to prevent infinite loops when a loader loads a new asset.</summary>
-    private readonly ContextHash<string> AssetsBeingLoaded = new();
+    private readonly ContextHash<string> AssetsBeingLoaded = [];
 
     /// <summary>Whether the next load is the first for any game content manager.</summary>
     private static bool IsFirstLoad = true;
@@ -222,7 +222,7 @@ internal class GameContentManager : BaseContentManager
                 return (IAssetData)this.GetType()
                     .GetMethod(nameof(this.ApplyEditors), BindingFlags.NonPublic | BindingFlags.Instance)!
                     .MakeGenericMethod(actualType)
-                    .Invoke(this, new object[] { info, asset, editOperations })!;
+                    .Invoke(this, [info, asset, editOperations])!;
             }
         }
 

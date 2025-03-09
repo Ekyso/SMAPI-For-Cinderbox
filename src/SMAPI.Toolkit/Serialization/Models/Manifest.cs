@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
@@ -105,8 +104,8 @@ public class Manifest : IManifest
         this.MinimumGameVersion = minimumGameVersion;
         this.EntryDll = this.NormalizeField(entryDll);
         this.ContentPackFor = contentPackFor;
-        this.Dependencies = dependencies ?? Array.Empty<IManifestDependency>();
-        this.UpdateKeys = updateKeys ?? Array.Empty<string>();
+        this.Dependencies = dependencies ?? [];
+        this.UpdateKeys = updateKeys ?? [];
     }
 
     /// <summary>Override the update keys loaded from the mod info.</summary>

@@ -22,7 +22,7 @@ public class TranslationTests
     ** Data
     *********/
     /// <summary>Sample translation text for unit tests.</summary>
-    public static string?[] Samples = { null, "", "  ", "boop", "  boop  " };
+    public static string?[] Samples = [null, "", "  ", "boop", "  boop  "];
 
 
     /*********
@@ -90,7 +90,7 @@ public class TranslationTests
         {
             this.AssertSetLocale(helper, locale, LocalizedContentManager.LanguageCode.en);
 
-            List<Translation> translations = new List<Translation>();
+            List<Translation> translations = [];
             foreach (Translation translation in expected[locale])
                 translations.Add(helper.Get(translation.Key));
             actual[locale] = translations.ToArray();
@@ -338,22 +338,22 @@ public class TranslationTests
     {
         var expected = new Dictionary<string, Translation[]>
         {
-            ["default"] = new[]
-            {
+            ["default"] =
+            [
                 new Translation("default", "key A", "default A"),
                 new Translation("default", "key C", "default C")
-            },
-            ["en"] = new[]
-            {
+            ],
+            ["en"] =
+            [
                 new Translation("en", "key A", "en A"),
                 new Translation("en", "key B", "en B"),
                 new Translation("en", "key C", "default C")
-            },
-            ["zzz"] = new[]
-            {
+            ],
+            ["zzz"] =
+            [
                 new Translation("zzz", "key A", "zzz A"),
                 new Translation("zzz", "key C", "default C")
-            }
+            ]
         };
         expected["en-us"] = expected["en"].ToArray();
         return expected;

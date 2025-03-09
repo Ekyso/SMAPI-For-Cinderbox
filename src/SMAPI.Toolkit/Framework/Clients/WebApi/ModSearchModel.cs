@@ -42,7 +42,7 @@ public class ModSearchModel
         // ASP.NET Web API needs a public empty constructor for top-level request models, and
         // it'll fail if the other constructor is marked with [JsonConstructor]. Apparently
         // it's fine with non-empty constructors in nested models like ModSearchEntryModel.
-        this.Mods = Array.Empty<ModSearchEntryModel>();
+        this.Mods = [];
         this.ApiVersion = null!;
         this.GameVersion = null!;
     }

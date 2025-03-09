@@ -26,7 +26,7 @@ public class JsonValidatorModel
     public string? Content { get; set; }
 
     /// <summary>The schema validation errors, if any.</summary>
-    public JsonValidatorErrorModel[] Errors { get; set; } = Array.Empty<JsonValidatorErrorModel>();
+    public JsonValidatorErrorModel[] Errors { get; set; } = [];
 
     /// <summary>A non-blocking warning while uploading the file.</summary>
     public string? UploadWarning { get; set; }

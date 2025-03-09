@@ -96,7 +96,7 @@ internal class ModResolver
                         string reasonPhrase = mod.DataRecord.StatusReasonPhrase ?? "it's no longer compatible";
 
                         // get update URLs
-                        List<string> updateUrls = new List<string>();
+                        List<string> updateUrls = [];
                         foreach (UpdateKey key in mod.GetUpdateKeys(validOnly: true))
                         {
                             string? url = getUpdateUrl(key.ToString());

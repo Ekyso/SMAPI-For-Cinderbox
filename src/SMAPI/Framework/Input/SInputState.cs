@@ -21,10 +21,10 @@ internal sealed class SInputState : InputState
     private Vector2? LastPlayerTile;
 
     /// <summary>The buttons to press until the game next handles input.</summary>
-    private readonly HashSet<SButton> CustomPressedKeys = new();
+    private readonly HashSet<SButton> CustomPressedKeys = [];
 
     /// <summary>The buttons to consider released until the actual button is released.</summary>
-    private readonly HashSet<SButton> CustomReleasedKeys = new();
+    private readonly HashSet<SButton> CustomReleasedKeys = [];
 
     /// <summary>Whether there are new overrides in <see cref="CustomPressedKeys"/> or <see cref="CustomReleasedKeys"/> that haven't been applied to the previous state.</summary>
     private bool HasNewOverrides;

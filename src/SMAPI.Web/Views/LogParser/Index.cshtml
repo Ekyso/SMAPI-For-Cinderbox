@@ -14,7 +14,7 @@
     ISet<int> screenIds = new HashSet<int>(log?.Messages.Select(p => p.ScreenId) ?? Array.Empty<int>());
 
     // detect suggested fixes
-    LogModInfo[] outdatedMods = log?.Mods.Where(mod => mod.HasUpdate).ToArray() ?? Array.Empty<LogModInfo>();
+    LogModInfo[] outdatedMods = log?.Mods.Where(mod => mod.HasUpdate).ToArray() ?? [];
     bool isPyTkCompatibilityMode = log?.ApiVersionParsed?.IsBetween("3.15.0", "3.19.0") is true && log.Mods.Any(p => p.IsCodeMod && p.Name == "PyTK" && p.GetParsedVersion()?.IsOlderThan("1.24.0") is true);
 
     LogModInfo? errorHandler = log?.Mods.FirstOrDefault(p => p.IsCodeMod && p.Name == "Error Handler");
@@ -391,7 +391,7 @@ else if (log?.IsValid == true)
                     .Where(mod => mod.Loaded && !mod.IsContentPack)
                     .Select(mod => (
                         Mod: mod,
-                        ContentPacks: contentPacks?.TryGetValue(mod.Name, out LogModInfo[]? contentPackList) == true ? contentPackList : Array.Empty<LogModInfo>()
+                        ContentPacks: contentPacks?.TryGetValue(mod.Name, out LogModInfo[]? contentPackList) == true ? contentPackList : []
                     ))
                     .ToList();
                 if (contentPacks?.TryGetValue("", out LogModInfo[]? invalidPacks) == true)

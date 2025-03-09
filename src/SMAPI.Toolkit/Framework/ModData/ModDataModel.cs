@@ -93,7 +93,7 @@ internal class ModDataModel
                 // version range
                 if (part.Contains("~"))
                 {
-                    string[] versionParts = part.Split(new[] { '~' }, 2);
+                    string[] versionParts = part.Split(['~'], 2);
                     lowerVersion = versionParts[0] != "" ? new SemanticVersion(versionParts[0]) : null;
                     upperVersion = versionParts[1] != "" ? new SemanticVersion(versionParts[1]) : null;
                     continue;

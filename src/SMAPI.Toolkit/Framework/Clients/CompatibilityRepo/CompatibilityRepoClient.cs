@@ -49,8 +49,8 @@ public class CompatibilityRepoClient : IDisposable
         RawCompatibilityList brokenContentPacks = await this.Client.GetAsync("broken-content-packs.jsonc").As<RawCompatibilityList>();
 
         return
-            (mods.Mods ?? Array.Empty<RawModEntry>())
-            .Concat(brokenContentPacks.BrokenContentPacks ?? Array.Empty<RawModEntry>())
+            (mods.Mods ?? [])
+            .Concat(brokenContentPacks.BrokenContentPacks ?? [])
             .Select(this.ParseRawModEntry)
             .ToArray();
     }
@@ -68,8 +68,8 @@ public class CompatibilityRepoClient : IDisposable
         RawCompatibilityList? brokenContentPacks = JsonConvert.DeserializeObject<RawCompatibilityList>(File.ReadAllText(contentPacksJsonPath));
 
         return
-            (mods?.Mods ?? Array.Empty<RawModEntry>())
-            .Concat(brokenContentPacks?.BrokenContentPacks ?? Array.Empty<RawModEntry>())
+            (mods?.Mods ?? [])
+            .Concat(brokenContentPacks?.BrokenContentPacks ?? [])
             .Select(this.ParseRawModEntry)
             .ToArray();
     }
@@ -132,7 +132,7 @@ public class CompatibilityRepoClient : IDisposable
                 unofficialVersion: this.GetSemanticVersion(rawModEntry.UnofficialUpdate?.Version),
                 unofficialUrl: rawModEntry.UnofficialUpdate?.Url
             ),
-            warnings: rawModEntry.Warnings ?? Array.Empty<string>(),
+            warnings: rawModEntry.Warnings ?? [],
             devNote: rawModEntry.DeveloperNotes,
             overrides: this.ParseOverrideEntries(modIds, rawModEntry.OverrideModData),
             anchor: PathUtilities.CreateSlug(modNames.FirstOrDefault())?.ToLower()
@@ -187,8 +187,8 @@ public class CompatibilityRepoClient : IDisposable
     private string[] GetCsv(string? rawValue)
     {
         return !string.IsNullOrWhiteSpace(rawValue)
-            ? rawValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToArray()
-            : Array.Empty<string>();
+            ? rawValue.Split([','], StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToArray()
+            : [];
     }
 
     /// <summary>Get a raw value as a semantic version.</summary>
