@@ -134,7 +134,7 @@ internal class ModRegistryHelper : BaseHelper, IModRegistry
         {
             return
                 api as TInterface
-                ?? this.ProxyFactory.CreateProxy<TInterface>(api, sourceModID: this.ModID, targetModID: uniqueID);
+                ?? this.ProxyFactory.CreateProxy<TInterface>(api, sourceModId: this.ModID, targetModId: uniqueID);
         }
         catch (Exception ex)
         {

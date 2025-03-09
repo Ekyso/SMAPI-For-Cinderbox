@@ -387,7 +387,7 @@ public static class Constants
 
         // get basic info
         string rawSaveName = Game1.GetSaveGameName(set_value: false);
-        ulong saveID = Context.LoadStage == LoadStage.SaveParsed
+        ulong saveId = Context.LoadStage == LoadStage.SaveParsed
             ? SaveGame.loaded.uniqueIDForThisGame
             : Game1.uniqueIDForThisGame;
 
@@ -397,7 +397,7 @@ public static class Constants
         {
             try
             {
-                folder = new DirectoryInfo(Path.Combine(Constants.SavesPath, $"{saveName}_{saveID}"));
+                folder = new DirectoryInfo(Path.Combine(Constants.SavesPath, $"{saveName}_{saveId}"));
                 if (folder.Exists)
                     return folder;
             }

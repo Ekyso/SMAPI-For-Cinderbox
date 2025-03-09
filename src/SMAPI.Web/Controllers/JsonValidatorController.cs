@@ -33,7 +33,7 @@ internal class JsonValidatorController : Controller
     };
 
     /// <summary>The schema ID to use if none was specified.</summary>
-    private readonly string DefaultSchemaID = "none";
+    private readonly string DefaultSchemaId = "none";
 
     /// <summary>A token in an error message which indicates that the child errors should be displayed instead.</summary>
     private readonly string TransparentToken = "$transparent";
@@ -172,22 +172,22 @@ internal class JsonValidatorController : Controller
     ** Private methods
     *********/
     /// <summary>Build a JSON validator model.</summary>
-    /// <param name="pasteID">The stored file ID.</param>
+    /// <param name="pasteId">The stored file ID.</param>
     /// <param name="schemaName">The schema name with which the JSON was validated.</param>
     /// <param name="isEditView">Whether to show the edit view.</param>
-    private JsonValidatorModel GetModel(string? pasteID, string? schemaName, bool isEditView)
+    private JsonValidatorModel GetModel(string? pasteId, string? schemaName, bool isEditView)
     {
-        return new JsonValidatorModel(pasteID, schemaName, this.SchemaFormats, isEditView);
+        return new JsonValidatorModel(pasteId, schemaName, this.SchemaFormats, isEditView);
     }
 
-    /// <summary>Get a normalized schema name, or the <see cref="DefaultSchemaID"/> if blank.</summary>
+    /// <summary>Get a normalized schema name, or the <see cref="DefaultSchemaId"/> if blank.</summary>
     /// <param name="schemaName">The raw schema name to normalize.</param>
     private string NormalizeSchemaName(string? schemaName)
     {
         schemaName = schemaName?.Trim().ToLower();
         return !string.IsNullOrWhiteSpace(schemaName)
             ? schemaName
-            : this.DefaultSchemaID;
+            : this.DefaultSchemaId;
     }
 
     /// <summary>Get the schema file given its unique ID.</summary>

@@ -40,10 +40,10 @@ internal class ManifestDependencyArrayConverter : JsonConverter
         List<ManifestDependency> result = new List<ManifestDependency>();
         foreach (JObject obj in JArray.Load(reader).Children<JObject>())
         {
-            string uniqueID = obj.ValueIgnoreCase<string>(nameof(ManifestDependency.UniqueID))!; // will be validated separately if null
+            string uniqueId = obj.ValueIgnoreCase<string>(nameof(ManifestDependency.UniqueID))!; // will be validated separately if null
             string? minVersion = obj.ValueIgnoreCase<string>(nameof(ManifestDependency.MinimumVersion));
             bool required = obj.ValueIgnoreCase<bool?>(nameof(ManifestDependency.IsRequired)) ?? true;
-            result.Add(new ManifestDependency(uniqueID, minVersion, required));
+            result.Add(new ManifestDependency(uniqueId, minVersion, required));
         }
         return result.ToArray();
     }

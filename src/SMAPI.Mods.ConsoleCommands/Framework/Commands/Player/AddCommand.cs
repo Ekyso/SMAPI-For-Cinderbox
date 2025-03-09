@@ -41,7 +41,7 @@ internal class AddCommand : ConsoleCommand
 
         // find matching item
         SearchableItem? match = id != null
-            ? this.FindItemByID(monitor, id)
+            ? this.FindItemById(monitor, id)
             : this.FindItemByName(monitor, name);
         if (match == null)
             return;
@@ -119,7 +119,7 @@ internal class AddCommand : ConsoleCommand
     /// <summary>Get a matching item by its ID.</summary>
     /// <param name="monitor">Writes messages to the console and log file.</param>
     /// <param name="id">The qualified item ID.</param>
-    private SearchableItem? FindItemByID(IMonitor monitor, string id)
+    private SearchableItem? FindItemById(IMonitor monitor, string id)
     {
         SearchableItem? item = this.Items
             .GetAll()

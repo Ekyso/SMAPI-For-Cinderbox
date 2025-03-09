@@ -27,7 +27,7 @@ internal class InteractiveInstaller
     private readonly string BundlePath;
 
     /// <summary>The mod IDs which the installer should allow as bundled mods.</summary>
-    private readonly string[] BundledModIDs = {
+    private readonly string[] BundledModIds = {
         "SMAPI.SaveBackup",
         "SMAPI.ConsoleCommands"
     };
@@ -447,7 +447,7 @@ internal class InteractiveInstaller
                             this.PrintWarning($"   ignored invalid bundled mod {sourceMod.DisplayName}: {sourceMod.ManifestParseError}");
                             continue;
                         }
-                        if (!this.BundledModIDs.Contains(sourceMod.Manifest.UniqueID))
+                        if (!this.BundledModIds.Contains(sourceMod.Manifest.UniqueID))
                         {
                             this.PrintWarning($"   ignored unknown '{sourceMod.DisplayName}' mod in the installer folder. To add mods, put them here instead: {paths.ModsPath}");
                             continue;

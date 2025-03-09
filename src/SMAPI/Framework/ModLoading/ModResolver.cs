@@ -156,10 +156,10 @@ internal class ModResolver
 
         // validate IDs are unique
         {
-            var duplicatesByID = mods
+            var duplicatesById = mods
                 .GroupBy(mod => mod.Manifest?.UniqueID?.Trim(), mod => mod, StringComparer.OrdinalIgnoreCase)
                 .Where(p => !string.IsNullOrEmpty(p.Key) && p.Count() > 1);
-            foreach (var group in duplicatesByID)
+            foreach (var group in duplicatesById)
             {
                 foreach (IModMetadata mod in group)
                 {
@@ -379,7 +379,7 @@ internal class ModResolver
     /// <param name="loadedMods">The loaded mods.</param>
     private IEnumerable<ModDependency> GetDependenciesFrom(IManifest manifest, IReadOnlyList<IModMetadata> loadedMods)
     {
-        IModMetadata? FindMod(string id) => loadedMods.FirstOrDefault(m => m.HasID(id));
+        IModMetadata? FindMod(string id) => loadedMods.FirstOrDefault(m => m.HasId(id));
 
         // yield dependencies
         foreach (IManifestDependency entry in manifest.Dependencies)

@@ -68,7 +68,7 @@ internal class ModRegistry
         uniqueID = uniqueID.Trim();
 
         // find match
-        return this.GetAll().FirstOrDefault(p => p.HasID(uniqueID));
+        return this.GetAll().FirstOrDefault(p => p.HasId(uniqueID));
     }
 
     /// <summary>Get the mod metadata from one of its assemblies.</summary>

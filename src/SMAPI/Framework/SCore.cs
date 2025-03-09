@@ -934,7 +934,7 @@ internal class SCore : IDisposable
                 *********/
                 if (Context.IsWorldReady)
                 {
-                    bool raiseWorldEvents = !state.SaveID.IsChanged; // don't report changes from unloaded => loaded
+                    bool raiseWorldEvents = !state.SaveId.IsChanged; // don't report changes from unloaded => loaded
 
                     // location list changes
                     if (state.Locations.LocationList.IsChanged && (events.LocationListChanged.HasListeners || verbose))
@@ -1428,16 +1428,16 @@ internal class SCore : IDisposable
         if (this.EventManager.ModMessageReceived.HasListeners)
         {
             // get mod IDs to notify
-            HashSet<string> modIDs = new(message.ToModIDs ?? this.ModRegistry.GetAll().Select(p => p.Manifest.UniqueID), StringComparer.OrdinalIgnoreCase);
-            if (message.FromPlayerID == Game1.player?.UniqueMultiplayerID)
-                modIDs.Remove(message.FromModID); // don't send a broadcast back to the sender
+            HashSet<string> modIds = new(message.ToModIds ?? this.ModRegistry.GetAll().Select(p => p.Manifest.UniqueID), StringComparer.OrdinalIgnoreCase);
+            if (message.FromPlayerId == Game1.player?.UniqueMultiplayerID)
+                modIds.Remove(message.FromModId); // don't send a broadcast back to the sender
 
             // raise events
             ModMessageReceivedEventArgs? args = null;
             this.EventManager.ModMessageReceived.Raise(
                 invoke: (mod, invoke) =>
                 {
-                    if (modIDs.Contains(mod.Manifest.UniqueID))
+                    if (modIds.Contains(mod.Manifest.UniqueID))
                     {
                         args ??= new(message, this.Toolkit.JsonHelper);
                         invoke(args);
@@ -1629,7 +1629,7 @@ internal class SCore : IDisposable
                     List<ModSearchEntryModel> searchMods = new List<ModSearchEntryModel>();
                     foreach (IModMetadata mod in mods)
                     {
-                        if (!mod.HasID() || suppressUpdateChecks.Contains(mod.Manifest.UniqueID))
+                        if (!mod.HasId() || suppressUpdateChecks.Contains(mod.Manifest.UniqueID))
                             continue;
 
                         string[] updateKeys = mod
@@ -1649,7 +1649,7 @@ internal class SCore : IDisposable
                     foreach (IModMetadata mod in mods.OrderBy(p => p.DisplayName))
                     {
                         // link to update-check data
-                        if (!mod.HasID() || !results.TryGetValue(mod.Manifest.UniqueID, out ModEntryModel? result))
+                        if (!mod.HasId() || !results.TryGetValue(mod.Manifest.UniqueID, out ModEntryModel? result))
                             continue;
                         mod.SetUpdateData(result);
 
@@ -1938,7 +1938,7 @@ internal class SCore : IDisposable
         }
 
         // add warning for missing update key
-        if (mod.HasID() && !suppressUpdateChecks.Contains(manifest!.UniqueID) && !mod.HasValidUpdateKeys())
+        if (mod.HasId() && !suppressUpdateChecks.Contains(manifest!.UniqueID) && !mod.HasValidUpdateKeys())
             mod.SetWarning(ModWarning.NoUpdateKeys);
 
         // validate status
@@ -1964,7 +1964,7 @@ internal class SCore : IDisposable
 
             // mark failed
             string dependencyName = mods
-                .FirstOrDefault(otherMod => otherMod.HasID(dependency.UniqueID))
+                .FirstOrDefault(otherMod => otherMod.HasId(dependency.UniqueID))
                 ?.DisplayName ?? dependency.UniqueID;
             errorReasonPhrase = $"it needs the '{dependencyName}' mod, which couldn't be loaded.";
             failReason = ModFailReason.MissingDependencies;
@@ -2039,7 +2039,7 @@ internal class SCore : IDisposable
 
                     return this.ModRegistry
                         .GetAll(assemblyMods: false)
-                        .Where(p => p.IsContentPack && mod.HasID(p.Manifest.ContentPackFor!.UniqueID))
+                        .Where(p => p.IsContentPack && mod.HasId(p.Manifest.ContentPackFor!.UniqueID))
                         .Select(p => p.ContentPack!)
                         .ToArray();
                 }

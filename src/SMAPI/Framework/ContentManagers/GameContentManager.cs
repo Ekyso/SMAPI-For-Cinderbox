@@ -66,8 +66,8 @@ internal class GameContentManager : BaseContentManager
             return true;
 
         // managed asset
-        if (this.Coordinator.TryParseManagedAssetKey(assetName.Name, out string? contentManagerID, out IAssetName? relativePath))
-            return this.Coordinator.DoesManagedAssetExist<T>(contentManagerID, relativePath);
+        if (this.Coordinator.TryParseManagedAssetKey(assetName.Name, out string? contentManagerId, out IAssetName? relativePath))
+            return this.Coordinator.DoesManagedAssetExist<T>(contentManagerId, relativePath);
 
         // custom asset from a loader
         string locale = this.GetLocale();
@@ -105,9 +105,9 @@ internal class GameContentManager : BaseContentManager
             return this.RawLoad<T>(assetName, useCache: true);
 
         // get managed asset
-        if (this.Coordinator.TryParseManagedAssetKey(assetName.Name, out string? contentManagerID, out IAssetName? relativePath))
+        if (this.Coordinator.TryParseManagedAssetKey(assetName.Name, out string? contentManagerId, out IAssetName? relativePath))
         {
-            T managedAsset = this.Coordinator.LoadManagedAsset<T>(contentManagerID, relativePath);
+            T managedAsset = this.Coordinator.LoadManagedAsset<T>(contentManagerId, relativePath);
             this.TrackAsset(assetName, managedAsset, useCache);
             return managedAsset;
         }

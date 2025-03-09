@@ -116,16 +116,16 @@ internal class LogParserController : Controller
     ** Private methods
     *********/
     /// <summary>Build a log parser model.</summary>
-    /// <param name="pasteID">The stored file ID.</param>
+    /// <param name="pasteId">The stored file ID.</param>
     /// <param name="oldExpiry">When the uploaded file would no longer have been available, before any renewal applied in this request</param>
     /// <param name="newExpiry">When the file will no longer be available, after any renewal applied in this request.</param>
     /// <param name="uploadWarning">A non-blocking warning while uploading the log.</param>
     /// <param name="uploadError">An error which occurred while uploading the log.</param>
-    private LogParserModel GetModel(string? pasteID, DateTimeOffset? oldExpiry = null, DateTimeOffset? newExpiry = null, string? uploadWarning = null, string? uploadError = null)
+    private LogParserModel GetModel(string? pasteId, DateTimeOffset? oldExpiry = null, DateTimeOffset? newExpiry = null, string? uploadWarning = null, string? uploadError = null)
     {
         Platform? platform = this.DetectClientPlatform();
 
-        return new LogParserModel(pasteID, platform)
+        return new LogParserModel(pasteId, platform)
         {
             UploadWarning = uploadWarning,
             UploadError = uploadError,

@@ -214,7 +214,7 @@ public class ModResolverTests
     }
 
     [Test(Description = "Assert that validation fails when multiple mods have the same unique ID.")]
-    public void ValidateManifests_DuplicateUniqueID_Fails()
+    public void ValidateManifests_DuplicateUniqueId_Fails()
     {
         // arrange
         Mock<IModMetadata> modA = this.GetMetadata("Mod A", Array.Empty<string>(), allowStatusChange: true);
@@ -509,11 +509,11 @@ public class ModResolverTests
     /// <param name="name">The <see cref="IManifest.Name"/> value, or <c>null</c> for a generated value.</param>
     /// <param name="version">The <see cref="IManifest.Version"/> value, or <c>null</c> for a generated value.</param>
     /// <param name="entryDll">The <see cref="IManifest.EntryDll"/> value, or <c>null</c> for a generated value.</param>
-    /// <param name="contentPackForID">The <see cref="IManifest.ContentPackFor"/> value.</param>
+    /// <param name="contentPackForId">The <see cref="IManifest.ContentPackFor"/> value.</param>
     /// <param name="minimumApiVersion">The <see cref="IManifest.MinimumApiVersion"/> value.</param>
     /// <param name="minimumGameVersion">The <see cref="IManifest.MinimumGameVersion"/> value.</param>
     /// <param name="dependencies">The <see cref="IManifest.Dependencies"/> value.</param>
-    private Manifest GetManifest(string? id = null, string? name = null, string? version = null, string? entryDll = null, string? contentPackForID = null, string? minimumApiVersion = null, string? minimumGameVersion = null, IManifestDependency[]? dependencies = null)
+    private Manifest GetManifest(string? id = null, string? name = null, string? version = null, string? entryDll = null, string? contentPackForId = null, string? minimumApiVersion = null, string? minimumGameVersion = null, IManifestDependency[]? dependencies = null)
     {
         return new Manifest(
             uniqueId: id ?? $"{Sample.String()}.{Sample.String()}",
@@ -522,7 +522,7 @@ public class ModResolverTests
             description: Sample.String(),
             version: version != null ? new SemanticVersion(version) : new SemanticVersion(Sample.Int(), Sample.Int(), Sample.Int(), Sample.String()),
             entryDll: entryDll ?? $"{Sample.String()}.dll",
-            contentPackFor: contentPackForID != null ? new ManifestContentPackFor(contentPackForID, null) : null,
+            contentPackFor: contentPackForId != null ? new ManifestContentPackFor(contentPackForId, null) : null,
             minimumApiVersion: minimumApiVersion != null ? new SemanticVersion(minimumApiVersion) : null,
             minimumGameVersion: minimumGameVersion != null ? new SemanticVersion(minimumGameVersion) : null,
             dependencies: dependencies ?? Array.Empty<IManifestDependency>(),
@@ -531,19 +531,19 @@ public class ModResolverTests
     }
 
     /// <summary>Get a randomized basic manifest.</summary>
-    /// <param name="uniqueID">The mod's name and unique ID.</param>
-    private Mock<IModMetadata> GetMetadata(string uniqueID)
+    /// <param name="uniqueId">The mod's name and unique ID.</param>
+    private Mock<IModMetadata> GetMetadata(string uniqueId)
     {
-        return this.GetMetadata(this.GetManifest(uniqueID, "1.0"));
+        return this.GetMetadata(this.GetManifest(uniqueId, "1.0"));
     }
 
     /// <summary>Get a randomized basic manifest.</summary>
-    /// <param name="uniqueID">The mod's name and unique ID.</param>
+    /// <param name="uniqueId">The mod's name and unique ID.</param>
     /// <param name="dependencies">The dependencies this mod requires.</param>
     /// <param name="allowStatusChange">Whether the code being tested is allowed to change the mod status.</param>
-    private Mock<IModMetadata> GetMetadata(string uniqueID, string[] dependencies, bool allowStatusChange = false)
+    private Mock<IModMetadata> GetMetadata(string uniqueId, string[] dependencies, bool allowStatusChange = false)
     {
-        IManifest manifest = this.GetManifest(id: uniqueID, version: "1.0", dependencies: dependencies.Select(dependencyID => (IManifestDependency)new ManifestDependency(dependencyID, null as ISemanticVersion)).ToArray());
+        IManifest manifest = this.GetManifest(id: uniqueId, version: "1.0", dependencies: dependencies.Select(dependencyID => (IManifestDependency)new ManifestDependency(dependencyID, null as ISemanticVersion)).ToArray());
         return this.GetMetadata(manifest, allowStatusChange);
     }
 
@@ -561,7 +561,7 @@ public class ModResolverTests
         mod.Setup(p => p.DisplayName).Returns(manifest.UniqueID);
         mod.Setup(p => p.DirectoryPath).Returns(directoryPath);
         mod.Setup(p => p.Manifest).Returns(manifest);
-        mod.Setup(p => p.HasID(It.IsAny<string>())).Returns((string id) => manifest.UniqueID == id);
+        mod.Setup(p => p.HasId(It.IsAny<string>())).Returns((string id) => manifest.UniqueID == id);
         mod.Setup(p => p.GetUpdateKeys(It.IsAny<bool>())).Returns(Enumerable.Empty<UpdateKey>());
         mod.Setup(p => p.GetRelativePathWithRoot()).Returns(directoryPath);
         if (allowStatusChange)

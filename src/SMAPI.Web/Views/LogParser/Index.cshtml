@@ -34,11 +34,11 @@
         .ToDictionary(section => (int)section, section => section.ToString());
 
     // get form
-    string curPageUrl = this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteID }, absoluteUrl: true)!;
+    string curPageUrl = this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteId }, absoluteUrl: true)!;
 }
 
 @section Head {
-    @if (Model.PasteID != null)
+    @if (Model.PasteId != null)
     {
         <meta name="robots" content="noindex" />
     }
@@ -168,7 +168,7 @@ else if (log?.IsValid == true)
             {
                 <text><s>@(oldExpiryText)</s> </text>
             }
-            <text>@(newExpiryText) (<a href="@(this.Url.PlainAction("Index", "LogParser", new { id = this.Model.PasteID, renew = true }))">renew</a>).</text>
+            <text>@(newExpiryText) (<a href="@(this.Url.PlainAction("Index", "LogParser", new { id = this.Model.PasteId, renew = true }))">renew</a>).</text>
         }
     </div>
 }
@@ -501,7 +501,7 @@ else if (log?.IsValid == true)
 
             <noscript>
                 <div>
-                    This website uses JavaScript to display a filterable table. To view this log, please enable JavaScript or <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteID, format = LogViewFormat.RawView })">view the raw log</a>.
+                    This website uses JavaScript to display a filterable table. To view this log, please enable JavaScript or <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteId, format = LogViewFormat.RawView })">view the raw log</a>.
                 </div>
                 <br />
             </noscript>
@@ -523,14 +523,14 @@ else if (log?.IsValid == true)
         <small>
             @if (Model.ShowRaw)
             {
-                <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteID })">view parsed log</a>
+                <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteId })">view parsed log</a>
             }
             else
             {
-                <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteID, format = LogViewFormat.RawView })">view raw log</a>
+                <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteId, format = LogViewFormat.RawView })">view raw log</a>
             }
 
-            | <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteID, format = LogViewFormat.RawDownload })" download>download</a>
+            | <a href="@this.Url.PlainAction("Index", "LogParser", new { id = Model.PasteId, format = LogViewFormat.RawDownload })" download>download</a>
         </small>
     </div>
 }

@@ -377,7 +377,7 @@ public class TranslationTests
             directoryPath: tempPath,
             rootPath: tempPath,
             manifest: new Manifest(
-                uniqueID: id,
+                uniqueId: id,
                 name: "Mod Name",
                 author: "Mod Author",
                 description: "Mod Description",
