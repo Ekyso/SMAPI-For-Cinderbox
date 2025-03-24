@@ -726,7 +726,7 @@ internal class SCore : IDisposable
             // during enumeration errors). To avoid problems, events are not invoked while a save
             // is in progress. It's safe to raise SaveEvents.BeforeSave as soon as the menu is
             // opened (since the save hasn't started yet), but all other events should be suppressed.
-            if (Context.IsSaving)
+            if (Context.IsSaving())
             {
                 // raise before-create
                 if (!Context.IsWorldReady && !instance.IsBetweenCreateEvents)
