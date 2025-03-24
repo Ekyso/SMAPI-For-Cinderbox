@@ -1,7 +1,9 @@
 ← [README](README.md)
 
 # Release notes
-## Upcoming release
+## 4.2.0
+Released 24 March 2025 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/125017679).
+
 * For players:
   * Fixed `log_context` command not disabling the extra logs when run again.
   * Fixed update alerts when using an unofficial port of SMAPI with a four-part version number.
