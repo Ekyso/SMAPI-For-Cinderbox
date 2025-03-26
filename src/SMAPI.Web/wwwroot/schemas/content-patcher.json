@@ -14,9 +14,9 @@
             "title": "Format version",
             "description": "The format version. You should always use the latest version to enable the latest features, avoid obsolete behavior, and reduce load times.",
             "type": "string",
-            "pattern": "^2\\.5\\.[0-9]+$",
+            "pattern": "^2\\.6\\.[0-9]+$",
             "@errorMessages": {
-                "pattern": "Incorrect value '@value'. You should always use the latest format version (currently 2.5.0) to enable the latest features, avoid obsolete behavior, and reduce load times."
+                "pattern": "Incorrect value '@value'. You should always use the latest format version (currently 2.6.0) to enable the latest features, avoid obsolete behavior, and reduce load times."
             }
         },
         "ConfigSchema": {
@@ -355,7 +355,19 @@
                             "type": "string",
                             "pattern": " *-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+ *$",
                             "@errorMessages": {
-                                "pattern": "Each warp must match the exact format recognized by the game's Warp map property (i.e. 'fromX fromY targetMap targetX targetY', like '10 10 Town 0 30'."
+                                "pattern": "Each warp must match the exact format recognized by the game's Warp map property (i.e. 'fromX fromY targetMap targetX targetY', like '10 10 Town 0 30')."
+                            }
+                        }
+                    },
+                    "AddNpcWarps": {
+                        "title": "Add NPC-only warps",
+                        "description": "The NPC-only warp values to add to the location, in the format recognized by the game's NPCWarp map property.",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "pattern": " *-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+ *$",
+                            "@errorMessages": {
+                                "pattern": "Each warp must match the exact format recognized by the game's NPCWarp map property (i.e. 'fromX fromY targetMap targetX targetY', like '10 10 Town 0 30')."
                             }
                         }
                     },
@@ -560,6 +572,7 @@
                                     "When",
 
                                     "AddWarps",
+                                    "AddNPCWarps",
                                     "FromArea",
                                     "MapProperties",
                                     "MapTiles",

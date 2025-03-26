@@ -1,6 +1,16 @@
 ← [README](README.md)
 
 # Release notes
+## Upcoming release
+Released 25 March 2025 for Stardew Valley 1.6.14 or later.
+
+* For players:
+  * Fixed crash when some mods' custom tiles are on-screen.
+
+* For mod authors:
+  * Reverted the fix for the game's `Data/ChairTiles` logic not handling unique string IDs like `Maps/Author.ModName` correctly.  
+    _The fix caused crashes loading map tiles in some cases. This will be fixed in the next game update instead._
+
 ## 4.2.0
 Released 24 March 2025 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/125017679).
 
@@ -13,7 +23,8 @@ Released 24 March 2025 for Stardew Valley 1.6.14 or later. See [release highligh
 * For mod authors:
   * Mod events are now raised on the shipping menu (except when it's actually saving).
   * Added translation API methods to query translation keys (`ContainsKey` and `GetKeys`).
-  * Fixed the game's `Data/ChairTiles` logic not handling unique string IDs like `Maps/Author.ModName` correctly.
+  * ~~Fixed the game's `Data/ChairTiles` logic not handling unique string IDs like `Maps/Author.ModName` correctly.~~  
+    _Reverted in 4.2.1._
   * Fixed exception thrown if `modRegistry.GetApi<T>` can't proxy the API to the given interface. It now logs an error and returns null as intended.
 
 * For external tools:
