@@ -28,9 +28,6 @@ public class ParsedLog
     /****
     ** Log data
     ****/
-    /// <summary>Whether SMAPI is running in strict mode, which disables all deprecated APIs.</summary>
-    public bool IsStrictMode { get; set; }
-
     /// <summary>The SMAPI version.</summary>
     public string? ApiVersion { get; set; }
 

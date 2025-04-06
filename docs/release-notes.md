@@ -2,6 +2,10 @@
 
 # Release notes
 ## Upcoming release
+* For the web UI:
+  * Removed support for very old SMAPI logs.
+
+## 4.2.1
 Released 25 March 2025 for Stardew Valley 1.6.14 or later.
 
 * For players:

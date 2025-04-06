@@ -15,12 +15,6 @@
 
     // detect suggested fixes
     LogModInfo[] outdatedMods = log?.Mods.Where(mod => mod.HasUpdate).ToArray() ?? [];
-    bool isPyTkCompatibilityMode = log?.ApiVersionParsed?.IsBetween("3.15.0", "3.19.0") is true && log.Mods.Any(p => p is { IsCodeMod: true, Name: "PyTK" } && p.GetParsedVersion()?.IsOlderThan("1.24.0") is true);
-
-    LogModInfo? errorHandler = log?.Mods.FirstOrDefault(p => p is { IsCodeMod: true, Name: "Error Handler" });
-    bool errorHandlerNeeded = log?.ApiVersionParsed?.IsOlderThan("4.0.0-alpha") == true && log.OperatingSystem?.Contains("Android Unix", StringComparison.OrdinalIgnoreCase) != true;
-    bool missingErrorHandler = errorHandlerNeeded && errorHandler is null;
-    bool hasOlderErrorHandler = errorHandlerNeeded && errorHandler?.GetParsedVersion() is not null && log?.ApiVersionParsed is not null && log.ApiVersionParsed.IsNewerThan(errorHandler.GetParsedVersion());
 
     // get filters
     IDictionary<string, bool> defaultFilters = Enum
@@ -259,29 +253,10 @@ else if (log?.IsValid == true)
 @if (log?.IsValid == true)
 {
     <div id="output">
-        @if (outdatedMods.Any() || missingErrorHandler || hasOlderErrorHandler || isPyTkCompatibilityMode || log.IsStrictMode)
+        @if (outdatedMods.Any())
         {
             <h2>Suggested fixes</h2>
             <ul id="fix-list">
-                @if (missingErrorHandler)
-                {
-                    <li class="important">You don't have the <strong>Error Handler</strong> mod installed. This automatically prevents many game or mod errors. You can <a href="https://stardewvalleywiki.com/Modding:Player_Guide#Install_SMAPI">reinstall SMAPI</a> to re-add it.</li>
-                }
-                @if (hasOlderErrorHandler)
-                {
-                    <li>Your <strong>Error Handler</strong> mod is older than SMAPI. You may be missing some game/mod error fixes. You can <a href="https://stardewvalleywiki.com/Modding:Player_Guide#Install_SMAPI">reinstall SMAPI</a> to update it.</li>
-                }
-                @if (isPyTkCompatibilityMode)
-                {
-                    if (log.IsStrictMode)
-                    {
-                        <li>PyTK's image scaling isn't compatible with SMAPI strict mode.</li>
-                    }
-                    else
-                    {
-                        <li>PyTK 1.23.* or earlier isn't compatible with newer SMAPI performance optimizations. This may increase loading times or in-game lag.</li>
-                    }
-                }
                 @if (outdatedMods.Any())
                 {
                     <li>
@@ -330,10 +305,6 @@ else if (log?.IsValid == true)
                         </table>
                     </li>
                 }
-                @if (log.IsStrictMode)
-                {
-                    <li class="notice">SMAPI is running in 'strict mode', which removes all deprecated APIs. This can significantly improve performance, but some mods may not work. You can <a href="https://stardewvalleywiki.com/Modding:Player_Guide#Install_SMAPI">reinstall SMAPI</a> to disable it if you run into problems.</li>
-                }
             </ul>
         }
 
@@ -356,13 +327,7 @@ else if (log?.IsValid == true)
             </tr>
             <tr>
                 <th>SMAPI:</th>
-                <td v-pre>
-                    @log.ApiVersion
-                    @if (log.IsStrictMode)
-                    {
-                        <strong>(strict mode)</strong>
-                    }
-                </td>
+                <td v-pre>@log.ApiVersion</td>
             </tr>
             <tr>
                 <th>Folder:</th>

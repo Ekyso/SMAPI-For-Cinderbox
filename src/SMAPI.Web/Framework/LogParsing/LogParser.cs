@@ -234,13 +234,6 @@ public class LogParser
                         log.GameVersion = match.Groups["gameVersion"].Value;
                         log.OperatingSystem = match.Groups["os"].Value;
 
-                        const string strictModeSuffix = " (strict mode)";
-                        if (log.ApiVersion.EndsWith(strictModeSuffix))
-                        {
-                            log.IsStrictMode = true;
-                            log.ApiVersion = log.ApiVersion[..^strictModeSuffix.Length];
-                        }
-
                         smapiMod.OverrideVersion(log.ApiVersion);
                         log.ApiVersionParsed = smapiMod.GetParsedVersion();
                     }
