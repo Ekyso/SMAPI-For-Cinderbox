@@ -10,6 +10,7 @@
     * Fixed some JSON files breaking page layout.
   * Improved log parser:
     * Mods which failed to load are now shown in the mod list (with 'failed to load' in the error column).
+    * Added suggested fix if there's a newer SMAPI version available.
     * Reduced response times with a new analysis cache and client-side fetch.
     * Removed support for very old SMAPI logs.
     * You can now download a JSON representation of the parsed log (see the download link at the bottom of the log page).

@@ -150,6 +150,8 @@ public class LogParser
                             mods[name] = entries = [];
                         entries.Add(new LogModInfo(ModType.CodeMod, name: name, author: author, version: version, description: description, loaded: true));
 
+                        log.TotalCodeMods++;
+
                         message.Section = LogSection.ModsList;
                     }
 
@@ -172,6 +174,8 @@ public class LogParser
                         if (!mods.TryGetValue(name, out List<LogModInfo>? entries))
                             mods[name] = entries = [];
                         entries.Add(new LogModInfo(ModType.ContentPack, name: name, author: author, version: version, description: description, contentPackFor: forMod, loaded: true));
+
+                        log.TotalContentPacks++;
 
                         message.Section = LogSection.ContentPackList;
                     }
@@ -215,6 +219,7 @@ public class LogParser
                         foreach (LogModInfo entry in entries)
                             entry.SetUpdate(newVersion, link);
 
+                        log.HasModUpdates = true;
                         message.Section = LogSection.ModUpdateList;
                     }
                     else if (message.Level == LogLevel.Alert && this.SmapiUpdatePattern.IsMatch(message.Text))
@@ -224,6 +229,8 @@ public class LogParser
                         string link = match.Groups["link"].Value;
 
                         smapiMod.SetUpdate(version, link);
+
+                        log.HasApiUpdate = true;
                     }
 
                     // platform info line
@@ -235,7 +242,6 @@ public class LogParser
                         log.OperatingSystem = match.Groups["os"].Value;
 
                         smapiMod.OverrideVersion(log.ApiVersion);
-                        log.ApiVersionParsed = smapiMod.GetParsedVersion();
                     }
 
                     // mod path line

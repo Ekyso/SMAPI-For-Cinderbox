@@ -31,9 +31,6 @@ public class ParsedLog
     /// <summary>The SMAPI version.</summary>
     public string? ApiVersion { get; set; }
 
-    /// <summary>The parsed SMAPI version, if it's valid.</summary>
-    public ISemanticVersion? ApiVersionParsed { get; set; }
-
     /// <summary>The game version.</summary>
     public string? GameVersion { get; set; }
 
@@ -55,6 +52,18 @@ public class ParsedLog
     /// <summary>The log messages.</summary>
     public LogMessage[] Messages { get; set; } = [];
 
+    /// <summary>The number of loaded non-content-pack mods.</summary>
+    public int TotalCodeMods { get; set; }
+
+    /// <summary>The number of loaded content packs.</summary>
+    public int TotalContentPacks { get; set; }
+
+    /// <summary>Whether update alerts were detected for SMAPI itself.</summary>
+    public bool HasApiUpdate { get; set; }
+
+    /// <summary>Whether update alerts were detected for one or more installed mods.</summary>
+    public bool HasModUpdates { get; set; }
+
 
     /*********
     ** Public methods
@@ -74,7 +83,6 @@ public class ParsedLog
 
         // log data
         this.ApiVersion = log.ApiVersion;
-        this.ApiVersionParsed = log.ApiVersionParsed;
         this.GameVersion = log.GameVersion;
         this.OperatingSystem = log.OperatingSystem;
         this.GamePath = log.GamePath;
@@ -82,5 +90,9 @@ public class ParsedLog
         this.Timestamp = log.Timestamp;
         this.Mods = log.Mods;
         this.Messages = log.Messages;
+        this.TotalCodeMods = log.TotalCodeMods;
+        this.TotalContentPacks = log.TotalContentPacks;
+        this.HasApiUpdate = log.HasApiUpdate;
+        this.HasModUpdates = log.HasModUpdates;
     }
 }

@@ -232,10 +232,14 @@
     @* parsed log *@
     <div v-if="data.IsValid">
         @* suggested fixes *@
-        <div v-if="hasOutdatedMods">
+        <div v-if="data.HasApiUpdate || hasOutdatedMods">
             <h2>Suggested fixes</h2>
             <ul id="fix-list">
-                <li>
+                <li v-if="data.HasApiUpdate">
+                    You have an older version of SMAPI installed. Consider updating SMAPI to fix problems.
+                </li>
+
+                <li v-if="hasOutdatedMods">
                     Consider updating these mods to fix problems:
 
                     <table id="updates" class="table">
