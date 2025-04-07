@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Azure.Storage.Sas;
 using Microsoft.Extensions.Options;
 using StardewModdingAPI.Web.Framework.Clients.Pastebin;
 using StardewModdingAPI.Web.Framework.Compression;
@@ -53,16 +54,14 @@ internal class StorageProvider : IStorageProvider
     }
 
     /// <inheritdoc />
-    public async Task<UploadResult> SaveAsync(string content, bool compress = true)
+    public async Task<UploadResult> SaveAsync(string id, string content, bool compress = true)
     {
-        string id = Guid.NewGuid().ToString("N");
-
         // save to Azure
         if (this.HasAzure)
         {
             try
             {
-                using Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
+                await using Stream stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
                 BlobClient blob = this.GetAzureBlobClient(id);
                 await blob.UploadAsync(stream);
 
@@ -80,42 +79,53 @@ internal class StorageProvider : IStorageProvider
             string path = this.GetDevFilePath(id);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-            File.WriteAllText(path, content);
+            await File.WriteAllTextAsync(path, content);
             return new UploadResult(id, null);
         }
     }
 
     /// <inheritdoc />
-    public async Task<StoredFileInfo> GetAsync(string id, bool forceRenew)
+    public async Task<StoredFileInfo> GetAsync(string id, bool forceRenew, bool forceDownloadContent = false)
     {
         // fetch from blob storage
-        if (Guid.TryParseExact(id, "N", out Guid _))
+        bool isBlobStorage = id.StartsWith("parsed-")
+            ? Guid.TryParseExact(id.Substring("parsed-".Length), "N", out _)
+            : Guid.TryParseExact(id, "N", out _);
+        if (isBlobStorage)
         {
             // Azure Blob storage
             if (this.HasAzure)
             {
                 try
                 {
-                    // get client
-                    BlobClient blob = this.GetAzureBlobClient(id);
+                    // fetch metadata
+                    BlobClient blobClient = this.GetAzureBlobClient(id);
+                    Response<BlobProperties> properties = await blobClient.GetPropertiesAsync();
+                    DateTimeOffset lastModified = properties.Value.LastModified;
+                    DateTimeOffset oldExpiry = this.GetExpiry(lastModified);
 
-                    // fetch file
-                    Response<BlobDownloadInfo> response = await blob.DownloadAsync();
-                    using BlobDownloadInfo result = response.Value;
-                    using StreamReader reader = new(result.Content);
-                    DateTimeOffset oldExpiry = this.GetExpiry(result.Details.LastModified);
-                    string content = this.GzipHelper.DecompressString(await reader.ReadToEndAsync());
+                    // get content or URL file
+                    string? content = null;
+                    string? fetchUri = null;
+                    if (forceDownloadContent)
+                    {
+                        Response<BlobDownloadInfo> response = await blobClient.DownloadAsync();
+                        using StreamReader reader = new(response.Value.Content);
+                        content = this.GzipHelper.DecompressString(await reader.ReadToEndAsync());
+                    }
+                    else
+                        fetchUri = blobClient.GenerateSasUri(BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(5)).ToString();
 
                     // extend expiry if needed
                     DateTimeOffset newExpiry = oldExpiry;
-                    if (forceRenew || this.IsWithinAutoRenewalWindow(result.Details.LastModified))
+                    if (forceRenew || this.IsWithinAutoRenewalWindow(lastModified))
                     {
-                        await blob.SetMetadataAsync(new Dictionary<string, string> { ["expiryRenewed"] = DateTime.UtcNow.ToString("O") }); // change the blob's last-modified date (the specific property set doesn't matter)
+                        await blobClient.SetMetadataAsync(new Dictionary<string, string> { ["expiryRenewed"] = DateTime.UtcNow.ToString("O") }); // change the blob's last-modified date (the specific property set doesn't matter)
                         newExpiry = this.GetExpiry(DateTimeOffset.UtcNow);
                     }
 
                     // build model
-                    return new StoredFileInfo(content, oldExpiry, newExpiry);
+                    return new StoredFileInfo(fetchUri, content, oldExpiry, newExpiry);
                 }
                 catch (RequestFailedException ex)
                 {
@@ -135,9 +145,7 @@ internal class StorageProvider : IStorageProvider
                 if (file.Exists && file.LastWriteTimeUtc.AddDays(this.ExpiryDays) < DateTime.UtcNow) // expired
                     file.Delete();
                 if (!file.Exists)
-                {
                     return new StoredFileInfo(error: "There's no file with that ID.");
-                }
 
                 // renew
                 if (forceRenew)
@@ -148,7 +156,8 @@ internal class StorageProvider : IStorageProvider
 
                 // build model
                 return new StoredFileInfo(
-                    content: await File.ReadAllTextAsync(file.FullName),
+                    fetchUri: null,
+                    fetchedData: await File.ReadAllTextAsync(file.FullName),
                     oldExpiry: null,
                     newExpiry: DateTime.UtcNow.AddDays(this.ExpiryDays),
                     warning: "This file was saved temporarily to the local computer. This should only happen in a local development environment."
@@ -161,7 +170,7 @@ internal class StorageProvider : IStorageProvider
         {
             PasteInfo response = await this.Pastebin.GetAsync(id);
             response.Content = this.GzipHelper.DecompressString(response.Content);
-            return new StoredFileInfo(response.Content, null, null, error: response.Error);
+            return new StoredFileInfo(null, response.Content, null, null, error: response.Error);
         }
     }
 

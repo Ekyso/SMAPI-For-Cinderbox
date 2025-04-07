@@ -63,6 +63,59 @@ a {
     margin-bottom: 1em;
 }
 
+/*
+    Vue.js loading state
+
+    Loading indicator from loading.io, released un CC0 license.
+*/
+.loading-indicator {
+    display: inline-block;
+    position: relative;
+    width: 80px;
+    height: 80px;
+    color: #1c4c5b;
+    box-sizing: border-box;
+}
+
+.loading-indicator div {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    margin: 8px;
+    border: 8px solid currentColor;
+    border-radius: 50%;
+    animation: loading-indicator 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    border-color: currentColor transparent transparent transparent;
+}
+
+.loading-indicator div:nth-child(1) {
+    animation-delay: -0.45s;
+}
+
+.loading-indicator div:nth-child(2) {
+    animation-delay: -0.3s;
+}
+
+.loading-indicator div:nth-child(3) {
+    animation-delay: -0.15s;
+}
+
+@keyframes loading-indicator {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+[v-cloak] > *:not(.loading-indicator) {
+    display: none;
+}
+
 /* sidebar */
 #sidebar {
     margin-top: 3em;
@@ -111,7 +164,6 @@ a {
         width: auto;
     }
 }
-
 
 /* footer */
 #footer {

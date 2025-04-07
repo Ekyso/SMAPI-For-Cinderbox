@@ -54,4 +54,33 @@ public class ParsedLog
 
     /// <summary>The log messages.</summary>
     public LogMessage[] Messages { get; set; } = [];
+
+
+    /*********
+    ** Public methods
+    *********/
+    /// <summary>Construct an empty instance.</summary>
+    public ParsedLog() { }
+
+    /// <summary>Construct an instance.</summary>
+    /// <param name="log">The other log instance to copy.</param>
+    public ParsedLog(ParsedLog log)
+    {
+        // metadata
+        this.IsValid = log.IsValid;
+        this.Error = log.Error;
+        this.RawText = log.RawText;
+        this.IsSplitScreen = log.IsSplitScreen;
+
+        // log data
+        this.ApiVersion = log.ApiVersion;
+        this.ApiVersionParsed = log.ApiVersionParsed;
+        this.GameVersion = log.GameVersion;
+        this.OperatingSystem = log.OperatingSystem;
+        this.GamePath = log.GamePath;
+        this.ModPath = log.ModPath;
+        this.Timestamp = log.Timestamp;
+        this.Mods = log.Mods;
+        this.Messages = log.Messages;
+    }
 }

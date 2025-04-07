@@ -24,7 +24,7 @@ public class LogModInfo
     public string Author { get; }
 
     /// <summary>The mod version.</summary>
-    public string Version { get; private set; }
+    public string? Version { get; private set; }
 
     /// <summary>The mod description.</summary>
     public string Description { get; }

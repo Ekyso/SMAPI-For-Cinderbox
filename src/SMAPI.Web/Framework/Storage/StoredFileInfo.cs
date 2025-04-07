@@ -10,11 +10,13 @@ internal class StoredFileInfo
     ** Accessors
     *********/
     /// <summary>Whether the file was successfully fetched.</summary>
-    [MemberNotNullWhen(true, nameof(StoredFileInfo.Content))]
-    public bool Success => this.Content != null && this.Error == null;
+    public bool Success => (this.FetchedData != null || this.FetchUri != null) && this.Error == null;
 
-    /// <summary>The fetched file content (if <see cref="Success"/> is <c>true</c>).</summary>
-    public string? Content { get; }
+    /// <summary>The URI from which to fetch the file, if available.</summary>
+    public string? FetchUri { get; }
+
+    /// <summary>The pre-fetched data, if a <see name="FetchUri"/> can't be provided for this file.</summary>
+    public string? FetchedData { get; }
 
     /// <summary>When the file would no longer have been available, before any renewal applied in this request.</summary>
     public DateTimeOffset? OldExpiry { get; }
@@ -33,14 +35,16 @@ internal class StoredFileInfo
     ** Public methods
     *********/
     /// <summary>Construct an instance.</summary>
-    /// <param name="content">The fetched file content (if <see cref="Success"/> is <c>true</c>).</param>
+    /// <param name="fetchUri">The URI from which to fetch the file, if available.</param>
+    /// <param name="fetchedData">The pre-fetched data, if a <paramref name="fetchUri"/> can't be provided for this file.</param>
     /// <param name="oldExpiry">When the file would no longer have been available, before any renewal applied in this request.</param>
     /// <param name="newExpiry">When the file will no longer be available, after any renewal applied in this request.</param>
     /// <param name="warning">The error message if saving succeeded, but a non-blocking issue was encountered.</param>
     /// <param name="error">The error message if saving failed.</param>
-    public StoredFileInfo(string? content, DateTimeOffset? oldExpiry, DateTimeOffset? newExpiry, string? warning = null, string? error = null)
+    public StoredFileInfo(string? fetchUri, string? fetchedData, DateTimeOffset? oldExpiry, DateTimeOffset? newExpiry, string? warning = null, string? error = null)
     {
-        this.Content = content;
+        this.FetchUri = fetchUri;
+        this.FetchedData = fetchedData;
         this.OldExpiry = oldExpiry;
         this.NewExpiry = newExpiry;
         this.Warning = warning;

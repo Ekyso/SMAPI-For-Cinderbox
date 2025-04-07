@@ -3,13 +3,17 @@
 # Release notes
 ## Upcoming release
 * For the web UI:
-  * Improved JSON parser code display:
+  * Improved JSON parser:
     * You can now hover/click braces to highlight matching pairs.
     * You can now hover and click 'Copy' on the top-right to copy the full code to the clipboard.
     * Updated to newer syntax highlighting library.
     * Fixed some JSON files breaking page layout.
+  * Improved log parser:
+    * Mods which failed to load are now shown in the mod list (with 'failed to load' in the error column).
+    * Reduced response times with a new analysis cache and client-side fetch.
+    * Removed support for very old SMAPI logs.
+    * You can now download a JSON representation of the parsed log (see the download link at the bottom of the log page).
   * Third-party libraries are now served from `smapi.io` instead of external CDNs.
-  * Removed support for very old SMAPI logs.
 
 ## 4.2.1
 Released 25 March 2025 for Stardew Valley 1.6.14 or later.
