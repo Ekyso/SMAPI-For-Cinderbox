@@ -1,4 +1,4 @@
-&larr; [SMAPI](../README.md)
+&larr; [SMAPI](https://github.com/Pathoschild/SMAPI/blob/develop/docs/README.md)
 
 The **mod build package** is an open-source NuGet package which automates the MSBuild configuration
 for SMAPI mods and related tools. The package is fully compatible with Linux, macOS, and Windows.
@@ -155,7 +155,7 @@ The package runs code analysis on your mod and raises warnings for some common e
 specific to Stardew Valley modding.
 
 For example:  
-> ![](screenshots/code-analyzer-example.png)
+> ![screenshot](screenshots/code-analyzer-example.png)
 
 You can [hide the warnings](https://visualstudiomagazine.com/articles/2017/09/01/hide-compiler-warnings.aspx)
 if needed using the warning ID (shown under 'code' in Visual Studio's Error List).
@@ -328,6 +328,6 @@ The NuGet package is generated automatically in `StardewModdingAPI.ModBuildConfi
 when you compile it.
 
 ## See also
-* [Release notes](mod-package-release-notes.md)
+* [Release notes](https://github.com/Pathoschild/SMAPI/blob/develop/docs/technical/mod-package-release-notes.md)
 
 [Harmony]: https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Harmony
