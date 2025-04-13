@@ -3,11 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Newtonsoft.Json;
 using StardewModdingAPI.Toolkit;
-using StardewModdingAPI.Toolkit.Framework;
-using StardewModdingAPI.Toolkit.Serialization;
-using StardewModdingAPI.Toolkit.Serialization.Models;
 using StardewModdingAPI.Toolkit.Utilities;
 
 namespace StardewModdingAPI.ModBuildConfig.Framework;
@@ -56,30 +52,15 @@ internal class ContentPackFileManager : IModFileManager
             }
         }
 
-        // validate manifest
+        // load manifest
+        if (manifestEntry is null)
+            throw GetError($"it has no {BundleFile.ManifestFileName} file");
+        if (!ManifestHelper.TryLoadManifest(manifestEntry.File.FullName, out IManifest manifest, out string error))
+            throw GetError($"its {BundleFile.ManifestFileName} file is invalid: {error}");
+
+        // validate manifest version
         if (validateManifest)
         {
-            // get manifest file
-            if (manifestEntry is null)
-                throw GetError($"it has no {BundleFile.ManifestFileName} file");
-
-            // parse file
-            Manifest manifest;
-            try
-            {
-                new JsonHelper().ReadJsonFileIfExists(manifestEntry.File.FullName, out Manifest rawManifest);
-                manifest = rawManifest;
-            }
-            catch (JsonReaderException ex)
-            {
-                throw GetError($"its {BundleFile.ManifestFileName} file isn't valid JSON: {ex.InnerException?.Message ?? ex.Message}");
-            }
-
-            // validate manifest fields
-            if (!ManifestValidator.TryValidateFields(manifest, out string error))
-                throw GetError($"its {BundleFile.ManifestFileName} file is invalid: {error}");
-
-            // validate version
             if (version == null)
                 throw GetError("no Version value was provided");
             if (!SemanticVersion.TryParse(version, out ISemanticVersion requiredVersion))

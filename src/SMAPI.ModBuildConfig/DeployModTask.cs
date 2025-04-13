@@ -7,11 +7,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
-using Newtonsoft.Json;
 using StardewModdingAPI.ModBuildConfig.Framework;
-using StardewModdingAPI.Toolkit.Framework;
-using StardewModdingAPI.Toolkit.Serialization;
-using StardewModdingAPI.Toolkit.Serialization.Models;
 using StardewModdingAPI.Toolkit.Utilities;
 
 namespace StardewModdingAPI.ModBuildConfig;
@@ -87,33 +83,12 @@ public class DeployModTask : Task
         if (!this.EnableModDeploy && !this.EnableModZip)
             return true;
 
-        // validate the manifest file
-        IManifest manifest;
+        // read & validate manifest
+        string manifestPath = Path.Combine(this.ProjectDir, BundleFile.ManifestFileName);
+        if (!ManifestHelper.TryLoadManifest(manifestPath, out IManifest manifest, out string error))
         {
-            try
-            {
-                string manifestPath = Path.Combine(this.ProjectDir, BundleFile.ManifestFileName);
-                if (!new JsonHelper().ReadJsonFileIfExists(manifestPath, out Manifest rawManifest))
-                {
-                    this.Log.LogError($"[mod build package] The mod's {BundleFile.ManifestFileName} file doesn't exist.");
-                    return false;
-                }
-                manifest = rawManifest;
-            }
-            catch (JsonReaderException ex)
-            {
-                // log the inner exception, otherwise the message will be generic
-                Exception exToShow = ex.InnerException ?? ex;
-                this.Log.LogError($"[mod build package] The mod's {BundleFile.ManifestFileName} file isn't valid JSON: {exToShow.Message}");
-                return false;
-            }
-
-            // validate manifest fields
-            if (!ManifestValidator.TryValidateFields(manifest, out string error))
-            {
-                this.Log.LogError($"[mod build package] The mod's {BundleFile.ManifestFileName} file is invalid: {error}");
-                return false;
-            }
+            this.Log.LogError($"[mod build package] The mod's {BundleFile.ManifestFileName} is invalid: {error}");
+            return false;
         }
 
         // deploy files
