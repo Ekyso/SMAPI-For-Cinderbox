@@ -64,7 +64,7 @@ internal class LogParserController : Controller
         if (file.FetchedData != null)
         {
             fetchUri = null;
-            rawData = new LogParser().Parse(file.FetchedData);
+            rawData = JsonConvert.DeserializeObject<ParsedLog>(file.FetchedData);
         }
 
         // TEMPORARY: support logs created before 2025-04-07.
