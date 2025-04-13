@@ -7,11 +7,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
-using Newtonsoft.Json;
 using StardewModdingAPI.ModBuildConfig.Framework;
-using StardewModdingAPI.Toolkit.Framework;
-using StardewModdingAPI.Toolkit.Serialization;
-using StardewModdingAPI.Toolkit.Serialization.Models;
 using StardewModdingAPI.Toolkit.Utilities;
 
 namespace StardewModdingAPI.ModBuildConfig;
@@ -33,6 +29,10 @@ public class DeployModTask : Task
     /// <summary>The absolute or relative path to the folder which should contain the generated zip file.</summary>
     [Required]
     public string ModZipPath { get; set; }
+
+    /// <summary>The version number for the project assembly.</summary>
+    [Required]
+    public string ProjectVersion { get; set; }
 
     /// <summary>The folder containing the project files.</summary>
     [Required]
@@ -87,33 +87,12 @@ public class DeployModTask : Task
         if (!this.EnableModDeploy && !this.EnableModZip)
             return true;
 
-        // validate the manifest file
-        IManifest manifest;
+        // read & validate manifest
+        string manifestPath = Path.Combine(this.ProjectDir, BundleFile.ManifestFileName);
+        if (!ManifestHelper.TryLoadManifest(manifestPath, this.ProjectVersion, out IManifest manifest, out string overrideManifestJson, out string error))
         {
-            try
-            {
-                string manifestPath = Path.Combine(this.ProjectDir, "manifest.json");
-                if (!new JsonHelper().ReadJsonFileIfExists(manifestPath, out Manifest rawManifest))
-                {
-                    this.Log.LogError("[mod build package] The mod's manifest.json file doesn't exist.");
-                    return false;
-                }
-                manifest = rawManifest;
-            }
-            catch (JsonReaderException ex)
-            {
-                // log the inner exception, otherwise the message will be generic
-                Exception exToShow = ex.InnerException ?? ex;
-                this.Log.LogError($"[mod build package] The mod's manifest.json file isn't valid JSON: {exToShow.Message}");
-                return false;
-            }
-
-            // validate manifest fields
-            if (!ManifestValidator.TryValidateFields(manifest, out string error))
-            {
-                this.Log.LogError($"[mod build package] The mod's manifest.json file is invalid: {error}");
-                return false;
-            }
+            this.Log.LogError($"[mod build package] The mod's {BundleFile.ManifestFileName} is invalid: {error}");
+            return false;
         }
 
         // deploy files
@@ -128,7 +107,7 @@ public class DeployModTask : Task
 
             var modPackages = new Dictionary<string, IModFileManager>
             {
-                [this.ModFolderName] = new MainModFileManager(this.ProjectDir, this.TargetDir, ignoreFilePaths, ignoreFilePatterns, bundleAssemblyTypes, this.ModDllName, validateRequiredModFiles: this.EnableModDeploy || this.EnableModZip)
+                [this.ModFolderName] = new MainModFileManager(this.ProjectDir, this.TargetDir, ignoreFilePaths, ignoreFilePatterns, bundleAssemblyTypes, this.ModDllName, overrideManifestJson, validateRequiredModFiles: this.EnableModDeploy || this.EnableModZip)
             };
 
             if (this.ContentPacks != null)
@@ -158,7 +137,7 @@ public class DeployModTask : Task
                     this.Log.LogMessage(MessageImportance.High, $"[mod build package] Bundling content pack: {folderName} v{version} at {contentPath}.");
                     modPackages.Add(
                         folderName,
-                        new ContentPackFileManager(this.ProjectDir, contentPath, version, ignoreFilePaths, ignoreFilePatterns, validateManifest)
+                        new ContentPackFileManager(this.ProjectDir, contentPath, this.ProjectVersion, version, ignoreFilePaths, ignoreFilePatterns, validateManifest)
                     );
                 }
             }
@@ -299,21 +278,17 @@ public class DeployModTask : Task
     /// <param name="outputPath">The folder path to create with the mod files.</param>
     private void CreateModFolder(IDictionary<string, IModFileManager> modPackages, string outputPath)
     {
-        foreach (var mod in modPackages)
+        foreach (var pair in modPackages)
         {
-            string relativePath = modPackages.Count == 1
+            string folderName = pair.Key;
+            IModFileManager fileManager = pair.Value;
+
+            string folderPath = modPackages.Count == 1
                 ? outputPath
-                : Path.Combine(outputPath, this.EscapeInvalidFilenameCharacters(mod.Key));
+                : Path.Combine(outputPath, this.EscapeInvalidFilenameCharacters(folderName));
 
-            foreach (var file in mod.Value.GetFiles())
-            {
-                string fromPath = file.Value.FullName;
-                string toPath = Path.Combine(relativePath, file.Key);
-
-                Directory.CreateDirectory(Path.GetDirectoryName(toPath)!);
-
-                File.Copy(fromPath, toPath, overwrite: true);
-            }
+            foreach (BundleFile from in fileManager.GetFiles())
+                from.CopyToFolder(folderPath);
         }
     }
 
@@ -330,21 +305,19 @@ public class DeployModTask : Task
         foreach (var mod in modPackages)
         {
             string modFolder = this.EscapeInvalidFilenameCharacters(mod.Key);
-            foreach (var file in mod.Value.GetFiles())
+            foreach (BundleFile from in mod.Value.GetFiles())
             {
-                string relativePath = file.Key;
+                string relativePath = from.RelativePath;
+
                 if (relativePath.Contains('\\'))
                     relativePath = string.Join("/", PathUtilities.GetSegments(relativePath)); // zip files use forward slashes regardless of OS
-
-                FileInfo fileInfo = file.Value;
 
                 string archivePath = modPackages.Count == 1
                     ? $"{modFolder}/{relativePath}"
                     : $"{this.ModFolderName}/{modFolder}/{relativePath}";
 
-                using Stream fileStream = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read);
                 using Stream fileStreamInZip = archive.CreateEntry(archivePath).Open();
-                fileStream.CopyTo(fileStreamInZip);
+                from.CopyToStream(fileStreamInZip);
             }
         }
     }
