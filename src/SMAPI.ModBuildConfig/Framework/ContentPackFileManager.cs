@@ -24,39 +24,37 @@ internal class ContentPackFileManager : IModFileManager
     /// <summary>Construct an instance.</summary>
     /// <param name="projectDir">The folder containing the project files.</param>
     /// <param name="contentPackDir">The absolute or relative path to the content pack folder.</param>
+    /// <param name="projectVersion">The version number for the project assembly.</param>
     /// <param name="version">The mod version.</param>
     /// <param name="ignoreFilePaths">The custom relative file paths provided by the user to ignore.</param>
     /// <param name="ignoreFilePatterns">Custom regex patterns matching files to ignore when deploying or zipping the mod.</param>
     /// <param name="validateManifest">Whether to validate that the content pack's manifest is valid.</param>
     /// <exception cref="UserErrorException">The mod package isn't valid.</exception>
-    public ContentPackFileManager(string projectDir, string contentPackDir, string version, string[] ignoreFilePaths, Regex[] ignoreFilePatterns, bool validateManifest)
+    public ContentPackFileManager(string projectDir, string contentPackDir, string projectVersion, string version, string[] ignoreFilePaths, Regex[] ignoreFilePatterns, bool validateManifest)
     {
         // get folders
         DirectoryInfo projectDirInfo = new(Path.Combine(projectDir, contentPackDir));
         if (!projectDirInfo.Exists)
             throw GetError($"that folder doesn't exist at {projectDirInfo.FullName}");
 
+        // load manifest
+        string manifestPath = Path.Combine(contentPackDir, BundleFile.ManifestFileName);
+        if (!ManifestHelper.TryLoadManifest(manifestPath, projectVersion, out IManifest manifest, out string overrideManifestJson, out string error))
+            throw GetError($"its {BundleFile.ManifestFileName} file is invalid: {error}");
+
         // collect files
-        BundleFile manifestEntry = null;
         foreach (FileInfo file in projectDirInfo.GetFiles("*", SearchOption.AllDirectories))
         {
             string relativePath = PathUtilities.GetRelativePath(projectDirInfo.FullName, file.FullName);
 
-            if (!this.ShouldIgnore(file, relativePath, ignoreFilePaths, ignoreFilePatterns))
-            {
-                BundleFile entry = new(relativePath, file);
-                this.Files.Add(entry);
+            if (this.ShouldIgnore(file, relativePath, ignoreFilePaths, ignoreFilePatterns))
+                continue;
 
-                if (manifestEntry is null && entry.IsModManifest())
-                    manifestEntry = entry;
-            }
+            this.Files.Add(BundleFile.IsModManifest(relativePath)
+                ? new BundleFile(relativePath, file, overrideManifestJson)
+                : new BundleFile(relativePath, file)
+            );
         }
-
-        // load manifest
-        if (manifestEntry is null)
-            throw GetError($"it has no {BundleFile.ManifestFileName} file");
-        if (!ManifestHelper.TryLoadManifest(manifestEntry.File.FullName, out IManifest manifest, out string error))
-            throw GetError($"its {BundleFile.ManifestFileName} file is invalid: {error}");
 
         // validate manifest version
         if (validateManifest)

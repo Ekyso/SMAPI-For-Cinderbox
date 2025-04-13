@@ -66,9 +66,10 @@ internal class MainModFileManager : IModFileManager
     /// <param name="ignoreFilePatterns">Custom regex patterns matching files to ignore when deploying or zipping the mod.</param>
     /// <param name="bundleAssemblyTypes">The extra assembly types which should be bundled with the mod.</param>
     /// <param name="modDllName">The name (without extension or path) for the current mod's DLL.</param>
+    /// <param name="overrideManifestJson">If set, replace the mod's <samp>manifest.json</samp> file with this content.</param>
     /// <param name="validateRequiredModFiles">Whether to validate that required mod files like the manifest are present.</param>
     /// <exception cref="UserErrorException">The mod package isn't valid.</exception>
-    public MainModFileManager(string projectDir, string targetDir, string[] ignoreFilePaths, Regex[] ignoreFilePatterns, ExtraAssemblyTypes bundleAssemblyTypes, string modDllName, bool validateRequiredModFiles)
+    public MainModFileManager(string projectDir, string targetDir, string[] ignoreFilePaths, Regex[] ignoreFilePatterns, ExtraAssemblyTypes bundleAssemblyTypes, string modDllName, string overrideManifestJson, bool validateRequiredModFiles)
     {
         // validate paths
         if (!Directory.Exists(projectDir))
@@ -78,7 +79,7 @@ internal class MainModFileManager : IModFileManager
 
         // collect files
         BundleFile manifestEntry = null;
-        foreach (BundleFile entry in this.GetPossibleFiles(projectDir, targetDir))
+        foreach (BundleFile entry in this.GetPossibleFiles(projectDir, targetDir, overrideManifestJson))
         {
             if (!this.ShouldIgnore(entry.File, entry.RelativePath, ignoreFilePaths, ignoreFilePatterns, bundleAssemblyTypes, modDllName))
             {
@@ -116,8 +117,9 @@ internal class MainModFileManager : IModFileManager
     /// <summary>Get all files to include in the mod folder, not accounting for ignore patterns.</summary>
     /// <param name="projectDir">The folder containing the project files.</param>
     /// <param name="targetDir">The folder containing the build output.</param>
+    /// <param name="overrideManifestJson">If set, replace the mod's <samp>manifest.json</samp> file with this content.</param>
     /// <returns>Returns tuples containing the relative path within the mod folder, and the file to copy to it.</returns>
-    private IEnumerable<BundleFile> GetPossibleFiles(string projectDir, string targetDir)
+    private IEnumerable<BundleFile> GetPossibleFiles(string projectDir, string targetDir, string overrideManifestJson)
     {
         // project manifest
         bool hasProjectManifest = false;
@@ -125,7 +127,7 @@ internal class MainModFileManager : IModFileManager
             FileInfo manifest = new(Path.Combine(projectDir, BundleFile.ManifestFileName));
             if (manifest.Exists)
             {
-                yield return new BundleFile(BundleFile.ManifestFileName, manifest);
+                yield return new BundleFile(BundleFile.ManifestFileName, manifest, overrideManifestJson);
                 hasProjectManifest = true;
             }
         }

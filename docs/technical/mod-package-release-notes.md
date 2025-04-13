@@ -2,6 +2,7 @@
 
 ## Release notes
 ## Upcoming release
+* Added `%ProjectVersion%` [token you can use in `manifest.json` files](mod-package.md#manifest-tokens).
 * Revamped [package documentation](mod-package.md).  
   _This makes it easier to see the features at a glance, and collects the info for each feature into one place._
 

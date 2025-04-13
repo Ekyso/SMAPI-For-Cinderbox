@@ -10,6 +10,7 @@ for SMAPI mods and related tools. The package is fully compatible with Linux, ma
   * [Install and debug your mod](#install-and-debug-your-mod)
   * [Release zip](#release-zip)
   * [Bundled content packs](#bundled-content-packs)
+  * [Manifest tokens](#manifest-tokens)
   * [Code warnings](#code-warnings)
   * [Unit tests](#unit-tests)
   * [Other features](#other-features)
@@ -124,6 +125,30 @@ property                | effect
 `ValidateManifest`      | _(Optional)_ Whether to validate that the included mod has a valid `manifest.json` file and version. Default `true`.
 `IgnoreModFilePaths`    | _(Optional)_ A list of file paths to ignore (relative to the content pack's directory); see `IgnoreModFilePaths` in the main settings. Default none.
 `IgnoreModFilePatterns` | _(Optional)_ A list of file regex patterns to ignore (relative to the content pack's directory); see `IgnoreModFilePatterns` in the main settings. Default none.
+
+### Manifest tokens
+It's best practices in .NET to set the code version in your `.csproj` project file. For example:
+```xml
+<PropertyGroup>
+    <Version>1.0.0</Version>
+</PropertyGroup>
+```
+
+If you do, you can use `%ProjectVersion%` in your [`manifest.json`](https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Manifest).
+This will be replaced with your project version automatically in your [game folder](#deploy) and [the release zip](#release-zip).
+
+For example:
+```js
+{
+    "Name": "Your Mod Name",
+    "Author": "Your Name",
+    "Version": "%ProjectVersion%",
+    ...
+}
+```
+
+This also works with [bundled content packs](#bundled-content-packs). When your mod consists of
+multiple parts, this lets you keep their versions in sync automatically.
 
 ### Code warnings
 The package runs code analysis on your mod and raises warnings for some common errors or pitfalls

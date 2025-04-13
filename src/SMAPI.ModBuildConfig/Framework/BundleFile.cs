@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 
 namespace StardewModdingAPI.ModBuildConfig.Framework;
 
@@ -18,6 +19,8 @@ internal class BundleFile
     /// <summary>The file to copy from.</summary>
     public FileInfo File { get; }
 
+    /// <summary>If set, deploy this content instead of copying the original file.</summary>
+    public string OverrideContent { get; }
 
     /*********
     ** Public methods
@@ -25,10 +28,12 @@ internal class BundleFile
     /// <summary>Construct an instance.</summary>
     /// <param name="relativePath">The file's relative path within the mod.</param>
     /// <param name="file">The file to copy from.</param>
-    public BundleFile(string relativePath, FileInfo file)
+    /// <param name="overrideContent">If set, deploy this content instead of copying the original file.</param>
+    public BundleFile(string relativePath, FileInfo file, string overrideContent = null)
     {
         this.RelativePath = relativePath;
         this.File = file;
+        this.OverrideContent = overrideContent;
     }
 
     /// <summary>Get whether this entry is for the mod's <samp>manifest.json</samp> file.</summary>
@@ -44,14 +49,21 @@ internal class BundleFile
         string toPath = Path.Combine(folderPath, this.RelativePath);
 
         Directory.CreateDirectory(Path.GetDirectoryName(toPath)!);
-        this.File.CopyTo(toPath, overwrite: true);
+
+        if (this.OverrideContent != null)
+            System.IO.File.WriteAllText(toPath, this.OverrideContent, Encoding.UTF8);
+        else
+            this.File.CopyTo(toPath, overwrite: true);
     }
 
     /// <summary>Copy the file's contents into a stream.</summary>
     /// <param name="stream">The stream into which to write the file's contents.</param>
     public void CopyToStream(Stream stream)
     {
-        using FileStream fromStream = this.File.OpenRead();
+        using Stream fromStream = this.OverrideContent != null
+            ? new MemoryStream(Encoding.UTF8.GetBytes(this.OverrideContent))
+            : this.File.OpenRead();
+
         fromStream.CopyTo(stream);
     }
 

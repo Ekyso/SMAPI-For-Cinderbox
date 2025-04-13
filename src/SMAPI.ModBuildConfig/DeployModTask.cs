@@ -30,6 +30,10 @@ public class DeployModTask : Task
     [Required]
     public string ModZipPath { get; set; }
 
+    /// <summary>The version number for the project assembly.</summary>
+    [Required]
+    public string ProjectVersion { get; set; }
+
     /// <summary>The folder containing the project files.</summary>
     [Required]
     public string ProjectDir { get; set; }
@@ -85,7 +89,7 @@ public class DeployModTask : Task
 
         // read & validate manifest
         string manifestPath = Path.Combine(this.ProjectDir, BundleFile.ManifestFileName);
-        if (!ManifestHelper.TryLoadManifest(manifestPath, out IManifest manifest, out string error))
+        if (!ManifestHelper.TryLoadManifest(manifestPath, this.ProjectVersion, out IManifest manifest, out string overrideManifestJson, out string error))
         {
             this.Log.LogError($"[mod build package] The mod's {BundleFile.ManifestFileName} is invalid: {error}");
             return false;
@@ -103,7 +107,7 @@ public class DeployModTask : Task
 
             var modPackages = new Dictionary<string, IModFileManager>
             {
-                [this.ModFolderName] = new MainModFileManager(this.ProjectDir, this.TargetDir, ignoreFilePaths, ignoreFilePatterns, bundleAssemblyTypes, this.ModDllName, validateRequiredModFiles: this.EnableModDeploy || this.EnableModZip)
+                [this.ModFolderName] = new MainModFileManager(this.ProjectDir, this.TargetDir, ignoreFilePaths, ignoreFilePatterns, bundleAssemblyTypes, this.ModDllName, overrideManifestJson, validateRequiredModFiles: this.EnableModDeploy || this.EnableModZip)
             };
 
             if (this.ContentPacks != null)
@@ -133,7 +137,7 @@ public class DeployModTask : Task
                     this.Log.LogMessage(MessageImportance.High, $"[mod build package] Bundling content pack: {folderName} v{version} at {contentPath}.");
                     modPackages.Add(
                         folderName,
-                        new ContentPackFileManager(this.ProjectDir, contentPath, version, ignoreFilePaths, ignoreFilePatterns, validateManifest)
+                        new ContentPackFileManager(this.ProjectDir, contentPath, this.ProjectVersion, version, ignoreFilePaths, ignoreFilePatterns, validateManifest)
                     );
                 }
             }
@@ -274,13 +278,16 @@ public class DeployModTask : Task
     /// <param name="outputPath">The folder path to create with the mod files.</param>
     private void CreateModFolder(IDictionary<string, IModFileManager> modPackages, string outputPath)
     {
-        foreach (var mod in modPackages)
+        foreach (var pair in modPackages)
         {
+            string folderName = pair.Key;
+            IModFileManager fileManager = pair.Value;
+
             string folderPath = modPackages.Count == 1
                 ? outputPath
-                : Path.Combine(outputPath, this.EscapeInvalidFilenameCharacters(mod.Key));
+                : Path.Combine(outputPath, this.EscapeInvalidFilenameCharacters(folderName));
 
-            foreach (BundleFile from in mod.Value.GetFiles())
+            foreach (BundleFile from in fileManager.GetFiles())
                 from.CopyToFolder(folderPath);
         }
     }
