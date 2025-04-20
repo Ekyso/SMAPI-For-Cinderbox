@@ -2,6 +2,9 @@
 
 # Release notes
 ## Upcoming release
+* For players:
+  * Improved content load performance for non-English players.
+
 * For the web UI:
   * Improved JSON parser:
     * You can now hover/click braces to highlight matching pairs.
