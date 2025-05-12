@@ -108,7 +108,7 @@
             "type": "array",
             "items": {
                 "type": "string",
-                "pattern": "^(?i)(Chucklefish:\\d+|Nexus:\\d+|GitHub:[A-Za-z0-9_\\-\\.]+/[A-Za-z0-9_\\-]+|ModDrop:\\d+)(?: *@ *[a-zA-Z0-9_]+ *)?$",
+                "pattern": "^(?i)(Chucklefish:\\d+|Nexus:\\d+|GitHub:[A-Za-z0-9_\\-\\.]+/[A-Za-z0-9_\\-]+|ModDrop:\\d+|CurseForge:\\d+)(?: *@ *[a-zA-Z0-9_]+ *)?$",
                 "@errorMessages": {
                     "pattern": "Invalid update key; see https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Manifest#Update_checks for more info."
                 }
