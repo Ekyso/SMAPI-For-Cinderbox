@@ -4,6 +4,7 @@
 ## Upcoming release
 * For players:
   * Improved content load performance for non-English players.
+  * Fixed some community shortcuts breaking if a mod edited the map which contains them.
 
 * For the web UI:
   * Improved JSON parser:
