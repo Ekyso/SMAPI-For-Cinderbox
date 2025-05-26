@@ -8,7 +8,6 @@ using StardewValley;
 using xTile;
 using xTile.Dimensions;
 using xTile.Layers;
-using xTile.ObjectModel;
 using xTile.Tiles;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
@@ -91,7 +90,7 @@ internal class AssetDataForMap : AssetData<Map>, IAssetDataForMap
 
                 // add tilesheet
                 targetSheet = new TileSheet(id, target, sourceSheet.ImageSource, sourceSheet.SheetSize, sourceSheet.TileSize);
-                this.Reflection.GetField<PropertyCollection>(targetSheet, "m_propertyCollection").SetValue((PropertyCollection)sourceSheet.Properties);
+                targetSheet.Properties.CopyFrom(sourceSheet.Properties);
                 target.AddTileSheet(targetSheet);
             }
 
