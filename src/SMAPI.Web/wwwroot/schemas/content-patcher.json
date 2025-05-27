@@ -634,7 +634,7 @@
                 }
             },
             "additionalProperties": {
-                "type": [ "boolean", "integer", "string" ]
+                "type": [ "boolean", "integer", "number", "string" ]
             }
         },
         "Position": {
