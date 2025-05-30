@@ -199,7 +199,7 @@ smapi.logParser = async function (state) {
 
     // parse log date
     state.logStarted = new Date(state.data.Timestamp);
-    state.logStartedUtcStr = `${state.logStarted.getUTCFullYear()}-${String(state.logStarted.getUTCMonth()).padStart(2, "0")}-${String(state.logStarted.getUTCDate()).padStart(2, "0")} ${String(state.logStarted.getUTCHours()).padStart(2, "0")}:${String(state.logStarted.getUTCMinutes()).padStart(2, "0")}`;
+    state.logStartedUtcStr = `${state.logStarted.getUTCFullYear()}-${String(state.logStarted.getUTCMonth() + 1).padStart(2, "0")}-${String(state.logStarted.getUTCDate()).padStart(2, "0")} ${String(state.logStarted.getUTCHours()).padStart(2, "0")}:${String(state.logStarted.getUTCMinutes()).padStart(2, "0")}`;
     state.logStartedLocalTimeStr = `${String(state.logStarted.getHours()).padStart(2, "0")}:${String(state.logStarted.getMinutes()).padStart(2, "0")}`;
 
     // parse data
