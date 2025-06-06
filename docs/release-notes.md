@@ -9,6 +9,9 @@
 * For mod authors:
   * You can now have an `en.json` translation file which overrides `default.json`.
   * Improved [Content Patcher JSON schema](technical/web.md#using-a-schema-file-directly) to allow decimal values in local tokens (thanks to rikai!) and update for Content Patcher 2.7.0.
+  * Updated dependencies, including...
+    * [FluentHttpClient](https://github.com/Pathoschild/FluentHttpClient#readme) 4.4.1 → 4.4.2 (see [changes](https://github.com/Pathoschild/FluentHttpClient/blob/develop/RELEASE-NOTES.md#442));
+    * [Pintail](https://github.com/Nanoray-pl/Pintail) 2.6.1 → 2.8.1 (see [changes](https://github.com/Nanoray-pl/Pintail/blob/master/docs/release-notes.md#260)).
 
 * For the web UI:
   * Improved JSON parser:
