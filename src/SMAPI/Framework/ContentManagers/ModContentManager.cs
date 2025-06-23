@@ -413,8 +413,19 @@ internal sealed class ModContentManager : BaseContentManager
 
             // validate tilesheet path
             string errorPrefix = $"{this.ModName} loaded map '{relativeMapPath}' with invalid tilesheet path '{imageSource}'.";
-            if (Path.IsPathRooted(imageSource) || PathUtilities.GetSegments(imageSource).Contains(".."))
-                throw new SContentLoadException(ContentLoadErrorType.InvalidData, $"{errorPrefix} Tilesheet paths must be a relative path without directory climbing (../).");
+            if (Path.IsPathRooted(imageSource))
+                throw new SContentLoadException(ContentLoadErrorType.InvalidData, $"{errorPrefix} Tilesheet paths must not be an absolute path ({Path.GetPathRoot(imageSource)}).");
+
+            string[] imageSourcePathSegments = PathUtilities.GetSegments(imageSource);
+            if (imageSourcePathSegments.Contains(".."))
+            {
+                int climbingCount = imageSourcePathSegments.Count(segment => segment.Equals("..", StringComparison.OrdinalIgnoreCase));
+                if (climbingCount > 1)
+                {
+                    string[] offendingSegments = imageSourcePathSegments.TakeWhile(seg => seg.Equals("..")).ToArray();
+                    throw new SContentLoadException(ContentLoadErrorType.InvalidData, $"{errorPrefix} Tilesheet paths must not climb more than one directory ({string.Join('/', offendingSegments)}/).");
+                }
+            }
 
             // load best match
             try
@@ -467,8 +478,8 @@ internal sealed class ModContentManager : BaseContentManager
                 relativePath = Path.Combine(Path.GetDirectoryName(relativePath) ?? "", filename.TrimStart('.'));
         }
 
-        // get relative to map file
-        {
+        // get relative to map file unless path has directory climbing
+        if (!PathUtilities.GetSegments(relativePath).Contains("..")) {
             string localKey = Path.Combine(modRelativeMapFolder, relativePath);
             if (this.GetModFile<Texture2D>(localKey).Exists)
             {
@@ -524,8 +535,12 @@ internal sealed class ModContentManager : BaseContentManager
         string key = relativePath;
         string topFolder = PathUtilities.GetSegments(key, limit: 2)[0];
 
-        // convert image source relative to map file into asset key
-        if (!topFolder.Equals("Maps", StringComparison.OrdinalIgnoreCase))
+        // remove previously validated directory climbing if it exists
+        if (topFolder.Equals("..", StringComparison.OrdinalIgnoreCase))
+            key = key[2..];
+
+        // else convert image source relative to map file into asset key
+        else if (!topFolder.Equals("Maps", StringComparison.OrdinalIgnoreCase))
             key = Path.Combine("Maps", key);
 
         // remove file extension from unpacked file
