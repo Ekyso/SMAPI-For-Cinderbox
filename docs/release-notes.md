@@ -9,7 +9,6 @@
 * For mod authors:
   * Added `helper.ModRegistry.GetFromNamespacedId` method to get a mod given a [standard namespaced ID](https://stardewvalleywiki.com/Modding:Common_data_field_types#Unique_string_ID) (e.g. an item ID).
   * You can now have an `en.json` translation file which overrides `default.json`.
-  * Improved [Content Patcher JSON schema](technical/web.md#using-a-schema-file-directly) to allow decimal values in local tokens (thanks to rikai!) and update for Content Patcher 2.7.0.
   * Updated dependencies, including...
     * [Mono.Cecil](https://github.com/jbevain/cecil) 0.11.5 → 0.11.6 (see [changes](https://github.com/jbevain/cecil/compare/0.11.5...0.11.6));
     * [FluentHttpClient](https://github.com/Pathoschild/FluentHttpClient#readme) 4.4.1 → 4.4.2 (see [changes](https://github.com/Pathoschild/FluentHttpClient/blob/develop/RELEASE-NOTES.md#442));
@@ -30,6 +29,10 @@
     * Removed support for very old SMAPI logs.
     * You can now download a JSON representation of the parsed log (see the download link at the bottom of the log page).
     * Fixed server error if a JSON file contains nested comment syntax.
+  * Improved [JSON schemas](technical/web.md#using-a-schema-file-directly):
+    * The Content Patcher JSON schema now allows decimal values in local tokens (thanks to rikai!).
+    * The `$schema` value is no longer validated.
+    * Updated Content Patcher schema for Content Patcher 2.7.0.
   * Improved mod compatibility list:
     * Reduced response times with a new cache and client-side fetch.
     * Fixed sort order for mods with non-Latin characters in the name.

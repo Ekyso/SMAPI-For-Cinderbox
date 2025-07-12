@@ -117,8 +117,7 @@
         "$schema": {
             "title": "Schema",
             "description": "A reference to this JSON schema. Not part of the actual format, but useful for validation tools.",
-            "type": "string",
-            "const": "https://smapi.io/schemas/manifest.json"
+            "type": "string"
         }
     },
     "definitions": {
