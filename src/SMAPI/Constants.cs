@@ -49,7 +49,7 @@ internal static class EarlyConstants
     internal static int? LogScreenId { get; set; }
 
     /// <summary>SMAPI's current raw semantic version.</summary>
-    internal static string RawApiVersion = "4.3.0";
+    internal static string RawApiVersion = "4.3.1";
 }
 
 /// <summary>Contains SMAPI's constants and assumptions.</summary>
