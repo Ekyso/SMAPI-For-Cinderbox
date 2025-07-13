@@ -1,7 +1,9 @@
 ← [README](README.md)
 
 # Release notes
-## Upcoming release
+## 4.3.0
+Released 12 July 2025 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/133992196).
+
 * For players:
   * Added 'malicious mod' blacklist.  
     _Once a malicious mod has been reported, this lets us quickly block it for all players. This helps mitigate damage in case of future attacks. This feature can be disabled in the SMAPI settings if needed._
@@ -18,7 +20,7 @@
 
 * For the web UI:
   * Increased default upload expiry from 30 to 60 days, to help avoid expired SMAPI logs when mod authors check messages monthly.
-  * Improved JSON parser:
+  * Improved JSON validator:
     * You can now hover/click braces to highlight matching pairs.
     * You can now hover and click 'Copy' on the top-right to copy the full code to the clipboard.
     * Updated to newer syntax highlighting library.
