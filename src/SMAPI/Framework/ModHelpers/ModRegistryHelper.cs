@@ -85,7 +85,7 @@ internal class ModRegistryHelper : BaseHelper, IModRegistry
             }
         }
 
-        return null;
+        return mod;
     }
 
     /// <inheritdoc />
