@@ -1,6 +1,10 @@
 ← [README](README.md)
 
 # Release notes
+## Upcoming release
+* For players:
+  * Improved performance when mods edit maps (thanks to SinZ!).
+
 ## 4.3.0
 Released 12 July 2025 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/133992196).
 
