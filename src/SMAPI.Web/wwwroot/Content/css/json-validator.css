@@ -22,6 +22,34 @@
 
 
 /*********
+** Code block
+*********/
+#code {
+    max-width: calc(
+        100vw
+        - 10px /* #output padding */
+        - 1em  /* #content padding */
+        - 1px  /* #content border */
+        - 10em /* #content-column position */
+        - 3em /* scrollbar */
+    );
+    overflow-x: scroll;
+}
+
+@media (min-width: 1020px) and (max-width: 1199px) {
+    #code {
+        max-width: calc(100vw - 10px - 1em - 1px - 7em - 3em); /* #content-column reduced to 7em */
+    }
+}
+
+@media (max-width: 1019px) {
+    #code {
+        max-width: calc(100vw - 10px - 1em - 1px - 0em - 2em); /* #content-column moved to 0em */
+    }
+}
+
+
+/*********
 ** Result banner
 *********/
 .banner {

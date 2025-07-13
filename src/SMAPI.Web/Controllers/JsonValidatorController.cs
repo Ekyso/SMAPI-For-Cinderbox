@@ -82,10 +82,10 @@ internal class JsonValidatorController : Controller
         this.Response.Headers["X-Robots-Tag"] = "noindex";
 
         // fetch raw JSON
-        StoredFileInfo file = await this.Storage.GetAsync(id!, renew);
-        if (string.IsNullOrWhiteSpace(file.Content))
+        StoredFileInfo file = await this.Storage.GetAsync(id!, renew, forceDownloadContent: true);
+        if (string.IsNullOrWhiteSpace(file.FetchedData))
             return this.View("Index", result.SetUploadError("The JSON file seems to be empty."));
-        result.SetContent(file.Content, oldExpiry: file.OldExpiry, newExpiry: file.NewExpiry, uploadWarning: file.Warning);
+        result.SetContent(file.FetchedData, oldExpiry: file.OldExpiry, newExpiry: file.NewExpiry, uploadWarning: file.Warning);
 
         // skip parsing if we're going to the edit screen
         if (isEditView)
@@ -102,7 +102,7 @@ internal class JsonValidatorController : Controller
             };
             try
             {
-                parsed = JToken.Parse(file.Content, settings);
+                parsed = JToken.Parse(file.FetchedData, settings);
             }
             catch (JsonReaderException ex)
             {
@@ -110,9 +110,19 @@ internal class JsonValidatorController : Controller
             }
 
             // format JSON
-            string formatted = parsed.ToString(Formatting.Indented);
-            result.SetContent(formatted, oldExpiry: file.OldExpiry, newExpiry: file.NewExpiry, uploadWarning: file.Warning);
-            parsed = JToken.Parse(formatted); // update line number references
+            try
+            {
+                string formatted = parsed.ToString(Formatting.Indented);
+                result.SetContent(formatted, oldExpiry: file.OldExpiry, newExpiry: file.NewExpiry, uploadWarning: file.Warning);
+                parsed = JToken.Parse(formatted); // update line number references
+            }
+            catch
+            {
+                // In rare cases, Json.NET will convert valid JSON to invalid JSON. For example,
+                // it will change `// remove /* */` to /*remove /* */*/` so it can't be parsed
+                // anymore. If that happens, just keep the JSON as-is; at worst line numbers will
+                // be slightly off if there are schema errors.
+            }
         }
 
         // skip if no schema selected
@@ -159,12 +169,13 @@ internal class JsonValidatorController : Controller
             return this.View("Index", this.GetModel(null, schemaName, isEditView: true).SetUploadError("The JSON file seems to be empty."));
 
         // upload file
-        UploadResult result = await this.Storage.SaveAsync(input);
+        string id = Guid.NewGuid().ToString("N");
+        UploadResult result = await this.Storage.SaveAsync(id, input, "application/json");
         if (!result.Succeeded)
-            return this.View("Index", this.GetModel(result.ID, schemaName, isEditView: true).SetContent(input, null, null).SetUploadError(result.UploadError));
+            return this.View("Index", this.GetModel(id, schemaName, isEditView: true).SetContent(input, null, null).SetUploadError(result.UploadError));
 
         // redirect to view
-        return this.Redirect(this.Url.PlainAction("Index", "JsonValidator", new { schemaName, id = result.ID })!);
+        return this.Redirect(this.Url.PlainAction("Index", "JsonValidator", new { schemaName, id })!);
     }
 
 

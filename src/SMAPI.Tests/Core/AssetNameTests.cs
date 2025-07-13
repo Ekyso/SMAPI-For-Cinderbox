@@ -328,6 +328,6 @@ internal class AssetNameTests
 
         // assert a collision frequency under 0.1%
         float collisionFrequency = 1 - (hashCodes.Count / (names.Count * 1f));
-        collisionFrequency.Should().BeLessOrEqualTo(0.001f, "hash codes should be relatively distinct with a collision rate under 0.1% for a small sample set");
+        collisionFrequency.Should().BeLessThanOrEqualTo(0.001f, "hash codes should be relatively distinct with a collision rate under 0.1% for a small sample set");
     }
 }

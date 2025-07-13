@@ -14,9 +14,9 @@
             "title": "Format version",
             "description": "The format version. You should always use the latest version to enable the latest features, avoid obsolete behavior, and reduce load times.",
             "type": "string",
-            "pattern": "^2\\.6\\.[0-9]+$",
+            "pattern": "^2\\.7\\.[0-9]+$",
             "@errorMessages": {
-                "pattern": "Incorrect value '@value'. You should always use the latest format version (currently 2.6.0) to enable the latest features, avoid obsolete behavior, and reduce load times."
+                "pattern": "Incorrect value '@value'. You should always use the latest format version (currently 2.7.0) to enable the latest features, avoid obsolete behavior, and reduce load times."
             }
         },
         "ConfigSchema": {
@@ -614,8 +614,7 @@
         "$schema": {
             "title": "Schema",
             "description": "A reference to this JSON schema. Not part of the actual format, but useful for validation tools.",
-            "type": "string",
-            "const": "https://smapi.io/schemas/content-patcher.json"
+            "type": "string"
         }
     },
     "definitions": {
@@ -634,7 +633,7 @@
                 }
             },
             "additionalProperties": {
-                "type": [ "boolean", "integer", "string" ]
+                "type": [ "boolean", "integer", "number", "string" ]
             }
         },
         "Position": {

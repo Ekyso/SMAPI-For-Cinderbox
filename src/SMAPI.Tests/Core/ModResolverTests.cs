@@ -10,6 +10,7 @@ using StardewModdingAPI;
 using StardewModdingAPI.Framework;
 using StardewModdingAPI.Framework.ModLoading;
 using StardewModdingAPI.Toolkit;
+using StardewModdingAPI.Toolkit.Framework.ModBlacklistData;
 using StardewModdingAPI.Toolkit.Framework.ModData;
 using StardewModdingAPI.Toolkit.Serialization.Models;
 using StardewModdingAPI.Toolkit.Utilities.PathLookups;
@@ -35,7 +36,7 @@ public class ModResolverTests
         Directory.CreateDirectory(rootFolder);
 
         // act
-        IModMetadata[] mods = new ModResolver().ReadManifests(new ModToolkit(), rootFolder, new ModDatabase(), useCaseInsensitiveFilePaths: true).ToArray();
+        IModMetadata[] mods = new ModResolver().ReadManifests(new ModToolkit(), rootFolder, new ModBlacklist(), new ModDatabase(), useCaseInsensitiveFilePaths: true).ToArray();
 
         // assert
         mods.Should().BeEmpty("it should match number of mods input");
@@ -53,7 +54,7 @@ public class ModResolverTests
         Directory.CreateDirectory(modFolder);
 
         // act
-        IModMetadata[] mods = new ModResolver().ReadManifests(new ModToolkit(), rootFolder, new ModDatabase(), useCaseInsensitiveFilePaths: true).ToArray();
+        IModMetadata[] mods = new ModResolver().ReadManifests(new ModToolkit(), rootFolder, new ModBlacklist(), new ModDatabase(), useCaseInsensitiveFilePaths: true).ToArray();
         IModMetadata? mod = mods.FirstOrDefault();
 
         // assert
@@ -96,13 +97,13 @@ public class ModResolverTests
         File.WriteAllText(filename, JsonConvert.SerializeObject(original));
 
         // act
-        IModMetadata[] mods = new ModResolver().ReadManifests(new ModToolkit(), rootFolder, new ModDatabase(), useCaseInsensitiveFilePaths: true).ToArray();
+        IModMetadata[] mods = new ModResolver().ReadManifests(new ModToolkit(), rootFolder, new ModBlacklist(), new ModDatabase(), useCaseInsensitiveFilePaths: true).ToArray();
         IModMetadata? mod = mods.FirstOrDefault();
 
         // assert
         mods.Should().HaveCount(1, "it should match number of mods input");
         mod.Should().NotBeNull();
-        mod!.DataRecord.Should().BeNull("we didn't provide one");
+        mod.DataRecord.Should().BeNull("we didn't provide one");
         mod.DirectoryPath.Should().Be(modFolder);
         mod.Error.Should().BeNull();
         mod.Status.Should().Be(ModMetadataStatus.Found);

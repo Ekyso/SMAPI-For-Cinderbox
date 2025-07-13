@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 using StardewModdingAPI.Toolkit.Utilities;
 using StardewModdingAPI.Web.Framework;
 using StardewModdingAPI.Web.Framework.LogParsing;
@@ -56,8 +57,31 @@ internal class LogParserController : Controller
         // don't index uploaded logs in search engines
         this.Response.Headers["X-Robots-Tag"] = "noindex";
 
-        // fetch log
-        StoredFileInfo file = await this.Storage.GetAsync(id, renew);
+        // fetch log info
+        StoredFileInfo file = await this.Storage.GetAsync($"parsed-{id}", renew);
+        string? fetchUri = file.FetchUri;
+        ParsedLog? rawData = null;
+        if (file.FetchedData != null)
+        {
+            fetchUri = null;
+            rawData = JsonConvert.DeserializeObject<ParsedLog>(file.FetchedData);
+        }
+
+        // TEMPORARY: support logs created before 2025-04-07.
+        if (!file.Success)
+        {
+            StoredFileInfo fallbackFile = await this.Storage.GetAsync(id, renew, forceDownloadContent: true);
+            if (fallbackFile.Success)
+            {
+                file = fallbackFile;
+                fetchUri = null;
+                rawData = new LogParser().Parse(file.FetchedData);
+            }
+        }
+
+        // wrap error if no data available
+        if (fetchUri is null)
+            rawData ??= new ParsedLog { Error = file.Error ?? "An unknown error occurred." };
 
         // render view
         switch (format)
@@ -65,16 +89,20 @@ internal class LogParserController : Controller
             case LogViewFormat.Default:
             case LogViewFormat.RawView:
                 {
-                    ParsedLog log = file.Success
-                        ? new LogParser().Parse(file.Content)
-                        : new ParsedLog { IsValid = false, Error = file.Error };
-
-                    return this.View("Index", this.GetModel(id, uploadWarning: file.Warning, oldExpiry: file.OldExpiry, newExpiry: file.NewExpiry).SetResult(log, showRaw: format == LogViewFormat.RawView));
+                    LogParserModel model = this
+                        .GetModel(id, uploadWarning: file.Warning, oldExpiry: file.OldExpiry, newExpiry: file.NewExpiry)
+                        .SetResult(fetchUri, rawData, showRaw: format == LogViewFormat.RawView);
+                    return this.View("Index", model);
                 }
 
             case LogViewFormat.RawDownload:
+                // from fetch URL
+                if (file.FetchUri != null)
+                    return this.Redirect(file.FetchUri);
+
+                // from raw content
                 {
-                    string content = file.Error ?? file.Content ?? string.Empty;
+                    string content = file.FetchedData ?? file.Error ?? string.Empty;
                     return this.File(Encoding.UTF8.GetBytes(content), "plain/text", $"SMAPI log ({id}).txt");
                 }
 
@@ -102,13 +130,17 @@ internal class LogParserController : Controller
                 return this.View("Index", this.GetModel(null, uploadError: "The log file seems to be empty."));
         }
 
+        // parse log
+        ParsedLog log = new LogParser().Parse(input);
+
         // upload log
-        UploadResult uploadResult = await this.Storage.SaveAsync(input);
+        string id = Guid.NewGuid().ToString("N");
+        UploadResult uploadResult = await this.Storage.SaveToJsonAsync($"parsed-{id}", log);
         if (!uploadResult.Succeeded)
             return this.View("Index", this.GetModel(null, uploadError: uploadResult.UploadError));
 
         // redirect to view
-        return this.Redirect(this.Url.PlainAction("Index", "LogParser", new { id = uploadResult.ID })!);
+        return this.Redirect(this.Url.PlainAction("Index", "LogParser", new { id })!);
     }
 
 

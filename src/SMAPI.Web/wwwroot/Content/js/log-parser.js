@@ -45,7 +45,7 @@ $(function () {
  * @param {object} state The state options to use.
  * @returns {void}
  */
-smapi.logParser = function (state) {
+smapi.logParser = async function (state) {
     if (!state)
         state = {};
 
@@ -192,19 +192,54 @@ smapi.logParser = function (state) {
         modsHidden: 0
     };
 
-    // load raw log data
-    {
-        const dataElement = document.querySelector(state.dataElement);
-        state.data = JSON.parse(dataElement.textContent.trim());
-        dataElement.remove(); // let browser unload the data element since we won't need it anymore
+    // fetch data
+    state.data = state.fetchUri
+        ? await $.getJSON(state.fetchUri)
+        : state.fetchedData ?? {};
+
+    // parse log date
+    state.logStarted = new Date(state.data.Timestamp);
+    state.logStartedUtcStr = `${state.logStarted.getUTCFullYear()}-${String(state.logStarted.getUTCMonth() + 1).padStart(2, "0")}-${String(state.logStarted.getUTCDate()).padStart(2, "0")} ${String(state.logStarted.getUTCHours()).padStart(2, "0")}:${String(state.logStarted.getUTCMinutes()).padStart(2, "0")}`;
+    state.logStartedLocalTimeStr = `${String(state.logStarted.getHours()).padStart(2, "0")}:${String(state.logStarted.getMinutes()).padStart(2, "0")}`;
+
+    // parse data
+    state.showPopup = state.data.IsValid ?? false;
+    state.isSplitScreen = state.data.IsSplitScreen ?? false;
+
+    // collect mod info
+    state.hasOutdatedMods = false;
+    state.showMods = {};
+    state.modsByName = {};
+    state.modsAndContentPacks = {};
+    for (let mod of state.data.Mods ?? []) {
+        mod.contentPacksHaveUpdates = false;
+
+        if (mod.Loaded)
+            state.showMods[mod.Name] = true;
+
+        state.modsByName[mod.Name] = mod;
+        state.hasOutdatedMods = mod.HasUpdate || state.hasOutdatedMods;
+
+        mod.contentPacks = [];
+        if (!mod.IsContentPack)
+            state.modsAndContentPacks[mod.Name] = mod;
+    }
+    for (let mod of state.data.Mods ?? []) {
+        if (mod.IsContentPack) {
+            const framework =
+                state.modsAndContentPacks[mod.ContentPackFor]
+                ?? (state.modsAndContentPacks[mod.ContentPackFor] = { Name: mod.ContentPackFor, HasUpdate: false, contentPacks: [] });
+
+            framework.contentPacks.push(mod);
+            framework.contentPacksHaveUpdates = framework.contentPacksHaveUpdates || mod.HasUpdate;
+        }
     }
 
     // preprocess data for display
-    state.messages = state.data.messages || [];
+    state.messages = state.data.Messages || [];
     if (state.messages.length) {
-        const levels = state.data.logLevels;
-        const sections = state.data.sections;
-        const modSlugs = state.data.modSlugs;
+        const levelNames = state.levelNames;
+        const sectionNames = state.sectionNames;
 
         for (let i = 0, length = state.messages.length; i < length; i++) {
             const message = state.messages[i];
@@ -213,9 +248,8 @@ smapi.logParser = function (state) {
             message.id = i;
 
             // add display values
-            message.LevelName = levels[message.Level];
-            message.SectionName = sections[message.Section];
-            message.ModSlug = modSlugs[message.Mod] || message.Mod;
+            message.LevelName = levelNames[message.Level];
+            message.SectionName = sectionNames[message.Section];
 
             // For repeated messages, since our <log-line /> component
             // can't return two rows, just insert a second message
@@ -239,10 +273,6 @@ smapi.logParser = function (state) {
         }
     }
     Object.freeze(state.messages);
-
-    // set local time started
-    if (state.logStarted)
-        state.localTimeStarted = ("0" + state.logStarted.getHours()).slice(-2) + ":" + ("0" + state.logStarted.getMinutes()).slice(-2);
 
     // add the properties we're passing to Vue
     const defaultPerPage = 1000;
@@ -619,7 +649,7 @@ smapi.logParser = function (state) {
                 // important when working with absolutely huge logs.
                 for (let i = 0, length = state.messages.length; i < length; i++) {
                     const msg = state.messages[i];
-                    if (!this.filtersAllow(msg.ModSlug, msg.LevelName))
+                    if (!this.filtersAllow(msg.Mod, msg.LevelName))
                         continue;
 
                     if (this.filterRegex) {

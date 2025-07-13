@@ -28,14 +28,8 @@ public class ParsedLog
     /****
     ** Log data
     ****/
-    /// <summary>Whether SMAPI is running in strict mode, which disables all deprecated APIs.</summary>
-    public bool IsStrictMode { get; set; }
-
     /// <summary>The SMAPI version.</summary>
     public string? ApiVersion { get; set; }
-
-    /// <summary>The parsed SMAPI version, if it's valid.</summary>
-    public ISemanticVersion? ApiVersionParsed { get; set; }
 
     /// <summary>The game version.</summary>
     public string? GameVersion { get; set; }
@@ -57,4 +51,48 @@ public class ParsedLog
 
     /// <summary>The log messages.</summary>
     public LogMessage[] Messages { get; set; } = [];
+
+    /// <summary>The number of loaded non-content-pack mods.</summary>
+    public int TotalCodeMods { get; set; }
+
+    /// <summary>The number of loaded content packs.</summary>
+    public int TotalContentPacks { get; set; }
+
+    /// <summary>Whether update alerts were detected for SMAPI itself.</summary>
+    public bool HasApiUpdate { get; set; }
+
+    /// <summary>Whether update alerts were detected for one or more installed mods.</summary>
+    public bool HasModUpdates { get; set; }
+
+
+    /*********
+    ** Public methods
+    *********/
+    /// <summary>Construct an empty instance.</summary>
+    public ParsedLog() { }
+
+    /// <summary>Construct an instance.</summary>
+    /// <param name="log">The other log instance to copy.</param>
+    public ParsedLog(ParsedLog log)
+    {
+        // metadata
+        this.IsValid = log.IsValid;
+        this.Error = log.Error;
+        this.RawText = log.RawText;
+        this.IsSplitScreen = log.IsSplitScreen;
+
+        // log data
+        this.ApiVersion = log.ApiVersion;
+        this.GameVersion = log.GameVersion;
+        this.OperatingSystem = log.OperatingSystem;
+        this.GamePath = log.GamePath;
+        this.ModPath = log.ModPath;
+        this.Timestamp = log.Timestamp;
+        this.Mods = log.Mods;
+        this.Messages = log.Messages;
+        this.TotalCodeMods = log.TotalCodeMods;
+        this.TotalContentPacks = log.TotalContentPacks;
+        this.HasApiUpdate = log.HasApiUpdate;
+        this.HasModUpdates = log.HasModUpdates;
+    }
 }

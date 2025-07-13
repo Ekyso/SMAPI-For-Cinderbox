@@ -27,16 +27,41 @@
     {
         <meta name="robots" content="noindex" />
     }
+
+    <!-- jQuery -->
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/jquery/dist/jquery.min.js")"></script>
+
+    <!-- Prism -->
+    <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/lib/prism-themes/themes/prism-vs.min.css")" />
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/prismjs/prism.min.js")"></script>
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/prismjs/components/prism-json.min.js")"></script>
+
+    <!-- Prism line numbers -->
+    <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/line-numbers/prism-line-numbers.min.css")" />
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/line-numbers/prism-line-numbers.min.js")"></script>
+
+    <!-- Prism line highlight -->
+    <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/line-highlight/prism-line-highlight.min.css")" />
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/line-highlight/prism-line-highlight.min.js")"></script>
+
+    <!-- Prism toolbar -->
+    <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/toolbar/prism-toolbar.min.css")" />
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/toolbar/prism-toolbar.min.js")"></script>
+
+    <!-- Prism copy to clipboard -->
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js")"></script>
+
+    <!-- Prism match braces -->
+    <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/match-braces/prism-match-braces.min.css")" />
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/prismjs/plugins/match-braces/prism-match-braces.min.js")"></script>
+
+    <!-- page CSS/JS -->
     <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/css/file-upload.css")" />
     <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/css/json-validator.css")" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/tmont/sunlight@1.22.0/src/themes/sunlight.default.min.css" />
-
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/gh/tmont/sunlight@1.22.0/src/sunlight.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/gh/tmont/sunlight@1.22.0/src/plugins/sunlight-plugin.linenumbers.min.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/gh/tmont/sunlight@1.22.0/src/lang/sunlight.javascript.min.js" crossorigin="anonymous"></script>
     <script src="@Url.ContentWithCacheBust("~/Content/js/file-upload.js")"></script>
     <script src="@Url.ContentWithCacheBust("~/Content/js/json-validator.js")"></script>
+
+    <!-- init -->
     <script>
         $(function() {
             smapi.jsonValidator(@this.ForJson(this.Url.PlainAction("Index", "JsonValidator", new { schemaName = "$schemaName", id = "$id" })), @this.ForJson(Model.PasteId));
@@ -153,7 +178,7 @@ else if (Model is { IsEditView: false, PasteId: not null })
                     @foreach (JsonValidatorErrorModel error in Model.Errors)
                     {
                         <tr data-schema-error="@error.SchemaErrorType">
-                            <td><a href="#L@(error.Line)">@error.Line</a></td>
+                            <td><a href="#code.@(error.Line)">@error.Line</a></td>
                             <td>@error.Path</td>
                             <td>@error.Message</td>
                         </tr>
@@ -171,7 +196,7 @@ else if (Model is { IsEditView: false, PasteId: not null })
                 }
             </select>) or <a href="@(this.Url.PlainAction("Index", "JsonValidator", new { id = this.Model.PasteId, schemaName = this.Model.SchemaName, operation = "edit" }))">edit this file</a>.
         </div>
-        <pre id="raw-content" class="sunlight-highlight-javascript">@Model.Content</pre>
+        <pre id="code" class="language-json line-numbers linkable-line-numbers match-braces"><code>@Model.Content</code></pre>
 
         @if (isValidSchema)
         {

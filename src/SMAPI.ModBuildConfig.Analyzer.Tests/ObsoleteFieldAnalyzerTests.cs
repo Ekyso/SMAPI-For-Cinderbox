@@ -14,7 +14,8 @@ public class ObsoleteFieldAnalyzerTests : DiagnosticVerifier
     ** Fields
     *********/
     /// <summary>Sample C# mod code, with a {{test-code}} placeholder for the code in the Entry method to test.</summary>
-    const string SampleProgram = @"
+    const string SampleProgram =
+        """
         using System;
         using StardewValley;
         using Netcode;
@@ -30,13 +31,13 @@ public class ObsoleteFieldAnalyzerTests : DiagnosticVerifier
                 }
             }
         }
-    ";
+        """;
 
     /// <summary>The line number where the unit tested code is injected into <see cref="SampleProgram"/>.</summary>
-    private const int SampleCodeLine = 13;
+    private const int SampleCodeLine = 12;
 
     /// <summary>The column number where the unit tested code is injected into <see cref="SampleProgram"/>.</summary>
-    private const int SampleCodeColumn = 25;
+    private const int SampleCodeColumn = 13;
 
 
     /*********
@@ -47,7 +48,7 @@ public class ObsoleteFieldAnalyzerTests : DiagnosticVerifier
     public void EmptyCode_HasNoDiagnostics()
     {
         // arrange
-        string test = @"";
+        string test = "";
 
         // assert
         this.VerifyCSharpDiagnostic(test);

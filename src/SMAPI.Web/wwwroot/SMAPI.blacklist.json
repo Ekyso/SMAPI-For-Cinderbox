@@ -1,0 +1,25 @@
+{
+    /**
+     * Metadata about malicious or harmful SMAPI mods which are blocked by default.
+     *
+     * This doesn't contain mods blocked due to compatibility issues; see metadata.json for that.
+    */
+    "Blacklist": [
+        /****
+        ** 2025-07 code execution via reflection and encoded strings
+        ****/
+        // 'Even Better Portable Community Center' (Nexus mod ID 35601)
+        {
+            "Id": "OpUlarenous.PortableCommunityCenter",
+            //"EntryDllHash": "dfd9e53ee3e6fb997c04a2b0c7f49a50",
+            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
+        },
+
+        // 'Give Speed In Morning' (Nexus mod ID 35650)
+        {
+            "Id": "BrEvoiultion.GiveSpeedInMorning",
+            //"EntryDllHash": "97860c755192a27cdb6c16ec32327774",
+            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
+        }
+    ]
+}

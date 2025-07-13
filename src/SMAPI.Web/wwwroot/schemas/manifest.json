@@ -24,8 +24,14 @@
         },
         "Version": {
             "title": "Mod version",
-            "description": "The mod's semantic version. Make sure you update this for each release! SMAPI uses this for update checks, mod dependencies, and compatibility blacklists (if the mod breaks in a future version of the game).",
-            "$ref": "#/definitions/SemanticVersion"
+            "description": "The mod's semantic version, or '%ProjectVersion%' to use the current project's assembly version. Make sure you update this for each release! SMAPI uses this for update checks, mod dependencies, and compatibility blacklists (if the mod breaks in a future version of the game).",
+            "anyOf": [
+                { "$ref": "#/definitions/SemanticVersion" },
+                { "const": "%ProjectVersion%" }
+            ],
+            "@errorMessages": {
+                "anyOf": "Invalid Value. This must be formatted like 1.2.0 or 1.2.0-prerelease.tags (see https://semver.org/ for more info), or the exact string '%ProjectVersion%'."
+            }
         },
         "Description": {
             "title": "Mod description",
@@ -108,7 +114,7 @@
             "type": "array",
             "items": {
                 "type": "string",
-                "pattern": "^(?i)(Chucklefish:\\d+|Nexus:\\d+|GitHub:[A-Za-z0-9_\\-\\.]+/[A-Za-z0-9_\\-]+|ModDrop:\\d+)(?: *@ *[a-zA-Z0-9_]+ *)?$",
+                "pattern": "^(?i)(Chucklefish:\\d+|Nexus:\\d+|GitHub:[A-Za-z0-9_\\-\\.]+/[A-Za-z0-9_\\-]+|ModDrop:\\d+|CurseForge:\\d+)(?: *@ *[a-zA-Z0-9_]+ *)?$",
                 "@errorMessages": {
                     "pattern": "Invalid update key; see https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Manifest#Update_checks for more info."
                 }
@@ -117,8 +123,7 @@
         "$schema": {
             "title": "Schema",
             "description": "A reference to this JSON schema. Not part of the actual format, but useful for validation tools.",
-            "type": "string",
-            "const": "https://smapi.io/schemas/manifest.json"
+            "type": "string"
         }
     },
     "definitions": {

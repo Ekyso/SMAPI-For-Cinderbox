@@ -19,13 +19,13 @@ public class ModModel
     public string? Name { get; }
 
     /// <summary>The mod's alternative names, if any.</summary>
-    public string AlternateNames { get; }
+    public string? AlternateNames { get; }
 
     /// <summary>The mod author's name.</summary>
     public string? Author { get; }
 
     /// <summary>The mod author's alternative names, if any.</summary>
-    public string AlternateAuthors { get; }
+    public string? AlternateAuthors { get; }
 
     /// <summary>The GitHub repo, if any.</summary>
     public string? GitHubRepo { get; }
@@ -33,14 +33,14 @@ public class ModModel
     /// <summary>The URL to the mod's source code, if any.</summary>
     public string? SourceUrl { get; }
 
-    /// <summary>The compatibility status for the stable version of the game.</summary>
-    public ModCompatibilityModel Compatibility { get; }
+    /// <summary>The compatibility status for the stable version of the game, or <c>null</c> if it's compatible with no notes.</summary>
+    public ModCompatibilityModel? Compatibility { get; }
 
     /// <summary>Links to the available mod pages.</summary>
     public ModLinkModel[] ModPages { get; }
 
     /// <summary>The human-readable warnings for players about this mod.</summary>
-    public string[] Warnings { get; }
+    public string[]? Warnings { get; }
 
     /// <summary>Special notes intended for developers who maintain unofficial updates or submit pull requests.</summary>
     public string? DevNote { get; }
@@ -66,7 +66,7 @@ public class ModModel
     /// <param name="devNote">Special notes intended for developers who maintain unofficial updates or submit pull requests.</param>
     /// <param name="slug">A unique identifier for the mod that can be used in an anchor URL.</param>
     [JsonConstructor]
-    public ModModel(string[] id, string? name, string alternateNames, string author, string alternateAuthors, string gitHubRepo, string sourceUrl, ModCompatibilityModel compatibility, ModLinkModel[] modPages, string[] warnings, string devNote, string slug)
+    public ModModel(string[] id, string? name, string? alternateNames, string? author, string? alternateAuthors, string? gitHubRepo, string? sourceUrl, ModCompatibilityModel? compatibility, ModLinkModel[] modPages, string[]? warnings, string? devNote, string? slug)
     {
         this.Id = id;
         this.Name = name;
@@ -89,14 +89,14 @@ public class ModModel
         // basic info
         this.Id = entry.ID.ToArray();
         this.Name = entry.Name.FirstOrDefault();
-        this.AlternateNames = string.Join(", ", entry.Name.Skip(1).ToArray());
+        this.AlternateNames = entry.Name.Length > 1 ? string.Join(", ", entry.Name.Skip(1)) : null;
         this.Author = entry.Author.FirstOrDefault();
-        this.AlternateAuthors = string.Join(", ", entry.Author.Skip(1).ToArray());
+        this.AlternateAuthors = entry.Author.Length > 1 ? string.Join(", ", entry.Author.Skip(1)) : null;
         this.GitHubRepo = entry.GitHubRepo;
         this.SourceUrl = this.GetSourceUrl(entry);
-        this.Compatibility = new ModCompatibilityModel(entry.Compatibility);
+        this.Compatibility = !entry.Compatibility.IsDefault() ? new ModCompatibilityModel(entry.Compatibility) : null;
         this.ModPages = this.GetModPageUrls(entry).ToArray();
-        this.Warnings = entry.Warnings;
+        this.Warnings = entry.Warnings.Length > 1 ? entry.Warnings : null;
         this.DevNote = entry.DevNote;
         this.Slug = entry.Anchor;
     }

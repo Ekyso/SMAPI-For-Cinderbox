@@ -44,4 +44,15 @@ public class ModCompatibilityInfo
         this.UnofficialVersion = unofficialVersion;
         this.UnofficialUrl = unofficialUrl;
     }
+
+    /// <summary>Get whether this mod is compatible with no notes.</summary>
+    public bool IsDefault()
+    {
+        return
+            this.Status == ModCompatibilityStatus.Ok
+            && this.Summary is "use latest version."
+            && this.BrokeIn is null
+            && this.UnofficialUrl is null
+            && this.UnofficialVersion is null;
+    }
 }

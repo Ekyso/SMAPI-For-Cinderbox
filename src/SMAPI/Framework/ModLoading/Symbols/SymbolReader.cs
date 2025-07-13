@@ -2,6 +2,7 @@ using System.IO;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Pdb;
+using Mono.Collections.Generic;
 
 namespace StardewModdingAPI.Framework.ModLoading.Symbols;
 
@@ -61,6 +62,13 @@ internal class SymbolReader : ISymbolReader
     public MethodDebugInformation Read(MethodDefinition method)
     {
         return this.Reader.Read(method);
+    }
+
+    /// <summary>Read the method debug information for a method in the assembly.</summary>
+    /// <param name="provider">The debug info provider.</param>
+    public Collection<CustomDebugInformation> Read(ICustomDebugInformationProvider provider)
+    {
+        return this.Reader.Read(provider);
     }
 
     /// <inheritdoc />

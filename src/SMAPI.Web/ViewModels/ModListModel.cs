@@ -10,8 +10,11 @@ public class ModListModel
     /*********
     ** Accessors
     *********/
-    /// <summary>The mods to display.</summary>
-    public ModModel[] Mods { get; }
+    /// <summary>The URI from which to fetch the mod data.</summary>
+    public string? FetchUri { get; }
+
+    /// <summary>The mods to display instead of the <see cref="FetchUri"/>, if set.</summary>
+    public ModModel[]? Mods { get; }
 
     /// <summary>When the data was last updated.</summary>
     public DateTimeOffset LastUpdated { get; }
@@ -20,19 +23,21 @@ public class ModListModel
     public bool IsStale { get; }
 
     /// <summary>Whether the mod metadata is available.</summary>
-    public bool HasData => this.Mods.Any();
+    public bool HasData => this.FetchUri != null || this.Mods?.Length > 0;
 
 
     /*********
     ** Public methods
     *********/
     /// <summary>Construct an instance.</summary>
-    /// <param name="mods">The mods to display.</param>
+    /// <param name="fetchUri">The URI from which to fetch the mod data.</param>
+    /// <param name="mods">The mods to display instead of the <paramref name="fetchUri"/>, if set.</param>
     /// <param name="lastUpdated">When the data was last updated.</param>
     /// <param name="isStale">Whether the data hasn't been updated in a while.</param>
-    public ModListModel(IEnumerable<ModModel> mods, DateTimeOffset lastUpdated, bool isStale)
+    public ModListModel(string? fetchUri, IEnumerable<ModModel>? mods, DateTimeOffset lastUpdated, bool isStale)
     {
-        this.Mods = mods.ToArray();
+        this.FetchUri = fetchUri;
+        this.Mods = mods?.ToArray();
         this.LastUpdated = lastUpdated;
         this.IsStale = isStale;
     }

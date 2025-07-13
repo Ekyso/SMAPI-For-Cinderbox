@@ -127,11 +127,11 @@ table caption {
     min-width: 400px;
 }
 
-#mods .color-red {
+#mods td.has-errors {
     color: red;
 }
 
-#mods .color-green {
+#mods td.no-errors {
     color: green;
 }
 

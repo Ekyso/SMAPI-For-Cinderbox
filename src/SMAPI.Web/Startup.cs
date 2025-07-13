@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Security.Cryptography;
 using Hangfire;
 using Hangfire.Console;
 using Hangfire.MemoryStorage;
@@ -8,6 +10,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Rewrite;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -40,6 +43,16 @@ namespace StardewModdingAPI.Web;
 internal class Startup
 {
     /*********
+    ** Fields
+    *********/
+    /// <summary>The name of the static 'malicious mods' blacklist file.</summary>
+    private const string BlacklistFileName = "SMAPI.blacklist.json";
+
+    /// <summary>The MD5 hash for the 'malicious mods' blacklist file.</summary>
+    private Lazy<string?> BlacklistMd5Hash;
+
+
+    /*********
     ** Accessors
     *********/
     /// <summary>The web app configuration.</summary>
@@ -53,12 +66,16 @@ internal class Startup
     /// <param name="env">The hosting environment.</param>
     public Startup(IWebHostEnvironment env)
     {
+        // load config
         this.Configuration = new ConfigurationBuilder()
             .SetBasePath(env.ContentRootPath)
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
             .AddJsonFile($"appsettings.{env.EnvironmentName}.json", optional: true)
             .AddEnvironmentVariables()
             .Build();
+
+        // get cached 'malicious mods' blacklist MD5 hash
+        this.BlacklistMd5Hash = new Lazy<string>(() => this.GetBlacklistMd5Hash(env.WebRootPath));
     }
 
     /// <summary>The method called by the runtime to add services to the container.</summary>
@@ -228,7 +245,7 @@ internal class Startup
                 .WithOrigins("https://smapi.io")
             )
             .UseRewriter(this.GetRedirectRules())
-            .UseStaticFiles() // wwwroot folder
+            .UseStaticFiles(new StaticFileOptions { OnPrepareResponse = this.OnPrepareStaticFileResponse }) // wwwroot folder
             .UseRouting()
             .UseAuthorization()
             .UseEndpoints(p =>
@@ -258,6 +275,14 @@ internal class Startup
 
         settings.Formatting = Formatting.Indented;
         settings.NullValueHandling = NullValueHandling.Ignore;
+    }
+
+    /// <summary>Prepare a response.</summary>
+    /// <param name="context">The file response content.</param>
+    private void OnPrepareStaticFileResponse(StaticFileResponseContext context)
+    {
+        if (context.File.Name == Startup.BlacklistFileName)
+            context.Context.Response.Headers.ContentMD5 = this.BlacklistMd5Hash.Value;
     }
 
     /// <summary>Get the redirect rules to apply.</summary>
@@ -337,5 +362,16 @@ internal class Startup
         }
 
         return redirects;
+    }
+
+    /// <summary>Get the <c>Content-MD5</c> header value for the 'malicious mods' blacklist file.</summary>
+    /// <param name="webRootPath">The web root path.</param>
+    private string GetBlacklistMd5Hash(string webRootPath)
+    {
+        string path = Path.Combine(webRootPath, Startup.BlacklistFileName);
+        using FileStream stream = File.OpenRead(path);
+        byte[] hash = MD5.HashData(stream);
+
+        return Convert.ToBase64String(hash);
     }
 }

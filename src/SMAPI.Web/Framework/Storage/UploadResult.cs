@@ -9,12 +9,12 @@ internal class UploadResult
     ** Accessors
     *********/
     /// <summary>Whether the file upload succeeded.</summary>
-    [MemberNotNullWhen(true, nameof(UploadResult.ID))]
+    [MemberNotNullWhen(true, nameof(UploadResult.Id))]
     [MemberNotNullWhen(false, nameof(UploadResult.UploadError))]
-    public bool Succeeded => this.ID != null && this.UploadError == null;
+    public bool Succeeded => this.Id != null && this.UploadError == null;
 
     /// <summary>The file ID, if applicable.</summary>
-    public string? ID { get; }
+    public string? Id { get; }
 
     /// <summary>The upload error, if any.</summary>
     public string? UploadError { get; }
@@ -28,7 +28,7 @@ internal class UploadResult
     /// <param name="uploadError">The upload error, if any.</param>
     public UploadResult(string? id, string? uploadError)
     {
-        this.ID = id;
+        this.Id = id;
         this.UploadError = uploadError;
     }
 }

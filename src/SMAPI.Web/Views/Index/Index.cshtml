@@ -5,8 +5,11 @@
     ViewData["ViewTitle"] = string.Empty;
 }
 @section Head {
+    <!-- jQuery -->
+    <script src="@Url.ContentWithCacheBust("~/Content/lib/jquery/dist/jquery.min.js")"></script>
+
+    <!-- page CSS/JS -->
     <link rel="stylesheet" href="@Url.ContentWithCacheBust("~/Content/css/index.css")" />
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1" crossorigin="anonymous"></script>
     <script src="@Url.ContentWithCacheBust("~/Content/js/index.js")"></script>
 }
 

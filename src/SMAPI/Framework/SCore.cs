@@ -5,8 +5,10 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Security;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +18,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Win32;
 #endif
 using Newtonsoft.Json;
+using Pathoschild.Http.Client;
 using StardewModdingAPI.Enums;
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Framework.Content;
@@ -37,6 +40,7 @@ using StardewModdingAPI.Framework.Utilities;
 using StardewModdingAPI.Internal;
 using StardewModdingAPI.Toolkit;
 using StardewModdingAPI.Toolkit.Framework.Clients.WebApi;
+using StardewModdingAPI.Toolkit.Framework.ModBlacklistData;
 using StardewModdingAPI.Toolkit.Framework.ModData;
 using StardewModdingAPI.Toolkit.Serialization;
 using StardewModdingAPI.Toolkit.Utilities;
@@ -51,7 +55,6 @@ using xTile.Display;
 using LanguageCode = StardewValley.LocalizedContentManager.LanguageCode;
 using MiniMonoModHotfix = MonoMod.Utils.MiniMonoModHotfix;
 using PathUtilities = StardewModdingAPI.Toolkit.Utilities.PathUtilities;
-using System.Security.Cryptography;
 
 namespace StardewModdingAPI.Framework;
 
@@ -409,6 +412,27 @@ internal class SCore : IDisposable
         ModToolkit toolkit = new();
         ModDatabase modDatabase = toolkit.GetModDatabase(Constants.ApiMetadataPath);
 
+        // load 'malicious mods' blacklist
+        ModBlacklist? modBlacklist = null;
+        if (File.Exists(Constants.ApiBlacklistFetchedPath) && File.GetLastWriteTimeUtc(Constants.ApiBlacklistFetchedPath) > File.GetLastWriteTimeUtc(Constants.ApiBlacklistPath))
+        {
+            try
+            {
+                modBlacklist = toolkit.GetModBlacklist(Constants.ApiBlacklistFetchedPath);
+                Constants.ApiBlacklistActualPath = Constants.ApiBlacklistFetchedPath;
+            }
+            catch (Exception ex)
+            {
+                this.Monitor.Log("Couldn't load mod blacklist fetched from the SMAPI web server. Defaulting to the version included with the SMAPI install.", LogLevel.Warn);
+                this.Monitor.Log(ex.GetLogSummary());
+            }
+        }
+        if (modBlacklist is null)
+        {
+            modBlacklist = toolkit.GetModBlacklist(Constants.ApiBlacklistPath);
+            Constants.ApiBlacklistActualPath = Constants.ApiBlacklistPath;
+        }
+
         // load mods
         {
             this.Monitor.Log("Loading mod metadata...", LogLevel.Debug);
@@ -429,7 +453,7 @@ internal class SCore : IDisposable
             }
 
             // load manifests
-            IModMetadata[] mods = resolver.ReadManifests(toolkit, this.ModsPath, modDatabase, useCaseInsensitiveFilePaths: this.Settings.UseCaseInsensitivePaths).ToArray();
+            IModMetadata[] mods = resolver.ReadManifests(toolkit, this.ModsPath, modBlacklist, modDatabase, useCaseInsensitiveFilePaths: this.Settings.UseCaseInsensitivePaths).ToArray();
 
             // filter out ignored mods
             foreach (IModMetadata mod in mods.Where(p => p.IsIgnored))
@@ -466,7 +490,9 @@ internal class SCore : IDisposable
             this.CheckForSoftwareConflicts();
 
             // check for updates
-            _ = this.CheckForUpdatesAsync(mods); // ignore task since the main thread doesn't need to wait for it
+            // ignore tasks since the main thread doesn't need to wait for them
+            _ = this.CheckForUpdatesAsync(mods);
+            _ = this.CheckForBlacklistUpdateAsync(modBlacklist);
         }
 
         // update window titles
@@ -1429,7 +1455,7 @@ internal class SCore : IDisposable
         if (this.EventManager.ModMessageReceived.HasListeners)
         {
             // get mod IDs to notify
-            HashSet<string> modIds = new(message.ToModIds ?? this.ModRegistry.GetAll().Select(p => p.Manifest.UniqueID), StringComparer.OrdinalIgnoreCase);
+            HashSet<string> modIds = new(message.ToModIds ?? this.ModRegistry.GetAllIds(), StringComparer.OrdinalIgnoreCase);
             if (message.FromPlayerId == Game1.player?.UniqueMultiplayerID)
                 modIds.Remove(message.FromModId); // don't send a broadcast back to the sender
 
@@ -1696,6 +1722,58 @@ internal class SCore : IDisposable
         catch (Exception ex)
         {
             this.Monitor.Log("Couldn't check for updates. This won't affect your game, but you won't be notified of SMAPI or mod updates if this keeps happening.", LogLevel.Warn);
+            this.Monitor.Log(ex is WebException && ex.InnerException == null
+                ? ex.Message
+                : ex.ToString()
+            );
+        }
+    }
+
+    /// <summary>Asynchronously check for a new version of the mod blacklist.</summary>
+    /// <param name="modBlacklist">The local mod blacklist data.</param>
+    private async Task CheckForBlacklistUpdateAsync(ModBlacklist modBlacklist)
+    {
+        try
+        {
+            if (!this.Settings.CheckForBlacklistUpdates)
+                return;
+
+            // get MD5 hash on the server
+            using IClient client = new FluentClient();
+            string serverHash;
+            {
+                IResponse response = await client.SendAsync(HttpMethod.Head, this.Settings.BlacklistUrl);
+                byte[] hashBytes =
+                    response.Message.Content.Headers.ContentMD5
+                    ?? throw new InvalidOperationException("Can't fetch Content-MD5 header from the web server.");
+
+                serverHash = FileUtilities.GetHashString(hashBytes);
+            }
+
+            // skip if up-to-date
+            string localHash = FileUtilities.GetFileHash(Constants.ApiBlacklistActualPath!);
+            if (localHash == serverHash)
+            {
+                this.Monitor.Log("   Mod blacklist OK.");
+                return;
+            }
+
+            // fetch new file
+            IResponse newData = await client.GetAsync(this.Settings.BlacklistUrl);
+            ModBlacklistModel? newModel = await newData.As<ModBlacklistModel?>();
+            if (newModel?.Blacklist.Length is not >= 0)
+                throw new InvalidOperationException("Can't deserialize mod blacklist from the web server, skipping update.");
+
+            // save new file
+            await using (Stream downloadStream = await newData.AsStream())
+            await using (FileStream stream = File.OpenWrite(Constants.ApiBlacklistFetchedPath))
+                await downloadStream.CopyToAsync(stream);
+
+            this.Monitor.Log($"   Mod blacklist updated to match the server (updated from {localHash} to {serverHash}). The changes will take effect on the next SMAPI launch.");
+        }
+        catch (Exception ex)
+        {
+            this.Monitor.Log("Couldn't check for updates to the mod blacklist. This won't affect your game, but SMAPI may not block new malicious mods.", LogLevel.Warn);
             this.Monitor.Log(ex is WebException && ex.InnerException == null
                 ? ex.Message
                 : ex.ToString()

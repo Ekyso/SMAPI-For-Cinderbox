@@ -1,8 +1,8 @@
 var smapi = smapi || {};
 var app;
-smapi.modList = function (mods) {
+smapi.modList = async function (state) {
     // init data
-    var defaultStats = {
+    const defaultStats = {
         total: 0,
         compatible: 0,
         workaround: 0,
@@ -14,8 +14,8 @@ smapi.modList = function (mods) {
         percentBroken: 0,
         percentObsolete: 0
     };
-    var data = {
-        mods: mods,
+    const data = {
+        mods: [],
         showAdvanced: false,
         visibleMainStats: $.extend({}, defaultStats),
         filters: {
@@ -51,6 +51,12 @@ smapi.modList = function (mods) {
         search: ""
     };
 
+    // fetch data
+    if (state.fetchUri)
+        data.mods = await $.getJSON(state.fetchUri);
+    else
+        data.mods = state.fetchedData ?? [];
+
     // init filters
     Object.entries(data.filters).forEach(([groupKey, filterGroup]) => {
         filterGroup.label = filterGroup.label || groupKey;
@@ -61,11 +67,15 @@ smapi.modList = function (mods) {
     });
 
     // init mods
-    for (var i = 0; i < data.mods.length; i++) {
-        var mod = mods[i];
+    for (let i = 0; i < data.mods.length; i++) {
+        const mod = data.mods[i];
 
         // set initial visibility
         mod.Visible = true;
+
+        // set default compatibility
+        if (!mod.Compatibility)
+            mod.Compatibility = { "Status": "ok", "Summary": "use latest version." };
 
         // concatenate searchable text
         mod.SearchableText = [mod.Name, mod.AlternateNames, mod.Author, mod.AlternateAuthors, mod.Compatibility.Summary, mod.BrokeIn];
@@ -75,18 +85,18 @@ smapi.modList = function (mods) {
     }
 
     // init app
-    var methods = {
+    const methods = {
         /**
          * Update the visibility of all mods based on the current search text and filters.
          */
         applyFilters: function () {
             // get search terms
-            var words = data.search.toLowerCase().split(" ");
+            const words = data.search.toLowerCase().split(" ");
 
             // apply criteria
-            var stats = data.visibleMainStats = $.extend({}, defaultStats);
-            for (var i = 0; i < data.mods.length; i++) {
-                var mod = data.mods[i];
+            const stats = data.visibleMainStats = $.extend({}, defaultStats);
+            for (let i = 0; i < data.mods.length; i++) {
+                const mod = data.mods[i];
                 mod.Visible = true;
 
                 // check filters
@@ -107,7 +117,7 @@ smapi.modList = function (mods) {
          * Fix the window position for the current hash.
          */
         fixHashPosition: function () {
-            var anchor = location.hash.substring(1);
+            const anchor = location.hash.substring(1);
             if (!anchor)
                 return;
 
@@ -116,10 +126,10 @@ smapi.modList = function (mods) {
                 return;
 
             // else jump to mod by ID
-            for (var i = 0; i < data.mods.length; i++) {
-                var mod = data.mods[i];
+            for (let i = 0; i < data.mods.length; i++) {
+                const mod = data.mods[i];
 
-                for (var n = 0; n < mod.Id.length; n++) {
+                for (let n = 0; n < mod.Id.length; n++) {
                     if (anchor.localeCompare(mod.Id[n], undefined, { sensitivity: 'accent' }) === 0) {
                         if (methods.scrollToRow(mod.Slug))
                             return;
@@ -134,8 +144,8 @@ smapi.modList = function (mods) {
          * @returns {boolean} Whether the target was found and scrolled into view.
          */
         scrollToRow: function(id) {
-            var row = $("#" + id);
-            var target = row.prev().get(0) || row.get(0); // show previous row if possible, to push the actual row below the sticky header
+            const row = $("#" + id);
+            const target = row.prev().get(0) || row.get(0); // show previous row if possible, to push the actual row below the sticky header
             target?.scrollIntoView();
             return !!target;
         },
@@ -147,7 +157,7 @@ smapi.modList = function (mods) {
          * @returns {boolean} Whether the mod matches the filters.
          */
         matchesFilters: function (mod, searchWords) {
-            var filters = data.filters;
+            const filters = data.filters;
 
             // check hash
             if (location.hash === "#" + mod.Slug)
@@ -160,12 +170,12 @@ smapi.modList = function (mods) {
                 return false;
 
             // check status
-            var mainStatus = mod.Compatibility.Status;
+            const mainStatus = mod.Compatibility.Status;
             if (filters.status.value[mainStatus] && !filters.status.value[mainStatus].value)
                 return false;
 
             // check download sites
-            var ignoreSites = [];
+            const ignoreSites = [];
 
             if (!filters.download.value.chucklefish.value)
                 ignoreSites.push("Chucklefish");
@@ -179,8 +189,8 @@ smapi.modList = function (mods) {
                 ignoreSites.push("custom");
 
             if (ignoreSites.length) {
-                var anyLeft = false;
-                for (var i = 0; i < mod.ModPages.length; i++) {
+                let anyLeft = false;
+                for (let i = 0; i < mod.ModPages.length; i++) {
                     if (ignoreSites.indexOf(mod.ModPages[i].Text) === -1) {
                         anyLeft = true;
                         break;
@@ -192,7 +202,7 @@ smapi.modList = function (mods) {
             }
 
             // check search terms
-            for (var w = 0; w < searchWords.length; w++) {
+            for (let w = 0; w < searchWords.length; w++) {
                 if (mod.SearchableText.indexOf(searchWords[w]) === -1)
                     return false;
             }
