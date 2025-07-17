@@ -1,6 +1,10 @@
 ← [README](README.md)
 
 # Release notes
+## Upcoming release
+* For the web UI:
+  * Fixed Content Patcher schema requiring `AddNPCWarps` instead of `AddNpcWarps`.
+
 ## 4.3.2
 Released 14 July 2025 for Stardew Valley 1.6.14 or later. See [4.3 release highlights](https://www.patreon.com/posts/133992196).
 
