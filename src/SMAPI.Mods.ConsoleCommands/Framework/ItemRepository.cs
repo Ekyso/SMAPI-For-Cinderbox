@@ -171,6 +171,8 @@ internal class ItemRepository
         string id = item.ItemId;
 
         // by category
+        bool createdJuice = false;
+        bool createdPickle = false;
         switch (item.Category)
         {
             // fish
@@ -190,12 +192,23 @@ internal class ItemRepository
             // greens
             case SObject.GreensCategory:
                 yield return this.TryCreate(itemType.Identifier, $"342/{id}", _ => objectDataDefinition.CreateFlavoredPickle(item));
+                createdPickle = true;
+
+                if (item.Edibility > 0 && !item.HasContextTag("edible_mushroom"))
+                {
+                    yield return this.TryCreate(itemType.Identifier, $"350/{id}", _ => objectDataDefinition.CreateFlavoredJuice(item));
+                    createdJuice = true;
+                }
+
                 break;
 
             // vegetable products
             case SObject.VegetableCategory:
                 yield return this.TryCreate(itemType.Identifier, $"350/{id}", _ => objectDataDefinition.CreateFlavoredJuice(item));
+                createdJuice = true;
+
                 yield return this.TryCreate(itemType.Identifier, $"342/{id}", _ => objectDataDefinition.CreateFlavoredPickle(item));
+                createdPickle = true;
                 break;
 
             // flower honey
@@ -216,8 +229,12 @@ internal class ItemRepository
                     yield return this.TryCreate(itemType.Identifier, $"447/{item.ItemId}", _ => objectDataDefinition.CreateFlavoredAgedRoe(roeObj));
             }
 
+            // juice
+            if (!createdJuice && item.HasContextTag("keg_juice"))
+                yield return this.TryCreate(itemType.Identifier, $"350/{id}", _ => objectDataDefinition.CreateFlavoredJuice(item));
+
             // pickles
-            if (item.HasContextTag("preserves_pickle") && item.Category is not (SObject.GreensCategory or SObject.VegetableCategory))
+            if (!createdPickle && item.HasContextTag("preserves_pickle") && item.Category is not (SObject.GreensCategory or SObject.VegetableCategory))
                 yield return this.TryCreate(itemType.Identifier, $"342/{id}", _ => objectDataDefinition.CreateFlavoredPickle(item));
 
             // dried mushrooms

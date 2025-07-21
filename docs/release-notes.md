@@ -2,6 +2,9 @@
 
 # Release notes
 ## Upcoming release
+* For players:
+  * Fixed `player_add` and `list_items` console commands not including some newer juice items.
+
 * For the web UI:
   * Fixed Content Patcher schema requiring `AddNPCWarps` instead of `AddNpcWarps`.
 
