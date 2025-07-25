@@ -353,7 +353,7 @@
                         "type": "array",
                         "items": {
                             "type": "string",
-                            "pattern": " *((.*\\{\\{.*\\}\\})|-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+) *$",
+                            "pattern": " *((.*\\{\\{.*\\}\\}.*)|-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+) *$",
                             "@errorMessages": {
                                 "pattern": "Each warp must match the exact format recognized by the game's Warp map property (i.e. 'fromX fromY targetMap targetX targetY', like '10 10 Town 0 30')."
                             }
@@ -365,7 +365,7 @@
                         "type": "array",
                         "items": {
                             "type": "string",
-                            "pattern": " *((.*\\{\\{.*\\}\\})|(-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+)) *$",
+                            "pattern": " *((.*\\{\\{.*\\}\\}.*)|(-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+)) *$",
                             "@errorMessages": {
                                 "pattern": "Each warp must match the exact format recognized by the game's NPCWarp map property (i.e. 'fromX fromY targetMap targetX targetY', like '10 10 Town 0 30')."
                             }
