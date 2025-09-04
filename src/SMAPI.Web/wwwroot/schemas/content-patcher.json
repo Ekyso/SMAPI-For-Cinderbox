@@ -114,7 +114,7 @@
                         "allOf": [
                             {
                                 "not": {
-                                    "pattern": "\\b\\.\\.[/\\]"
+                                    "pattern": "\\b\\.\\.[/\\\\]"
                                 }
                             },
                             {
@@ -195,7 +195,7 @@
                         "description": "The game asset you want to patch (or multiple comma-delimited assets). This is the file path inside your game's Content folder, without the file extension or language (like Animals/Dinosaur to edit Content/Animals/Dinosaur.xnb). This field supports tokens and capitalization doesn't matter. Your changes are applied in all languages unless you specify a language condition.",
                         "type": "string",
                         "not": {
-                            "pattern": "^ *[cC][oO][nN][tT][eE][nN][tT]/|\\.[xX][nN][bB] *$|\\.[a-zA-Z][a-zA-Z]-[a-zA-Z][a-zA-Z](?:.xnb)? *$"
+                            "pattern": "(?i)(?:\\bcontent/|\\.xnb\\b|\\.[a-zA-Z][a-zA-Z]-[a-zA-Z][a-zA-Z](?:.xnb)\\b)"
                         },
                         "@errorMessages": {
                             "not": "Invalid target; it shouldn't include the 'Content/' folder, '.xnb' extension, or locale code."
@@ -236,7 +236,7 @@
                         "allOf": [
                             {
                                 "not": {
-                                    "pattern": "\\b\\.\\.[/\\]"
+                                    "pattern": "\\b\\.\\.[/\\\\]"
                                 }
                             },
                             {
@@ -353,7 +353,7 @@
                         "type": "array",
                         "items": {
                             "type": "string",
-                            "pattern": " *-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+ *$",
+                            "pattern": " *((.*\\{\\{.*\\}\\})|-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+) *$",
                             "@errorMessages": {
                                 "pattern": "Each warp must match the exact format recognized by the game's Warp map property (i.e. 'fromX fromY targetMap targetX targetY', like '10 10 Town 0 30')."
                             }
@@ -365,7 +365,7 @@
                         "type": "array",
                         "items": {
                             "type": "string",
-                            "pattern": " *-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+ *$",
+                            "pattern": " *((.*\\{\\{.*\\}\\})|(-?\\d+ -?\\d+ [A-Za-z0-9_\\.]+ -?\\d+ -?\\d+)) *$",
                             "@errorMessages": {
                                 "pattern": "Each warp must match the exact format recognized by the game's NPCWarp map property (i.e. 'fromX fromY targetMap targetX targetY', like '10 10 Town 0 30')."
                             }
