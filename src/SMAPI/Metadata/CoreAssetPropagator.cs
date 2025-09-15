@@ -170,7 +170,11 @@ internal class CoreAssetPropagator
             Lazy<Texture2D?> newTexture = new(() =>
             {
                 if (this.DisposableContentManager.DoesAssetExist<Texture2D>(name))
-                    return this.DisposableContentManager.LoadLocalized<Texture2D>(name, language, useCache: false);
+                {
+                    return forLocalizedAsset
+                        ? this.DisposableContentManager.LoadLocalized<Texture2D>(name, language, useCache: false)
+                        : this.DisposableContentManager.LoadLocalized<Texture2D>(name, name.LanguageCode ?? this.DisposableContentManager.Language, useCache: false);
+                }
 
                 this.Monitor.Log($"Skipped reload for '{name.Name}' because the underlying asset no longer exists.", LogLevel.Warn);
                 return null;
