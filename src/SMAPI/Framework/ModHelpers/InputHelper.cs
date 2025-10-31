@@ -85,4 +85,10 @@ internal class InputHelper : BaseHelper, IInputHelper
     {
         return this.CurrentInputState().GetState(button);
     }
+
+    /// <inheritdoc />
+    public void OverrideButton(SButton button, bool setDown)
+    {
+        this.CurrentInputState().OverrideButton(button, setDown);
+    }
 }

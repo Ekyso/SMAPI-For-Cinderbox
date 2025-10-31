@@ -30,4 +30,9 @@ public interface IInputHelper : IModLinked
     /// <summary>Get the state of a button.</summary>
     /// <param name="button">The button to check.</param>
     SButtonState GetState(SButton button);
+
+    /// <summary>Override the state of a button.</summary>
+    /// <param name="button">The button to override.</param>
+    /// <param name="setDown">A new button state.</param>
+    void OverrideButton(SButton button, bool setDown);
 }
