@@ -399,32 +399,33 @@ internal sealed class ModContentManager : BaseContentManager
         this.Monitor.VerboseLog($"Fixing tilesheet paths for map '{relativeMapPath}' from mod '{this.ModName}'...");
         foreach (TileSheet tilesheet in map.TileSheets)
         {
-            // get image source
+            // get image path
             tilesheet.ImageSource = this.NormalizePathSeparators(tilesheet.ImageSource);
             string imageSource = tilesheet.ImageSource;
+            if (fixEagerPathPrefixes && relativeMapFolder.Length > 0 && imageSource?.StartsWith(relativeMapFolder) is true)
+                imageSource = imageSource[(relativeMapFolder.Length + 1)..];
 
-            // validate image source
+            // ensure path isn't empty
             if (string.IsNullOrWhiteSpace(imageSource))
                 throw new SContentLoadException(ContentLoadErrorType.InvalidData, $"{this.ModName} loaded map '{relativeMapPath}' with invalid tilesheet '{tilesheet.Id}'. This tilesheet has no image source.");
 
-            // reverse incorrect eager tilesheet path prefixing
-            if (fixEagerPathPrefixes && relativeMapFolder.Length > 0 && imageSource.StartsWith(relativeMapFolder))
-                imageSource = imageSource[(relativeMapFolder.Length + 1)..];
-
-            // validate tilesheet path
+            // ensure path is relative
             if (Path.IsPathRooted(imageSource))
                 throw this.GetPathError(relativeMapFolder, imageSource, $"Tilesheet paths must not be an absolute path ({Path.GetPathRoot(imageSource)}).");
 
+            // ensure any directory climbing is valid
+            // Tilesheet paths are relative to either the `Content/Maps` folder or the map file. Directory climbing is
+            // restricted for safety and simplicity:
+            //   1. Can only climb at the start of the path (e.g. `../LooseSprites/Cursors` but not `Mines/../Barn`).
+            //   2. Can only climb once (to avoid escaping the `Content` folder).
+            //   3. Always relative to the `Content/Maps` folder (not the map file).
             {
-                string[] imageSourcePathSegments = PathUtilities.GetSegments(imageSource);
-                if (imageSourcePathSegments.Contains(".."))
+                const string climbSegment = "..";
+                string[] pathSegments = PathUtilities.GetSegments(imageSource);
+                if (pathSegments.Contains(climbSegment))
                 {
-                    int climbingCount = imageSourcePathSegments.Count(segment => segment == "..");
-                    if (climbingCount > 1)
-                    {
-                        var offendingSegments = imageSourcePathSegments.TakeWhile(segment => segment == "..");
-                        throw this.GetPathError(relativeMapFolder, imageSource, $"Tilesheet paths must not climb more than one directory ({string.Join('/', offendingSegments)}/).");
-                    }
+                    if (pathSegments[0] != climbSegment || pathSegments.Count(segment => segment == climbSegment) > 1)
+                        throw this.GetPathError(relativeMapFolder, imageSource, $"Directory climbing ({climbSegment}/) is only permitted once at the start of the path.");
                 }
             }
 
@@ -480,7 +481,7 @@ internal sealed class ModContentManager : BaseContentManager
         }
 
         // get relative to map file unless path has directory climbing
-        if (!PathUtilities.GetSegments(relativePath).Contains(".."))
+        if (!relativePath.StartsWith("..") && PathUtilities.GetSegments(relativePath, 2)[0] != "..") // directory climbing can only be at the start of the path
         {
             string localKey = Path.Combine(modRelativeMapFolder, relativePath);
             if (this.GetModFile<Texture2D>(localKey).Exists)
