@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -353,38 +352,6 @@ internal sealed class ModContentManager : BaseContentManager
         }
 
         return file;
-    }
-
-    /// <summary>Premultiply a texture's alpha values to avoid transparency issues in the game.</summary>
-    /// <param name="texture">The texture to premultiply.</param>
-    /// <returns>Returns a premultiplied texture.</returns>
-    /// <remarks>Based on <a href="https://gamedev.stackexchange.com/a/26037">code by David Gouveia</a>.</remarks>
-    private void PremultiplyTransparency(Texture2D texture)
-    {
-        int count = texture.Width * texture.Height;
-        Color[] data = ArrayPool<Color>.Shared.Rent(count);
-        try
-        {
-            texture.GetData(data, 0, count);
-
-            bool changed = false;
-            for (int i = 0; i < count; i++)
-            {
-                ref Color pixel = ref data[i];
-                if (pixel.A is (byte.MinValue or byte.MaxValue))
-                    continue; // no need to change fully transparent/opaque pixels
-
-                data[i] = new Color(pixel.R * pixel.A / byte.MaxValue, pixel.G * pixel.A / byte.MaxValue, pixel.B * pixel.A / byte.MaxValue, pixel.A); // slower version: Color.FromNonPremultiplied(data[i].ToVector4())
-                changed = true;
-            }
-
-            if (changed)
-                texture.SetData(data, 0, count);
-        }
-        finally
-        {
-            ArrayPool<Color>.Shared.Return(data);
-        }
     }
 
     /// <summary>Fix custom map tilesheet paths so they can be found by the content manager.</summary>
