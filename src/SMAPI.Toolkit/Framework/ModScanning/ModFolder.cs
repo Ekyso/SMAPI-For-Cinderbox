@@ -11,13 +11,6 @@ namespace StardewModdingAPI.Toolkit.Framework.ModScanning;
 public class ModFolder
 {
     /*********
-    ** Fields
-    *********/
-    /// <summary>The backing field for <see cref="Directory"/>.</summary>
-    private DirectoryInfo? DirectoryImpl;
-
-
-    /*********
     ** Accessors
     *********/
     /// <summary>A suggested display name for the mod folder.</summary>
@@ -28,7 +21,7 @@ public class ModFolder
 
     /// <summary>The folder containing the mod's manifest.json.</summary>
     [JsonIgnore]
-    public DirectoryInfo Directory => this.DirectoryImpl ??= new DirectoryInfo(this.DirectoryPath);
+    public DirectoryInfo Directory => field ??= new DirectoryInfo(this.DirectoryPath);
 
     /// <summary>The mod type.</summary>
     public ModType Type { get; }
@@ -64,7 +57,7 @@ public class ModFolder
     public ModFolder(DirectoryInfo root, DirectoryInfo directory, ModType type, Manifest? manifest, ModParseError manifestParseError, string? manifestParseErrorText)
     {
         // save info
-        this.DirectoryImpl = directory;
+        this.Directory = directory;
         this.DirectoryPath = directory.FullName;
         this.Type = type;
         this.Manifest = manifest;
