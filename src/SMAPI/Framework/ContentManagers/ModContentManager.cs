@@ -30,6 +30,9 @@ internal sealed class ModContentManager : BaseContentManager
     /*********
     ** Fields
     *********/
+    /// <summary>A path segment which navigates to the parent directory.</summary>
+    private const string DirectoryClimbingPathSegment = "..";
+
     /// <summary>Encapsulates SMAPI's JSON file parsing.</summary>
     private readonly JsonHelper JsonHelper;
 
@@ -420,7 +423,7 @@ internal sealed class ModContentManager : BaseContentManager
             //   2. Can only climb once (to avoid escaping the `Content` folder).
             //   3. Always relative to the `Content/Maps` folder (not the map file).
             {
-                const string climbSegment = "..";
+                const string climbSegment = ModContentManager.DirectoryClimbingPathSegment;
                 string[] pathSegments = PathUtilities.GetSegments(imageSource);
                 if (pathSegments.Contains(climbSegment))
                 {
@@ -481,7 +484,8 @@ internal sealed class ModContentManager : BaseContentManager
         }
 
         // get relative to map file unless path has directory climbing
-        if (!relativePath.StartsWith("..") && PathUtilities.GetSegments(relativePath, 2)[0] != "..") // directory climbing can only be at the start of the path
+        const string climbSegment = ModContentManager.DirectoryClimbingPathSegment;
+        if (!relativePath.StartsWith(climbSegment) && PathUtilities.GetSegments(relativePath, 2)[0] != climbSegment) // directory climbing can only be at the start of the path
         {
             string localKey = Path.Combine(modRelativeMapFolder, relativePath);
             if (this.GetModFile<Texture2D>(localKey).Exists)
@@ -536,15 +540,17 @@ internal sealed class ModContentManager : BaseContentManager
     private string GetContentKeyForTilesheetImageSource(string relativePath)
     {
         string key = relativePath;
-        string topFolder = PathUtilities.GetSegments(key, limit: 2)[0];
 
-        // remove previously validated directory climbing if it exists
-        if (topFolder.Equals("..", StringComparison.OrdinalIgnoreCase))
-            key = key[2..];
+        // make path relative to Content folder
+        {
+            string topFolder = PathUtilities.GetSegments(key, limit: 2)[0];
+            const string climbSegment = ModContentManager.DirectoryClimbingPathSegment;
 
-        // else convert image source relative to map file into asset key
-        else if (!topFolder.Equals("Maps", StringComparison.OrdinalIgnoreCase))
-            key = Path.Combine("Maps", key);
+            if (topFolder == climbSegment)
+                key = key[(climbSegment.Length + 1)..];
+            else if (!topFolder.Equals("Maps", StringComparison.OrdinalIgnoreCase))
+                key = Path.Combine("Maps", key);
+        }
 
         // remove file extension from unpacked file
         if (key.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
