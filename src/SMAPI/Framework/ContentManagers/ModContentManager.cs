@@ -415,14 +415,16 @@ internal sealed class ModContentManager : BaseContentManager
             if (Path.IsPathRooted(imageSource))
                 throw this.GetPathError(relativeMapFolder, imageSource, $"Tilesheet paths must not be an absolute path ({Path.GetPathRoot(imageSource)}).");
 
-            string[] imageSourcePathSegments = PathUtilities.GetSegments(imageSource);
-            if (imageSourcePathSegments.Contains(".."))
             {
-                int climbingCount = imageSourcePathSegments.Count(segment => segment.Equals("..", StringComparison.OrdinalIgnoreCase));
-                if (climbingCount > 1)
+                string[] imageSourcePathSegments = PathUtilities.GetSegments(imageSource);
+                if (imageSourcePathSegments.Contains(".."))
                 {
-                    var offendingSegments = imageSourcePathSegments.TakeWhile(seg => seg.Equals(".."));
-                    throw this.GetPathError(relativeMapFolder, imageSource, $"Tilesheet paths must not climb more than one directory ({string.Join('/', offendingSegments)}/).");
+                    int climbingCount = imageSourcePathSegments.Count(segment => segment == "..");
+                    if (climbingCount > 1)
+                    {
+                        var offendingSegments = imageSourcePathSegments.TakeWhile(segment => segment == "..");
+                        throw this.GetPathError(relativeMapFolder, imageSource, $"Tilesheet paths must not climb more than one directory ({string.Join('/', offendingSegments)}/).");
+                    }
                 }
             }
 
