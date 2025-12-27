@@ -109,7 +109,7 @@ else
                     </td>
                     <td>
                         <div v-html="mod.Compatibility.Summary"></div>
-                        <div v-if="mod.Warnings" v-for="(warning, i) in mod.Warnings">⚠ {{warning}}</div>
+                        <div v-if="mod.Warnings" v-for="(warning, i) in mod.Warnings">⚠ <span v-html="warning"></span></div>
                     </td>
                     <td class="mod-broke-in" v-html="mod.Compatibility.BrokeIn" v-show="showAdvanced"></td>
                     <td v-show="showAdvanced">

@@ -53,18 +53,18 @@ public class ModModel
     ** Public methods
     *********/
     /// <summary>Construct an instance.</summary>
-    /// <param name="id">The mod IDs.</param>
-    /// <param name="name">The mod name.</param>
-    /// <param name="alternateNames">The mod's alternative names, if any.</param>
-    /// <param name="author">The mod author's name.</param>
-    /// <param name="alternateAuthors">The mod author's alternative names, if any.</param>
-    /// <param name="gitHubRepo">The GitHub repo, if any.</param>
-    /// <param name="sourceUrl">The URL to the mod's source code, if any.</param>
-    /// <param name="compatibility">The compatibility status for the stable version of the game.</param>
-    /// <param name="modPages">Links to the available mod pages.</param>
-    /// <param name="warnings">The human-readable warnings for players about this mod.</param>
-    /// <param name="devNote">Special notes intended for developers who maintain unofficial updates or submit pull requests.</param>
-    /// <param name="slug">A unique identifier for the mod that can be used in an anchor URL.</param>
+    /// <param name="id"><inheritdoc cref="Id" path="/summary"/></param>
+    /// <param name="name"><inheritdoc cref="Name" path="/summary"/></param>
+    /// <param name="alternateNames"><inheritdoc cref="AlternateNames" path="/summary"/></param>
+    /// <param name="author"><inheritdoc cref="Author" path="/summary"/></param>
+    /// <param name="alternateAuthors"><inheritdoc cref="AlternateAuthors" path="/summary"/></param>
+    /// <param name="gitHubRepo"><inheritdoc cref="GitHubRepo" path="/summary"/></param>
+    /// <param name="sourceUrl"><inheritdoc cref="SourceUrl" path="/summary"/></param>
+    /// <param name="compatibility"><inheritdoc cref="Compatibility" path="/summary"/></param>
+    /// <param name="modPages"><inheritdoc cref="ModPages" path="/summary"/></param>
+    /// <param name="warnings"><inheritdoc cref="Warnings" path="/summary"/></param>
+    /// <param name="devNote"><inheritdoc cref="DevNote" path="/summary"/></param>
+    /// <param name="slug"><inheritdoc cref="Slug" path="/summary"/></param>
     [JsonConstructor]
     public ModModel(string[] id, string? name, string? alternateNames, string? author, string? alternateAuthors, string? gitHubRepo, string? sourceUrl, ModCompatibilityModel? compatibility, ModLinkModel[] modPages, string[]? warnings, string? devNote, string? slug)
     {
@@ -96,9 +96,12 @@ public class ModModel
         this.SourceUrl = this.GetSourceUrl(entry);
         this.Compatibility = !entry.Compatibility.IsDefault() ? new ModCompatibilityModel(entry.Compatibility) : null;
         this.ModPages = this.GetModPageUrls(entry).ToArray();
-        this.Warnings = entry.Warnings.Length > 1 ? entry.Warnings : null;
+        this.Warnings = entry.HtmlWarnings ?? entry.Warnings;
         this.DevNote = entry.DevNote;
         this.Slug = entry.Anchor;
+
+        if (this.Warnings.Length == 0)
+            this.Warnings = null;
     }
 
 

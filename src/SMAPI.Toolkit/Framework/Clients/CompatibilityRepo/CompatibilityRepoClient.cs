@@ -57,7 +57,7 @@ public class CompatibilityRepoClient : IDisposable
 
     /// <summary>Fetch mods from the compatibility list by reading a local copy of the compatibility list repo.</summary>
     /// <param name="gitRepoPath">The full path to the compatibility list repo folder.</param>
-    public async Task<ModCompatibilityEntry[]> FetchModsFromLocalGitFolderAsync(string gitRepoPath)
+    public Task<ModCompatibilityEntry[]> FetchModsFromLocalGitFolderAsync(string gitRepoPath)
     {
         string modsJsonPath = Path.Combine(gitRepoPath, "data", "mods.jsonc");
         string contentPacksJsonPath = Path.Combine(gitRepoPath, "data", "broken-content-packs.jsonc");
@@ -67,11 +67,12 @@ public class CompatibilityRepoClient : IDisposable
         RawCompatibilityList? mods = JsonConvert.DeserializeObject<RawCompatibilityList>(File.ReadAllText(modsJsonPath));
         RawCompatibilityList? brokenContentPacks = JsonConvert.DeserializeObject<RawCompatibilityList>(File.ReadAllText(contentPacksJsonPath));
 
-        return
+        return Task.FromResult(
             (mods?.Mods ?? [])
-            .Concat(brokenContentPacks?.BrokenContentPacks ?? [])
-            .Select(this.ParseRawModEntry)
-            .ToArray();
+                .Concat(brokenContentPacks?.BrokenContentPacks ?? [])
+                .Select(this.ParseRawModEntry)
+                .ToArray()
+        );
     }
 
     /// <summary>Get the inline HTML produced by a Markdown string in a compatibility repo field.</summary>
@@ -99,6 +100,7 @@ public class CompatibilityRepoClient : IDisposable
         string[] modIds = this.GetCsv(rawModEntry.Id);
         string[] modNames = this.GetCsv(rawModEntry.Name);
         string[] authorNames = this.GetCsv(rawModEntry.Author);
+        string[] warnings = (rawModEntry.Warnings?.Where(warning => !string.IsNullOrWhiteSpace(warning)).ToArray() ?? [])!;
         ModCompatibilityStatus status = rawModEntry.GetStatus();
         ModCompatibilityReasonAbandoned reasonAbandoned = rawModEntry.GetReasonAbandoned();
         rawModEntry.GetCompatibilitySummary(out string summary, out bool hasMarkdown);
@@ -110,6 +112,26 @@ public class CompatibilityRepoClient : IDisposable
             htmlSummary = this.ParseMarkdownToInlineHtml(summary);
             if (htmlSummary == summary)
                 htmlSummary = null;
+        }
+
+        // get HTML warnings
+        string[]? htmlWarnings = null;
+        if (warnings.Length > 0)
+        {
+            bool anyDifferent = false;
+
+            htmlWarnings = warnings
+                .Select(warning =>
+                {
+                    string html = this.ParseMarkdownToInlineHtml(warning);
+                    if (html != warning)
+                        anyDifferent = true;
+                    return html;
+                })
+                .ToArray();
+
+            if (!anyDifferent)
+                htmlWarnings = null;
         }
 
         // build model
@@ -134,7 +156,8 @@ public class CompatibilityRepoClient : IDisposable
                 unofficialUrl: rawModEntry.UnofficialUpdate?.Url,
                 abandonedReason: reasonAbandoned
             ),
-            warnings: rawModEntry.Warnings ?? [],
+            warnings: warnings,
+            htmlWarnings: htmlWarnings,
             devNote: rawModEntry.DeveloperNotes,
             overrides: this.ParseOverrideEntries(modIds, rawModEntry.OverrideModData),
             anchor: PathUtilities.CreateSlug(modNames.FirstOrDefault())?.ToLower()

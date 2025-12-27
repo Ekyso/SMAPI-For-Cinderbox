@@ -9,6 +9,8 @@
   * Map tilesheet paths can now start with `../` to reference an asset under the `Content` folder that's not in `Content/Maps`.
 
 * For the web UI:
+  * Improved mod compatibility list:
+    * Added support for mod links in warnings.
   * Improved Content Patcher [JSON schemas](technical/web.md#using-a-schema-file-directly):
     * Updated for Content Patcher 2.8.0.
     * Fixed schema requiring `AddNPCWarps` instead of `AddNpcWarps`.
