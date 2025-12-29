@@ -91,15 +91,9 @@ internal class CoreAssetPropagator
 
             if (textureAssets.Any())
             {
-                var defaultLanguage = this.MainContentManager.GetCurrentLanguage();
-
                 foreach (IAssetName assetName in textureAssets)
                 {
-                    var language = assetName.LanguageCode ?? defaultLanguage;
-                    if (language == LocalizedContentManager.LanguageCode.mod && LocalizedContentManager.CurrentModLanguage is null)
-                        language = defaultLanguage;
-
-                    bool changed = this.PropagateTexture(assetName, language, contentManagers, ignoreWorld);
+                    bool changed = this.PropagateTexture(assetName, contentManagers, ignoreWorld);
                     if (changed)
                         propagatedAssets[assetName] = true;
                 }
@@ -139,14 +133,19 @@ internal class CoreAssetPropagator
     *********/
     /// <summary>Propagate changes to a cached texture asset.</summary>
     /// <param name="assetName">The asset name to reload.</param>
-    /// <param name="language">The language for which to get assets.</param>
     /// <param name="contentManagers">The content managers whose assets to update.</param>
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
     /// <returns>Returns whether an asset was loaded.</returns>
     [SuppressMessage("ReSharper", "StringLiteralTypo", Justification = "These deliberately match the asset names.")]
-    private bool PropagateTexture(IAssetName assetName, LocalizedContentManager.LanguageCode language, IList<IContentManager> contentManagers, bool ignoreWorld)
+    private bool PropagateTexture(IAssetName assetName, IList<IContentManager> contentManagers, bool ignoreWorld)
     {
         bool changed = false;
+
+        // get default language
+        // This method replaces the textures that would be loaded if you called `contentManager.Load<Texture2D>(assetName)`,
+        // which internally maps to `contentManager.LoadLocalized<Texture2D>(assetName, currentLanguage)` regardless of
+        // the asset name's language. If the asset name includes a locale, `LoadLocalized` handles that internally.
+        LocalizedContentManager.LanguageCode currentLanguage = LocalizedContentManager.CurrentLanguageCode;
 
         // update textures in-place (0 = localized asset name, 1 = base asset name)
         for (int i = 0; i < 2; i++)
@@ -170,7 +169,7 @@ internal class CoreAssetPropagator
             Lazy<Texture2D?> newTexture = new(() =>
             {
                 if (this.DisposableContentManager.DoesAssetExist<Texture2D>(name))
-                    return this.DisposableContentManager.LoadLocalized<Texture2D>(name, language, useCache: false);
+                    return this.DisposableContentManager.LoadLocalized<Texture2D>(name, currentLanguage, useCache: false);
 
                 this.Monitor.Log($"Skipped reload for '{name.Name}' because the underlying asset no longer exists.", LogLevel.Warn);
                 return null;
@@ -184,7 +183,7 @@ internal class CoreAssetPropagator
                     if (newTexture.Value is null)
                         break;
 
-                    Texture2D texture = contentManager.LoadLocalized<Texture2D>(name, language, useCache: true);
+                    Texture2D texture = contentManager.LoadLocalized<Texture2D>(name, currentLanguage, useCache: true);
                     texture.CopyFromTexture(newTexture.Value);
                     changed = true;
                 }
