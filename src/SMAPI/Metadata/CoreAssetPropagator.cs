@@ -697,6 +697,10 @@ internal class CoreAssetPropagator
         // reapply map changes
         // This must happen after updating warps (since some map modifications like the community shortcuts add warps)
         // and after resetting interior doors' state (so they apply their modifications too).
+        if (location is FarmHouse)
+        {
+            this.Reflection.GetField<bool>(location, "displayingSpouseRoom", true).SetValue(false);
+        }
         location.MakeMapModifications(force: true);
 
         // reset player position
