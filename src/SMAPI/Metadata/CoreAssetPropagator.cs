@@ -82,6 +82,7 @@ internal class CoreAssetPropagator
         changedWarpRoutes = false;
         {
             Type imageType = typeof(Texture2D);
+            Type mapType = typeof(Map);
 
             foreach ((IAssetName assetName, Type assetType) in assets)
             {
@@ -93,12 +94,16 @@ internal class CoreAssetPropagator
                     if (imageType.IsAssignableFrom(assetType))
                         changed = this.PropagateTexture(assetName, contentManagers, ignoreWorld);
 
-                    // any other type
-                    else
+                    // map
+                    else if (assetType == mapType)
                     {
-                        changed = this.PropagateOther(assetName, assetType, ignoreWorld, out bool curChangedMapRoutes);
+                        changed = this.PropagateMap(assetName, ignoreWorld, out bool curChangedMapRoutes);
                         changedWarpRoutes |= curChangedMapRoutes;
                     }
+
+                    // any other type
+                    else
+                        changed = this.PropagateOther(assetName, ignoreWorld);
                 }
                 catch (Exception ex)
                 {
@@ -118,12 +123,58 @@ internal class CoreAssetPropagator
     /*********
     ** Private methods
     *********/
+    /// <summary>Propagate changes to a map asset.</summary>
+    /// <param name="assetName">The asset name that changed.</param>
+    /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
+    /// <param name="changedWarpRoutes">Whether the locations reachable by warps from this location changed as part of this propagation.</param>
+    /// <returns>Returns whether any assets were updated.</returns>
+    private bool PropagateMap(IAssetName assetName, bool ignoreWorld, out bool changedWarpRoutes)
+    {
+        bool changed = false;
+        changedWarpRoutes = false;
+
+        if (!ignoreWorld)
+        {
+            foreach (LocationInfo info in this.GetLocationsWithInfo())
+            {
+                GameLocation location = info.Location;
+
+                if (this.IsSameBaseName(assetName, location.mapPath.Value))
+                {
+                    static ISet<string> GetWarpSet(GameLocation location)
+                    {
+                        HashSet<string> targetNames = [];
+
+                        foreach (Warp warp in location.warps)
+                            targetNames.Add(warp.TargetName);
+
+                        if (location.doors?.Count() > 0)
+                        {
+                            foreach (string targetName in location.doors.Values)
+                                targetNames.Add(targetName);
+                        }
+
+                        return targetNames;
+                    }
+
+                    var oldWarps = GetWarpSet(location);
+                    this.UpdateMap(info);
+                    var newWarps = GetWarpSet(location);
+
+                    changedWarpRoutes = changedWarpRoutes || oldWarps.Count != newWarps.Count || oldWarps.Any(p => !newWarps.Contains(p));
+                    changed = true;
+                }
+            }
+        }
+
+        return changed;
+    }
+
     /// <summary>Propagate changes to a cached texture asset.</summary>
-    /// <param name="assetName">The asset name to reload.</param>
+    /// <param name="assetName">The asset name that changed.</param>
     /// <param name="contentManagers">The content managers whose assets to update.</param>
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
-    /// <returns>Returns whether an asset was loaded.</returns>
-    [SuppressMessage("ReSharper", "StringLiteralTypo", Justification = "These deliberately match the asset names.")]
+    /// <returns>Returns whether any assets were updated.</returns>
     private bool PropagateTexture(IAssetName assetName, IList<IContentManager> contentManagers, bool ignoreWorld)
     {
         bool changed = false;
@@ -218,69 +269,20 @@ internal class CoreAssetPropagator
         return changed;
     }
 
-    /// <summary>Reload one of the game's core assets (if applicable).</summary>
-    /// <param name="assetName">The asset name to reload.</param>
-    /// <param name="type">The asset type to reload.</param>
+    /// <summary>Propagate changes to an asset which isn't a map (handled by <see cref="PropagateMap"/>) or texture (handled by <see cref="PropagateTexture"/>).</summary>
+    /// <param name="assetName">The asset name that changed.</param>
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
-    /// <param name="changedWarpRoutes">Whether the locations reachable by warps from this location changed as part of this propagation.</param>
-    /// <returns>Returns whether an asset was loaded.</returns>
+    /// <returns>Returns whether any assets were updated.</returns>
     [SuppressMessage("ReSharper", "StringLiteralTypo", Justification = "These deliberately match the asset names.")]
-    private bool PropagateOther(IAssetName assetName, Type type, bool ignoreWorld, out bool changedWarpRoutes)
+    private bool PropagateOther(IAssetName assetName, bool ignoreWorld)
     {
-        bool changed = false;
         var content = this.MainContentManager;
-        string key = assetName.BaseName;
-        changedWarpRoutes = false;
+        string baseName = assetName.BaseName;
 
-        /****
-        ** Propagate map changes
-        ****/
-        if (type == typeof(Map))
-        {
-            if (!ignoreWorld)
-            {
-                foreach (LocationInfo info in this.GetLocationsWithInfo())
-                {
-                    GameLocation location = info.Location;
-
-                    if (this.IsSameBaseName(assetName, location.mapPath.Value))
-                    {
-                        static ISet<string> GetWarpSet(GameLocation location)
-                        {
-                            HashSet<string> targetNames = [];
-
-                            foreach (Warp warp in location.warps)
-                                targetNames.Add(warp.TargetName);
-
-                            if (location.doors?.Count() > 0)
-                            {
-                                foreach (string targetName in location.doors.Values)
-                                    targetNames.Add(targetName);
-                            }
-
-                            return targetNames;
-                        }
-
-                        var oldWarps = GetWarpSet(location);
-                        this.UpdateMap(info);
-                        var newWarps = GetWarpSet(location);
-
-                        changedWarpRoutes = changedWarpRoutes || oldWarps.Count != newWarps.Count || oldWarps.Any(p => !newWarps.Contains(p));
-                        changed = true;
-                    }
-                }
-            }
-
-            return changed;
-        }
-
-        /****
-        ** Propagate by key
-        ****/
-        switch (assetName.BaseName.ToLower().Replace("\\", "/")) // normalized key so we can compare statically
+        switch (baseName.ToLower().Replace("\\", "/")) // normalized key so we can compare statically
         {
             /****
-            ** Content\Data
+            ** Content/Data
             ****/
             case "data/achievements": // Game1.LoadContent
                 Game1.achievements = DataLoader.Achievements(content);
@@ -369,7 +371,7 @@ internal class CoreAssetPropagator
                 return true;
 
             case "data/hairdata": // Farmer.GetHairStyleMetadataFile
-                return changed | this.UpdateHairData();
+                return this.UpdateHairData();
 
             case "data/hats": // HatDataDefinition
                 ItemRegistry.ResetCache();
@@ -439,25 +441,25 @@ internal class CoreAssetPropagator
                 return true;
 
             /****
-            ** Content\Fonts
+            ** Content/Fonts
             ****/
             case "fonts/spritefont1": // Game1.LoadContent
-                Game1.dialogueFont = content.Load<SpriteFont>(key);
+                Game1.dialogueFont = content.Load<SpriteFont>(baseName);
                 return true;
 
             case "fonts/smallfont": // Game1.LoadContent
-                Game1.smallFont = content.Load<SpriteFont>(key);
+                Game1.smallFont = content.Load<SpriteFont>(baseName);
                 return true;
 
             case "fonts/tinyfont": // Game1.LoadContent
-                Game1.tinyFont = content.Load<SpriteFont>(key);
+                Game1.tinyFont = content.Load<SpriteFont>(baseName);
                 return true;
 
             /****
-            ** Content\Strings
+            ** Content/Strings
             ****/
             case "strings/stringsfromcsfiles":
-                return changed | this.UpdateStringsFromCsFiles(content);
+                return this.UpdateStringsFromCsFiles(content);
 
             /****
             ** Dynamic keys
@@ -466,10 +468,10 @@ internal class CoreAssetPropagator
                 if (!ignoreWorld)
                 {
                     if (assetName.IsDirectlyUnderPath("Characters/Dialogue"))
-                        return changed | this.UpdateNpcDialogue(assetName);
+                        return this.UpdateNpcDialogue(assetName);
 
                     if (assetName.IsDirectlyUnderPath("Characters/schedules"))
-                        return changed | this.UpdateNpcSchedules(assetName);
+                        return this.UpdateNpcSchedules(assetName);
                 }
 
                 return false;
