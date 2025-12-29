@@ -6,7 +6,6 @@ using Hangfire;
 using Hangfire.Console;
 using Hangfire.Server;
 using Humanizer;
-using Humanizer.Localisation;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using StardewModdingAPI.Toolkit;

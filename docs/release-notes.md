@@ -13,6 +13,9 @@
   * Added asset propagation for spouse room map edits.
   * Improved performance when propagating localized assets in some cases (thanks to SinZ!).
   * Improved error-handling during asset propagation.
+  * Updated dependencies, including...
+    * [Newtonsoft.Json](https://www.newtonsoft.com/json) 13.0.3 → 13.0.4 (see [changes](https://github.com/JamesNK/Newtonsoft.Json/releases/tag/13.0.4));
+    * [Pintail](https://github.com/Nanoray-pl/Pintail) 2.8.1 → 2.9.1 (see [changes](https://github.com/Nanoray-pl/Pintail/blob/master/docs/release-notes.md#291)).
 
 * For the web UI:
   * Improved mod compatibility list:
