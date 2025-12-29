@@ -10,6 +10,7 @@
   * Added [input API to send button presses to the game](https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Input#Send_input) (thanks to martiandweller!).
   * Added `PatchMode.Mask` option when editing textures, which lets you apply a transparency mask to the target texture (thanks to PinkSerenity!).
   * Added support for map tilesheet paths starting with `../` to reference an asset under the `Content` folder that's not in `Content/Maps` (thanks to Spiderbuttons!).
+  * Added asset propagation for spouse room map edits.
   * Improved performance when propagating localized assets in some cases (thanks to SinZ!).
   * Improved error-handling during asset propagation.
 

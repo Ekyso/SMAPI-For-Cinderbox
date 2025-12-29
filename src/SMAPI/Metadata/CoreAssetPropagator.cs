@@ -11,6 +11,7 @@ using StardewModdingAPI.Framework.Utilities;
 using StardewModdingAPI.Internal;
 using StardewValley;
 using StardewValley.Buildings;
+using StardewValley.GameData.Characters;
 using StardewValley.Locations;
 using StardewValley.Pathfinding;
 using StardewValley.TerrainFeatures;
@@ -83,6 +84,7 @@ internal class CoreAssetPropagator
         {
             Type imageType = typeof(Texture2D);
             Type mapType = typeof(Map);
+            Dictionary<FarmHouse, string?>? spouseRoomMapPathCache = null; // constructed later if needed
 
             foreach ((IAssetName assetName, Type assetType) in assets)
             {
@@ -97,7 +99,7 @@ internal class CoreAssetPropagator
                     // map
                     else if (assetType == mapType)
                     {
-                        changed = this.PropagateMap(assetName, ignoreWorld, out bool curChangedMapRoutes);
+                        changed = this.PropagateMap(assetName, ref spouseRoomMapPathCache, ignoreWorld, out bool curChangedMapRoutes);
                         changedWarpRoutes |= curChangedMapRoutes;
                     }
 
@@ -125,10 +127,11 @@ internal class CoreAssetPropagator
     *********/
     /// <summary>Propagate changes to a map asset.</summary>
     /// <param name="assetName">The asset name that changed.</param>
+    /// <param name="spouseRoomMapPathCache">A cache of spouse room map path lookups by farmhouse or cabin instance. This will be created the first time it's needed.</param>
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
     /// <param name="changedWarpRoutes">Whether the locations reachable by warps from this location changed as part of this propagation.</param>
     /// <returns>Returns whether any assets were updated.</returns>
-    private bool PropagateMap(IAssetName assetName, bool ignoreWorld, out bool changedWarpRoutes)
+    private bool PropagateMap(IAssetName assetName, ref Dictionary<FarmHouse, string?>? spouseRoomMapPathCache, bool ignoreWorld, out bool changedWarpRoutes)
     {
         bool changed = false;
         changedWarpRoutes = false;
@@ -139,7 +142,20 @@ internal class CoreAssetPropagator
             {
                 GameLocation location = info.Location;
 
-                if (this.IsSameBaseName(assetName, location.mapPath.Value))
+                bool shouldUpdateMap =
+                    // edited this map
+                    this.IsSameBaseName(assetName, location.mapPath.Value)
+
+                    // edited spouse room for this farmhouse
+                    || (
+                        location is FarmHouse farmhouse
+                        && this.IsSameBaseName(
+                            assetName,
+                            this.GetDisplayedSpouseRoomPath(farmhouse, ref spouseRoomMapPathCache)
+                        )
+                    );
+
+                if (shouldUpdateMap)
                 {
                     static ISet<string> GetWarpSet(GameLocation location)
                     {
@@ -687,9 +703,7 @@ internal class CoreAssetPropagator
         // This must happen after updating warps (since some map modifications like the community shortcuts add warps)
         // and after resetting interior doors' state (so they apply their modifications too).
         if (location is FarmHouse)
-        {
-            this.Reflection.GetField<bool>(location, "displayingSpouseRoom", true).SetValue(false);
-        }
+            this.Reflection.GetField<bool>(location, "displayingSpouseRoom").SetValue(false);
         location.MakeMapModifications(force: true);
 
         // reset player position
@@ -795,6 +809,33 @@ internal class CoreAssetPropagator
 
                 return locations;
             });
+    }
+
+    /// <summary>Get the asset name for a farmhouse's spouse room, if it's currently displaying one.</summary>
+    /// <param name="farmhouse">The farmhouse whose spouse room to get.</param>
+    /// <param name="cache">A cache of spouse room map path lookups by farmhouse or cabin instance. This is created if it's null.</param>
+    private string? GetDisplayedSpouseRoomPath(FarmHouse farmhouse, ref Dictionary<FarmHouse, string?>? cache)
+    {
+        // from cache
+        if (cache is null)
+            cache = [];
+        else if (cache.TryGetValue(farmhouse, out string? spouseRoomMapPath))
+            return spouseRoomMapPath;
+
+        // no spouse room shown
+        Farmer? owner = farmhouse.owner;
+        if (owner?.spouse is null || !this.Reflection.GetField<bool>(farmhouse, "displayingSpouseRoom").GetValue())
+        {
+            cache[farmhouse] = null;
+            return null;
+        }
+
+        // else get map path
+        string mapPath = NPC.TryGetData(owner.spouse, out CharacterData? spouseData) && spouseData?.SpouseRoom?.MapAsset is { } mapName
+            ? $"Maps/{mapName}"
+            : "Maps/spouseRooms";
+        cache[farmhouse] = mapPath;
+        return mapPath;
     }
 
     /// <summary>Get whether two asset names are equivalent if you ignore the locale code.</summary>
