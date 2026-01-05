@@ -5,6 +5,7 @@
 * For players:
   * Fixed `player_add` and `list_items` console commands not including some newer juice items.
   * Fixed farmhouse map edits sometimes removing the spouse room (thanks to SinZ!).
+  * Fixed installer error if Steam has an empty game path saved to the registry.
 
 * For mod authors:
   * Added [input API to send button presses to the game](https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Input#Send_input) (thanks to martiandweller!).
