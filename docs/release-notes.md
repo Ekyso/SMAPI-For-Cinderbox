@@ -19,6 +19,7 @@
   * Updated dependencies, including...
     * [Newtonsoft.Json](https://www.newtonsoft.com/json) 13.0.3 → 13.0.4 (see [changes](https://github.com/JamesNK/Newtonsoft.Json/releases/tag/13.0.4));
     * [Pintail](https://github.com/Nanoray-pl/Pintail) 2.8.1 → 2.9.1 (see [changes](https://github.com/Nanoray-pl/Pintail/blob/master/docs/release-notes.md#291)).
+  * Fixed asset propagation for farmer sprites before a save is loaded.
   * Removed `System.Management.dll`, which SMAPI no longer uses.
 
 * For the web UI:

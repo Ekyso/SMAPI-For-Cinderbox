@@ -260,8 +260,7 @@ internal class CoreAssetPropagator
                 case "characters/farmer/farmer_base_bald":
                 case "characters/farmer/farmer_girl_base":
                 case "characters/farmer/farmer_girl_base_bald":
-                    if (!ignoreWorld)
-                        this.UpdatePlayerSprites(assetName);
+                    this.UpdatePlayerSprites(assetName);
                     break;
 
                 /****
@@ -530,19 +529,19 @@ internal class CoreAssetPropagator
     /// <param name="assetName">The asset name to update.</param>
     private void UpdatePlayerSprites(IAssetName assetName)
     {
-        Farmer[] players =
-            (
-                from player in Game1.getOnlineFarmers()
-                where this.IsSameBaseName(assetName, player.getTexture())
-                select player
-            )
-            .ToArray();
+        // reset recolors
+        FarmerRenderer.recolorOffsets?.Clear();
 
-        foreach (Farmer player in players)
+        // reset local player
+        // This is handled separately since Game1.getOnlineFarmers() doesn't include the local player before the save is loaded
+        if (this.IsSameBaseName(assetName, Game1.player?.getTexture()))
+            Game1.player.FarmerRenderer.MarkSpriteDirty();
+
+        // reset other player
+        foreach (Farmer player in Game1.getOnlineFarmers())
         {
-            FarmerRenderer.recolorOffsets?.Clear();
-
-            player.FarmerRenderer.MarkSpriteDirty();
+            if (!object.ReferenceEquals(player, Game1.player) && this.IsSameBaseName(assetName, player.getTexture()))
+                player.FarmerRenderer.MarkSpriteDirty();
         }
     }
 
@@ -841,7 +840,7 @@ internal class CoreAssetPropagator
     /// <summary>Get whether two asset names are equivalent if you ignore the locale code.</summary>
     /// <param name="left">The first value to compare.</param>
     /// <param name="right">The second value to compare.</param>
-    private bool IsSameBaseName(IAssetName? left, string? right)
+    private bool IsSameBaseName([NotNullWhen(true)] IAssetName? left, [NotNullWhen(true)] string? right)
     {
         if (left is null || right is null)
             return false;
@@ -853,7 +852,7 @@ internal class CoreAssetPropagator
     /// <summary>Get whether two asset names are equivalent if you ignore the locale code.</summary>
     /// <param name="left">The first value to compare.</param>
     /// <param name="right">The second value to compare.</param>
-    private bool IsSameBaseName(IAssetName? left, IAssetName? right)
+    private bool IsSameBaseName([NotNullWhen(true)] IAssetName? left, [NotNullWhen(true)] IAssetName? right)
     {
         if (left is null || right is null)
             return false;
