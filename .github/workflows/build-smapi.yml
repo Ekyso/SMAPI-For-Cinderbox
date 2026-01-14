@@ -3,7 +3,7 @@ name: Build SMAPI
 on:
     push:
         tags:
-            - "[0-9]+.[0-9]+.[0-9]+" # On any d.d.d tag push.
+            - "[0-9]+.[0-9]+.[0-9]+" # stable version tag
         branches:
             - develop
 
@@ -11,8 +11,8 @@ jobs:
     build_and_release:
         runs-on: ubuntu-latest
         permissions:
-            contents: write # For creating releases.
-            id-token: write # For creating attestations.
+            contents: write # for creating releases
+            id-token: write # for creating attestations
             attestations: write
         steps:
             -   name: Checkout code
@@ -20,8 +20,8 @@ jobs:
                 with:
                     fetch-depth: 0
 
-            -   name: Get trigger type.
-                id: trigger-type # Possible values: tag, dev-branch.
+            -   name: Get trigger type # Possible values: tag, dev-branch
+                id: trigger-type
                 shell: pwsh
                 run: |
                     # If we ever decide to add manual workflow runs, this will need to be reworked.
@@ -42,7 +42,7 @@ jobs:
                         exit 1
                     }
 
-            -   name: Extract current SMAPI version.
+            -   name: Get SMAPI assembly version
                 id: smapi-version
                 shell: pwsh
                 run: |
@@ -71,7 +71,7 @@ jobs:
 
                     Write-Host "Version: $major.$minor.$patch"
 
-            -   name: Verify SMAPI version matches tag.
+            -   name: Verify SMAPI assembly version matches tag
                 if: steps.trigger-type.outputs.trigger_type == 'tag'
                 shell: pwsh
                 run: |
@@ -83,7 +83,7 @@ jobs:
                         exit 1
                     }
 
-            -   name: Update SMAPI's current version for dev builds.
+            -   name: Update SMAPI assembly version
                 id: version-parsing
                 if: steps.trigger-type.outputs.trigger_type == 'dev-branch'
                 shell: pwsh
@@ -99,43 +99,43 @@ jobs:
                     bash build/unix/set-smapi-version.sh "$updatedVersion"
                     Write-Host 'Version updated using build/unix/set-smapi-version.sh.'
 
-            -   name: Checkout reference assemblies
+            -   name: Checkout game reference assemblies
                 uses: actions/checkout@v4
                 with:
                     repository: "StardewModders/mod-reference-assemblies"
                     path: "stardew-reference-assemblies"
                     fetch-depth: 1
 
-            -   name: Symlink reference assemblies to a valid location. # Simply cloning the repo to this location doesn't seem to work.
+            -   name: Symlink game reference assemblies # simply cloning the repo to this location doesn't seem to work
                 run: |
                     ln -s "$(pwd)/stardew-reference-assemblies" "$HOME/StardewValley"
 
-            -   name: Build SMAPI.
+            -   name: Build SMAPI
                 shell: pwsh
                 run: |
                     Write-Host "Building SMAPI $env:VERSION."
                     bash build/unix/prepare-install-package.sh "$env:VERSION"
 
-            -   name: Rename build zips.
+            -   name: Rename build zips
                 run: |
                     mv "bin/SMAPI ${{env.VERSION}} installer.zip" "bin/SMAPI-${{env.VERSION}}-installer.zip"
                     mv "bin/SMAPI ${{env.VERSION}} installer for developers.zip" "bin/SMAPI-${{env.VERSION}}-installer-for-developers.zip"
 
-            -   name: Upload regular installer.
+            -   name: Upload installer
                 uses: actions/upload-artifact@v4
                 with:
                     name: 'SMAPI ${{env.VERSION}} installer'
                     path: 'bin/SMAPI-${{env.VERSION}}-installer.zip'
                     if-no-files-found: 'error'
 
-            -   name: Upload installer for developers.
+            -   name: Upload installer for developers
                 uses: actions/upload-artifact@v4
                 with:
                     name: 'SMAPI ${{env.VERSION}} installer for developers'
                     path: 'bin/SMAPI-${{env.VERSION}}-installer-for-developers.zip'
                     if-no-files-found: 'error'
 
-            -   name: Create release and upload artifact
+            -   name: Create GitHub release
                 uses: ncipollo/release-action@v1
                 if: steps.trigger-type.outputs.trigger_type == 'tag'
                 with:
