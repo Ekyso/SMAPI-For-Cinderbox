@@ -20,7 +20,7 @@ jobs:
                 with:
                     fetch-depth: 0
 
-            -   name: Get trigger type # Possible values: tag, dev-branch
+            -   name: Get trigger type # possible values: tag, dev-branch
                 id: trigger-type
                 shell: pwsh
                 run: |
@@ -84,7 +84,6 @@ jobs:
                     }
 
             -   name: Update SMAPI assembly version
-                id: version-parsing
                 if: steps.trigger-type.outputs.trigger_type == 'dev-branch'
                 shell: pwsh
                 run: |
@@ -142,7 +141,6 @@ jobs:
 
             -   name: Generate artifact attestations
                 uses: actions/attest-build-provenance@v2
-                id: attestation-step
                 with:
                     subject-path: |
                         bin/SMAPI-${{env.VERSION}}-installer.zip
