@@ -100,15 +100,8 @@ jobs:
                     Write-Host 'Version updated using build/unix/set-smapi-version.sh.'
 
             -   name: Checkout game reference assemblies
-                uses: actions/checkout@v4
-                with:
-                    repository: "StardewModders/mod-reference-assemblies"
-                    path: "stardew-reference-assemblies"
-                    fetch-depth: 1
-
-            -   name: Symlink game reference assemblies # simply cloning the repo to this location doesn't seem to work
                 run: |
-                    ln -s "$(pwd)/stardew-reference-assemblies" "$HOME/StardewValley"
+                    git clone --depth 1 https://github.com/StardewModders/mod-reference-assemblies.git "$HOME/StardewValley"
 
             -   name: Build SMAPI
                 shell: pwsh
