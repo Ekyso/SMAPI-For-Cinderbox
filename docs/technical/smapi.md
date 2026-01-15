@@ -14,9 +14,11 @@ This document is about SMAPI itself; see also [mod build package](mod-package.md
 * [Compile from source code](#compile-from-source-code)
   * [Main project](#main-project)
   * [Custom Harmony build](#custom-harmony-build)
+* [Version format](#version-format)
 * [Prepare a release](#prepare-a-release)
-  * [On any platform](#on-any-platform)
-  * [On Windows](#on-windows)
+  * [Automated build pipeline](#automated-build-pipeline)
+  * [Manual release on any platform](#manual-release-on-any-platform)
+  * [Manual release On Windows](#manual-release-on-windows)
 * [Release notes](#release-notes)
 
 ## Customisation
@@ -67,6 +69,15 @@ flag | purpose
 ---- | -------
 `SMAPI_FOR_WINDOWS` | Whether SMAPI is being compiled for Windows; if not set, the code assumes Linux/macOS. Set automatically in `common.targets`.
 
+## Version format
+SMAPI uses [semantic versioning](https://semver.org). Typical format:
+
+build type | format                   | example
+:--------- | :----------------------- | :------
+dev build  | `<version>-alpha.<date>` | `4.0.0-alpha.20251230`
+prerelease | `<version>-beta.<date>`  | `4.0.0-beta.20251230`
+release    | `<version>`              | `4.0.0`
+
 ## Compile from source code
 ### Main project
 Using an official SMAPI release is recommended for most users, but you can compile from source
@@ -80,89 +91,86 @@ the `SMAPI` project with debugging from Visual Studio or Rider should launch SMA
 debugger attached, so you can intercept errors and step through the code being executed.
 
 ### Custom Harmony build
-SMAPI uses [a custom build of Harmony 2.2.2](https://github.com/Pathoschild/Harmony#readme), which
-is included in the `build` folder. To use a different build, just replace `0Harmony.dll` in that
+SMAPI uses [a custom build of Harmony](https://github.com/Pathoschild/Harmony#readme), which is
+included in the `build` folder. To use a different build, just replace `0Harmony.dll` in that
 folder before compiling.
 
 ## Prepare a release
-### On any platform
-_This is the unified process that works on any platform. However, it needs a few extra steps on
-Windows (e.g. running Steam in WSL); see ['On Windows'](#on-windows) below for an alternative quick
-option._
+### Automated build pipeline
+SMAPI releases can be compiled automatically on GitHub. This is the recommended approach for
+official releases, since...
+- It eliminates the risk of malware on your computer infecting the release.
+- It creates an [attestation](https://docs.github.com/en/actions/concepts/security/artifact-attestations),
+  so security-savvy users can verify that the release was compiled from the code on GitHub and
+  hasn't been tampered with.
+- It benefits from future workflow improvements like code signing.
 
-#### First-time setup
+The typical process is:
+
+1. Commit changes on the `develop` branch.  
+   * _Note: for an alpha version, you're done! All commits on `develop` are compiled into alpha
+     releases. See the 'Actions' tab on GitHub._
+2. Set SMAPI's [version](#version-format) in `build/common.targets`, `src/SMAPI/Constants.cs`, and
+   each mod's `manifest.json`.  
+   * _You can run `pwsh build/scripts/set-smapi-version.ps1 VERSION_HERE` to do it automatically.
+     On Linux/macOS, you'll need to [install PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell)._
+3. Update the [release notes](../release-notes.md).
+4. Commit.
+5. Merge `develop` into `stable`.
+6. Tag the merge commit with the version (e.g. `5.0.0`).
+7. Check the 'Actions' tab on GitHub for the build, and download its artifacts when it finishes.
+
+### Manual release on any platform
+> [!WARNING]  
+> This lets you manually prepare a release, which is fine for personal use. However, official
+> releases should use the [automated build pipeline](#automated-build-pipeline) instead.
+
+> [!TIP]
+> This approach works on any platform, but it's a bit complicated on Windows. See also [_Manual
+> release on Windows_](#manual-release-on-windows) for a simpler approach.
+
+First-time setup:
 1. On Windows only:
    1. [Install Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install).
    2. Follow the rest of the instructions inside WSL.
-2. Install the required software:
-   1. Install...
-      - [.NET 6 SDK](https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu) (run
-        `lsb_release -a` if you need the Ubuntu version number);
-      - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-linux);
-      - and [Steam](https://linuxconfig.org/how-to-install-steam-on-ubuntu-20-04-focal-fossa-linux).
-   3. Launch `steam` and install the game like usual.
-   4. Download and install your preferred IDE. For the [latest standalone Rider
-      version](https://www.jetbrains.com/help/rider/Installation_guide.html#prerequisites):
-      ```sh
-      wget "<download url here>" -O rider-install.tar.gz
-      sudo tar -xzvf rider-install.tar.gz -C /opt
-      ln -s "/opt/JetBrains Rider-<version>/bin/rider.sh"
-      ./rider.sh
-      ```
-3. Clone the SMAPI repo:
+2. Install...
+   - [.NET 6 SDK](https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu) (run
+     `lsb_release -a` if you need the Ubuntu version number);
+   - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell);
+   - and Steam (see [Linux instructions](https://linuxconfig.org/how-to-install-steam-on-ubuntu-20-04-focal-fossa-linux)).
+3. Launch `steam` and install the game like usual.
+4. Clone the SMAPI repo:
    ```sh
    git clone https://github.com/Pathoschild/SMAPI.git
    ```
 
-### Launch the game
-1. Run these commands to start Steam:
-   ```sh
-   export TERM=xterm
-   steam
-   ```
-2. Launch the game through the Steam UI.
-
-### Prepare the release
+To prepare the release:
 1. Run `pwsh build/scripts/prepare-install-package.sh VERSION_HERE` to create the release package in the
-   root `bin` folder.
+   root `bin` folder. Make sure you use a [semantic version](#version-format).
 
-   Make sure you use a [semantic version](https://semver.org). Recommended format:
+### Manual release On Windows
+> [!WARNING]  
+> This lets you manually prepare a release, which is fine for personal use. However, official
+> releases should use the [automated build pipeline](#automated-build-pipeline) instead.
 
-   build type | format                   | example
-   :--------- | :----------------------- | :------
-   dev build  | `<version>-alpha.<date>` | `4.0.0-alpha.20251230`
-   prerelease | `<version>-beta.<date>`  | `4.0.0-beta.20251230`
-   release    | `<version>`              | `4.0.0`
+> [!TIP]
+> To prepare a Windows-only build, you can skip WSL and replace `--skip-bundle-deletion` with `--windows-only`
+> when calling `prepare-install-package.ps1`.
 
-### On Windows
-_This is the alternative quick process for Windows only. This avoids needing Steam installed on WSL,
-and can be used to create Windows-only builds without using WSL at all. See ['on any platform'](#on-any-platform)
-above for the unified process._
-
-#### First-time setup
-1. Set up Windows Subsystem for Linux (WSL):
-   1. [Install WSL](https://docs.microsoft.com/en-us/windows/wsl/install).
-   2. Run `sudo apt update` in WSL to update the package list.
-   3. The rest of the instructions below should be run in WSL.
-2. Install the required software:
-   1. Install the [.NET 5 SDK](https://dotnet.microsoft.com/download/dotnet/5.0).
-   2. Install [Stardew Valley](https://www.stardewvalley.net/).
-3. Clone the SMAPI repo:
+First-time setup:
+1. Install...
+   - [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install);
+   - [.NET 6 SDK](https://dotnet.microsoft.com/download/dotnet/5.0);
+   - [Stardew Valley](https://www.stardewvalley.net/).
+2. Clone the SMAPI repo:
    ```sh
    git clone https://github.com/Pathoschild/SMAPI.git
    ```
 
-### Prepare the release
+To prepare the release:
 1. Run `pwsh build/scripts/prepare-install-package.ps1 VERSION_HERE --skip-bundle-deletion` to
-   create the release package folders in the root `bin` folder.
-
-   Make sure you use a [semantic version](https://semver.org). Recommended format:
-
-   build type | format                   | example
-   :--------- | :----------------------- | :------
-   dev build  | `<version>-alpha.<date>` | `4.0.0-alpha.20251230`
-   prerelease | `<version>-beta.<date>`  | `4.0.0-beta.20251230`
-   release    | `<version>`              | `4.0.0`
+   create the release package folders in the root `bin` folder. Make sure you use a [semantic
+   version](#version-format).
 
 2. Launch WSL and run this script:
    ```bash
@@ -172,9 +180,6 @@ above for the unified process._
    binFolder="/mnt/e/source/_Stardew/SMAPI/bin"
    pwsh build/scripts/finalize-install-package.sh "$version" "$binFolder"
    ```
-
-Note: to prepare a test Windows-only build, you can pass `--windows-only` in the first step and
-skip the second one.
 
 ## Release notes
 See [release notes](../release-notes.md).
