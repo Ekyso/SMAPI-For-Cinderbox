@@ -152,7 +152,7 @@ above for the unified process._
    ```
 
 ### Prepare the release
-1. Run `build/windows/prepare-install-package.ps1 VERSION_HERE` in PowerShell to create the release
+1. Run `build/scripts/prepare-install-package.ps1 VERSION_HERE` in PowerShell to create the release
    package folders in the root `bin` folder.
 
    Make sure you use a [semantic version](https://semver.org). Recommended format:
@@ -169,7 +169,7 @@ above for the unified process._
    # In WSL, `/mnt/c/example` accesses `C:\example` on the Windows filesystem.
    version="4.0.0"
    binFolder="/mnt/e/source/_Stardew/SMAPI/bin"
-   build/windows/finalize-install-package.sh "$version" "$binFolder"
+   build/scripts/finalize-install-package.sh "$version" "$binFolder"
    ```
 
 Note: to prepare a test Windows-only build, you can pass `--windows-only` in the first step and

@@ -20,17 +20,17 @@
     <File Path="../build/deploy-local-smapi.targets" />
     <File Path="../build/find-game-folder.targets" />
   </Folder>
+  <Folder Name="/.root/build/scripts/">
+    <File Path="../build/scripts/finalize-install-package.sh" />
+    <File Path="../build/scripts/prepare-install-package.ps1" />
+    <File Path="../build/scripts/set-smapi-version.ps1" />
+  </Folder>
+  <Folder Name="/.root/build/scripts/lib/">
+    <File Path="../build/scripts/lib/in-place-regex.ps1" />
+  </Folder>
   <Folder Name="/.root/build/unix/">
     <File Path="../build/unix/prepare-install-package.sh" />
     <File Path="../build/unix/set-smapi-version.sh" />
-  </Folder>
-  <Folder Name="/.root/build/windows/">
-    <File Path="../build/windows/finalize-install-package.sh" />
-    <File Path="../build/windows/prepare-install-package.ps1" />
-    <File Path="../build/windows/set-smapi-version.ps1" />
-  </Folder>
-  <Folder Name="/.root/build/windows/lib/">
-    <File Path="../build/windows/lib/in-place-regex.ps1" />
   </Folder>
   <Folder Name="/.root/docs/">
     <File Path="../docs/mod-build-config.md" />
