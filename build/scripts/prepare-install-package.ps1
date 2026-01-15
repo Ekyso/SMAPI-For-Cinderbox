@@ -1,11 +1,7 @@
 #
 #
-# This is the PowerShell equivalent of ../unix/prepare-install-package.sh, *except* that it doesn't
-# set Linux permissions, create the install.dat files, or create the final zip (unless you specify
-# --windows-only). Due to limitations in PowerShell, the final changes are handled by the
-# windows/finalize-install-package.sh file in WSL.
-#
-# When making changes, make sure to update ../unix/prepare-install-package.ps1 too.
+# Note: On Windows, this script *does not* set Linux permissions. The final changes are handled by the
+# finalize-install-package.sh file in WSL.
 #
 #
 
@@ -13,21 +9,55 @@
 
 
 ##########
+## Read arguments
+##########
+$windowsOnly = $false # Windows-only build
+$skipBundleDeletion = $false # skip bundle deletion (only applies when using WSL to finalize the build on Windows)
+    foreach ($arg in $args) {
+        if ($arg -eq "--windows-only" -and $IsWindows) {
+            $windowsOnly = $true
+        }
+        elseif ($arg -eq "--skip-bundle-deletion") {
+            $skipBundleDeletion = $true
+    }
+}
+
+
+##########
 ## Find the game folder
 ##########
-$possibleGamePaths=(
-    # GOG
-    "C:\Program Files\GalaxyClient\Games\Stardew Valley",
-    "C:\Program Files\GOG Galaxy\Games\Stardew Valley",
-    "C:\Program Files\GOG Games\Stardew Valley",
-    "C:\Program Files (x86)\GalaxyClient\Games\Stardew Valley",
-    "C:\Program Files (x86)\GOG Galaxy\Games\Stardew Valley",
-    "C:\Program Files (x86)\GOG Games\Stardew Valley",
+if ($IsWindows) {
+    $possibleGamePaths=(
+        # GOG
+        "C:\Program Files\GalaxyClient\Games\Stardew Valley",
+        "C:\Program Files\GOG Galaxy\Games\Stardew Valley",
+        "C:\Program Files\GOG Games\Stardew Valley",
+        "C:\Program Files (x86)\GalaxyClient\Games\Stardew Valley",
+        "C:\Program Files (x86)\GOG Galaxy\Games\Stardew Valley",
+        "C:\Program Files (x86)\GOG Games\Stardew Valley",
 
-    # Steam
-    "C:\Program Files\Steam\steamapps\common\Stardew Valley",
-    "C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley"
-)
+        # Steam
+        "C:\Program Files\Steam\steamapps\common\Stardew Valley",
+        "C:\Program Files (x86)\Steam\steamapps\common\Stardew Valley"
+    )
+}
+else {
+    $possibleGamePaths=(
+        # override
+        "$HOME/StardewValley",
+
+        # Linux
+        "$HOME/GOG Games/Stardew Valley/game",
+        "$HOME/.steam/steam/steamapps/common/Stardew Valley",
+        "$HOME/.local/share/Steam/steamapps/common/Stardew Valley",
+        "$HOME/.var/app/com.valvesoftware.Steam/data/Steam/steamapps/common/Stardew Valley",
+
+        # macOS
+        "/Applications/Stardew Valley.app/Contents/MacOS",
+        "$HOME/Library/Application Support/Steam/steamapps/common/Stardew Valley/Contents/MacOS"
+    )
+}
+
 $gamePath = ""
 foreach ($possibleGamePath in $possibleGamePaths) {
     if (Test-Path $possibleGamePath -PathType Container) {
@@ -46,9 +76,16 @@ $bundleModNames = "ConsoleCommands", "SaveBackup"
 # build configuration
 $buildConfig = "Release"
 $framework = "net6.0"
-$folders = "linux", "macOS", "windows"
-$runtimes = @{ linux = "linux-x64"; macOS = "osx-x64"; windows = "win-x64" }
-$msBuildPlatformNames = @{ linux = "Unix"; macOS = "OSX"; windows = "Windows_NT" }
+if ($windowsOnly) {
+    $folders = "windows"
+    $runtimes = @{ windows = "win-x64" }
+    $msBuildPlatformNames = @{ windows = "Windows_NT" }
+}
+else {
+    $folders = "linux", "macOS", "windows"
+    $runtimes = @{ linux = "linux-x64"; macOS = "osx-x64"; windows = "win-x64" }
+    $msBuildPlatformNames = @{ linux = "Unix"; macOS = "OSX"; windows = "Windows_NT" }
+}
 
 # version number
 $version = $args[0]
@@ -56,35 +93,24 @@ if (!$version) {
     $version = Read-Host "SMAPI release version (like '4.0.0')"
 }
 
-# Windows-only build
-$windowsOnly = $false
-foreach ($arg in $args) {
-    if ($arg -eq "--windows-only") {
-        $windowsOnly = $true
-        $folders = "windows"
-        $runtimes = @{ windows = "win-x64" }
-        $msBuildPlatformNames = @{ windows = "Windows_NT" }
-    }
-}
-
 
 ##########
 ## Move to SMAPI root
 ##########
-cd "$PSScriptRoot/../.."
+Set-Location "$PSScriptRoot/../.."
 
 
 ##########
 ## Clear old build files
 ##########
-echo "Clearing old builds..."
-echo "-------------------------------------------------"
+Write-Output "Clearing old builds..."
+Write-Output "-------------------------------------------------"
 
-foreach ($path in (dir -Recurse -Include ('bin', 'obj'))) {
-    echo "$path"
-    rm -Recurse -Force "$path"
+foreach ($path in (Get-ChildItem -Recurse -Include ('bin', 'obj'))) {
+    Write-Output "$path"
+    Remove-Item -Recurse -Force "$path"
 }
-echo ""
+Write-Output ""
 
 
 ##########
@@ -95,24 +121,24 @@ foreach ($folder in $folders) {
     $runtime = $runtimes[$folder]
     $msbuildPlatformName = $msBuildPlatformNames[$folder]
 
-    echo "Compiling SMAPI for $folder..."
-    echo "-------------------------------------------------"
+    Write-Output "Compiling SMAPI for $folder..."
+    Write-Output "-------------------------------------------------"
     dotnet publish src/SMAPI --configuration $buildConfig -v minimal --runtime "$runtime" --framework "$framework" -p:OS="$msbuildPlatformName" -p:TargetFrameworks="$framework" -p:GamePath="$gamePath" -p:CopyToGameFolder="false" --self-contained true
-    echo ""
-    echo ""
+    Write-Output ""
+    Write-Output ""
 
-    echo "Compiling installer for $folder..."
-    echo "-------------------------------------------------"
+    Write-Output "Compiling installer for $folder..."
+    Write-Output "-------------------------------------------------"
     dotnet publish src/SMAPI.Installer --configuration $buildConfig -v minimal --runtime "$runtime" --framework "$framework" -p:OS="$msbuildPlatformName" -p:TargetFrameworks="$framework" -p:GamePath="$gamePath" -p:CopyToGameFolder="false" --self-contained true
-    echo ""
-    echo ""
+    Write-Output ""
+    Write-Output ""
 
     foreach ($modName in $bundleModNames) {
-        echo "Compiling $modName for $folder..."
-        echo "-------------------------------------------------"
+        Write-Output "Compiling $modName for $folder..."
+        Write-Output "-------------------------------------------------"
         dotnet publish src/SMAPI.Mods.$modName --configuration $buildConfig -v minimal --runtime "$runtime" --framework "$framework" -p:OS="$msbuildPlatformName" -p:TargetFrameworks="$framework" -p:GamePath="$gamePath" -p:CopyToGameFolder="false" --self-contained false
-        echo ""
-        echo ""
+        Write-Output ""
+        Write-Output ""
     }
 }
 
@@ -120,8 +146,8 @@ foreach ($folder in $folders) {
 ##########
 ## Prepare install package
 ##########
-echo "Preparing install package..."
-echo "----------------------------"
+Write-Output "Preparing install package..."
+Write-Output "----------------------------"
 
 # init paths
 $installAssets = "src/SMAPI.Installer/assets"
@@ -130,7 +156,16 @@ $packageDevPath = "bin/SMAPI installer for developers"
 
 # init structure
 foreach ($folder in $folders) {
-    mkdir "$packagePath/internal/$folder/bundle/smapi-internal" > $null
+    $folderPath = "$packagePath/internal/$folder/bundle/smapi-internal"
+
+    if ($IsWindows) {
+        # On Windows, mkdir creates parent directories automatically and the --parents argument isn't recognized.
+        mkdir "$folderPath" > $null
+    }
+    else
+    {
+        mkdir "$folderPath" --parents
+    }
 }
 
 # copy base installer files
@@ -139,7 +174,7 @@ foreach ($name in @("install on Linux.sh", "install on macOS.command", "install 
         continue;
     }
 
-    cp "$installAssets/$name" "$packagePath"
+    Copy-Item "$installAssets/$name" "$packagePath"
 }
 
 # copy per-platform files
@@ -152,18 +187,18 @@ foreach ($folder in $folders) {
     $bundlePath = "$internalPath/bundle"
 
     # installer files
-    cp "src/SMAPI.Installer/bin/$buildConfig/$runtime/publish/*" "$internalPath" -Recurse
-    rm -Recurse -Force "$internalPath/assets"
+    Copy-Item "src/SMAPI.Installer/bin/$buildConfig/$runtime/publish/*" "$internalPath" -Recurse
+    Remove-Item -Recurse -Force "$internalPath/assets"
 
     # runtime config for SMAPI
     # This is identical to the one generated by the build, except that the min runtime version is
-    # set to 5.0.0 (instead of whatever version it was built with) and rollForward is set to latestMinor instead of
+    # set to 6.0.0 (instead of whatever version it was built with) and rollForward is set to latestMinor instead of
     # minor.
-    cp "$installAssets/runtimeconfig.json" "$bundlePath/StardewModdingAPI.runtimeconfig.json"
+    Copy-Item "$installAssets/runtimeconfig.json" "$bundlePath/StardewModdingAPI.runtimeconfig.json"
 
     # installer DLL config
     if ($folder -eq "windows") {
-        cp "$installAssets/windows-exe-config.xml" "$packagePath/internal/windows/install.exe.config"
+        Copy-Item "$installAssets/windows-exe-config.xml" "$packagePath/internal/windows/install.exe.config"
     }
 
     # bundle root files
@@ -172,29 +207,29 @@ foreach ($folder in $folders) {
             $name = "$name.exe"
         }
 
-        cp "$smapiBin/$name" "$bundlePath"
+        Copy-Item "$smapiBin/$name" "$bundlePath"
     }
 
     # bundle i18n
-    cp -Recurse "$smapiBin/i18n" "$bundlePath/smapi-internal"
+    Copy-Item -Recurse "$smapiBin/i18n" "$bundlePath/smapi-internal"
 
     # bundle smapi-internal
     foreach ($name in @("0Harmony.dll", "0Harmony.xml", "Markdig.dll", "Mono.Cecil.dll", "Mono.Cecil.Mdb.dll", "Mono.Cecil.Pdb.dll", "MonoMod.Common.dll", "Newtonsoft.Json.dll", "Pathoschild.Http.Client.dll", "Pintail.dll", "TMXTile.dll", "SMAPI.Toolkit.dll", "SMAPI.Toolkit.xml", "SMAPI.Toolkit.CoreInterfaces.dll", "SMAPI.Toolkit.CoreInterfaces.xml", "System.Net.Http.Formatting.dll")) {
-        cp "$smapiBin/$name" "$bundlePath/smapi-internal"
+        Copy-Item "$smapiBin/$name" "$bundlePath/smapi-internal"
     }
 
     if ($folder -eq "windows") {
-        cp "$smapiBin/VdfConverter.dll" "$bundlePath/smapi-internal"
+        Copy-Item "$smapiBin/VdfConverter.dll" "$bundlePath/smapi-internal"
     }
 
-    cp "$smapiBin/SMAPI.blacklist.json" "$bundlePath/smapi-internal/blacklist.json"
-    cp "$smapiBin/SMAPI.config.json" "$bundlePath/smapi-internal/config.json"
-    cp "$smapiBin/SMAPI.metadata.json" "$bundlePath/smapi-internal/metadata.json"
+    Copy-Item "$smapiBin/SMAPI.blacklist.json" "$bundlePath/smapi-internal/blacklist.json"
+    Copy-Item "$smapiBin/SMAPI.config.json" "$bundlePath/smapi-internal/config.json"
+    Copy-Item "$smapiBin/SMAPI.metadata.json" "$bundlePath/smapi-internal/metadata.json"
     if ($folder -eq "linux" -or $folder -eq "macOS") {
-        cp "$installAssets/unix-launcher.sh" "$bundlePath"
+        Copy-Item "$installAssets/unix-launcher.sh" "$bundlePath"
     }
     else {
-        cp "$installAssets/windows-exe-config.xml" "$bundlePath/StardewModdingAPI.exe.config"
+        Copy-Item "$installAssets/windows-exe-config.xml" "$bundlePath/StardewModdingAPI.exe.config"
     }
 
     # copy bundled mods
@@ -202,38 +237,47 @@ foreach ($folder in $folders) {
         $fromPath = "src/SMAPI.Mods.$modName/bin/$buildConfig/$runtime/publish"
         $targetPath = "$bundlePath/Mods/$modName"
 
-        mkdir "$targetPath" > $null
+        if ($IsWindows) {
+            # On Windows, mkdir creates parent directories automatically and the --parents argument isn't recognized.
+            mkdir "$targetPath" > $null
+        }
+        else
+        {
+            mkdir "$targetPath" --parents
+        }
 
-        cp "$fromPath/$modName.dll" "$targetPath"
-        cp "$fromPath/manifest.json" "$targetPath"
+        Copy-Item "$fromPath/$modName.dll" "$targetPath"
+        Copy-Item "$fromPath/manifest.json" "$targetPath"
         if (Test-Path "$fromPath/i18n" -PathType Container) {
-            cp -Recurse "$fromPath/i18n" "$targetPath"
+            Copy-Item -Recurse "$fromPath/i18n" "$targetPath"
         }
     }
 }
 
-# DISABLED: will be handled by Linux script
 # mark scripts executable
-#ForEach ($path in @("install on Linux.sh", "install on macOS.command", "bundle/unix-launcher.sh")) {
-#    if (Test-Path "$packagePath/$path" -PathType Leaf) {
-#        chmod 755 "$packagePath/$path"
-#    }
-#}
+if ($IsWindows) {
+    Write-Warning "Can't set Unix file permissions on Windows. This may cause issues for Linux/macOS players."
+}
+else {
+    ForEach ($path in @("install on Linux.sh", "install on macOS.command", "bundle/unix-launcher.sh")) {
+        if (Test-Path "$packagePath/$path" -PathType Leaf) {
+            chmod 755 "$packagePath/$path"
+        }
+    }
+}
 
 # split into main + for-dev folders
-cp -Recurse "$packagePath" "$packageDevPath"
+Copy-Item -Recurse "$packagePath" "$packageDevPath"
 foreach ($folder in $folders) {
     # disable developer mode in main package
     In-Place-Regex -Path "$packagePath/internal/$folder/bundle/smapi-internal/config.json" -Search "`"DeveloperMode`": true" -Replace "`"DeveloperMode`": false"
 
     # convert bundle folder into final 'install.dat' files
-    if ($windowsOnly)
+    foreach ($path in @("$packagePath/internal/$folder", "$packageDevPath/internal/$folder"))
     {
-        foreach ($path in @("$packagePath/internal/$folder", "$packageDevPath/internal/$folder"))
-        {
-            Compress-Archive -Path "$path/bundle/*" -CompressionLevel Optimal -DestinationPath "$path/install.zip"
-            mv "$path/install.zip" "$path/install.dat"
-            rm -Recurse -Force "$path/bundle"
+        Compress-Archive -Path "$path/bundle/*" -CompressionLevel Optimal -DestinationPath "$path/install.dat"
+        if (!$skipBundleDeletion) {
+            Remove-Item -Recurse -Force "$path/bundle"
         }
     }
 }
@@ -243,15 +287,12 @@ foreach ($folder in $folders) {
 ### Create release zips
 ###########
 # rename folders
-mv "$packagePath" "bin/SMAPI $version installer"
-mv "$packageDevPath" "bin/SMAPI $version installer for developers"
+Move-Item "$packagePath" "bin/SMAPI $version installer"
+Move-Item "$packageDevPath" "bin/SMAPI $version installer for developers"
 
 # package files
-if ($windowsOnly)
-{
-    Compress-Archive -Path "bin/SMAPI $version installer" -DestinationPath "bin/SMAPI $version installer.zip" -CompressionLevel Optimal
-    Compress-Archive -Path "bin/SMAPI $version installer for developers" -DestinationPath "bin/SMAPI $version installer for developers.zip" -CompressionLevel Optimal
-}
+Compress-Archive -Path "bin/SMAPI $version installer" -DestinationPath "bin/SMAPI $version installer.zip" -CompressionLevel Optimal
+Compress-Archive -Path "bin/SMAPI $version installer for developers" -DestinationPath "bin/SMAPI $version installer for developers.zip" -CompressionLevel Optimal
 
-echo ""
-echo "Done! See docs/technical/smapi.md to create the release zips."
+Write-Output ""
+Write-Output "Done! Package created in ${pwd.Path}/bin."

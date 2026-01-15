@@ -93,12 +93,13 @@ option._
 #### First-time setup
 1. On Windows only:
    1. [Install Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install).
-   2. Run `sudo apt update` in WSL to update the package list.
-   3. The rest of the instructions below should be run in WSL.
+   2. Follow the rest of the instructions inside WSL.
 2. Install the required software:
-   1. Install the [.NET 5 SDK](https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu).  
-      _For Ubuntu-based systems, you can run `lsb_release -a` to get the Ubuntu version number._
-   2. [Install Steam](https://linuxconfig.org/how-to-install-steam-on-ubuntu-20-04-focal-fossa-linux).
+   1. Install...
+      - [.NET 6 SDK](https://docs.microsoft.com/en-us/dotnet/core/install/linux-ubuntu) (run
+        `lsb_release -a` if you need the Ubuntu version number);
+      - [PowerShell](https://learn.microsoft.com/en-us/powershell/scripting/install/install-powershell-on-linux);
+      - and [Steam](https://linuxconfig.org/how-to-install-steam-on-ubuntu-20-04-focal-fossa-linux).
    3. Launch `steam` and install the game like usual.
    4. Download and install your preferred IDE. For the [latest standalone Rider
       version](https://www.jetbrains.com/help/rider/Installation_guide.html#prerequisites):
@@ -122,7 +123,7 @@ option._
 2. Launch the game through the Steam UI.
 
 ### Prepare the release
-1. Run `build/unix/prepare-install-package.sh VERSION_HERE` to create the release package in the
+1. Run `pwsh build/scripts/prepare-install-package.sh VERSION_HERE` to create the release package in the
    root `bin` folder.
 
    Make sure you use a [semantic version](https://semver.org). Recommended format:
@@ -152,8 +153,8 @@ above for the unified process._
    ```
 
 ### Prepare the release
-1. Run `build/scripts/prepare-install-package.ps1 VERSION_HERE` in PowerShell to create the release
-   package folders in the root `bin` folder.
+1. Run `pwsh build/scripts/prepare-install-package.ps1 VERSION_HERE --skip-bundle-deletion` to
+   create the release package folders in the root `bin` folder.
 
    Make sure you use a [semantic version](https://semver.org). Recommended format:
 
@@ -169,7 +170,7 @@ above for the unified process._
    # In WSL, `/mnt/c/example` accesses `C:\example` on the Windows filesystem.
    version="4.0.0"
    binFolder="/mnt/e/source/_Stardew/SMAPI/bin"
-   build/scripts/finalize-install-package.sh "$version" "$binFolder"
+   pwsh build/scripts/finalize-install-package.sh "$version" "$binFolder"
    ```
 
 Note: to prepare a test Windows-only build, you can pass `--windows-only` in the first step and

@@ -74,8 +74,8 @@ jobs:
 
                     Write-Host "This is a dev version. Building as version: $updatedVersion"
 
-                    bash build/unix/set-smapi-version.sh "$updatedVersion"
-                    Write-Host 'Version updated using build/unix/set-smapi-version.sh.'
+                    ./build/scripts/set-smapi-version.ps1 "$updatedVersion"
+                    Write-Host 'Version updated.'
 
             -   name: Checkout game reference assemblies
                 run: |
@@ -85,7 +85,7 @@ jobs:
                 shell: pwsh
                 run: |
                     Write-Host "Building SMAPI $env:VERSION."
-                    bash build/unix/prepare-install-package.sh "$env:VERSION"
+                    ./build/scripts/prepare-install-package.ps1 "$env:VERSION"
 
             -   name: Rename build zips
                 run: |

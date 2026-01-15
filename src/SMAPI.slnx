@@ -28,10 +28,6 @@
   <Folder Name="/.root/build/scripts/lib/">
     <File Path="../build/scripts/lib/in-place-regex.ps1" />
   </Folder>
-  <Folder Name="/.root/build/unix/">
-    <File Path="../build/unix/prepare-install-package.sh" />
-    <File Path="../build/unix/set-smapi-version.sh" />
-  </Folder>
   <Folder Name="/.root/docs/">
     <File Path="../docs/mod-build-config.md" />
     <File Path="../docs/README.md" />
