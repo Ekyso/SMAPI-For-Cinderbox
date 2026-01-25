@@ -111,5 +111,6 @@ jobs:
 
             -   name: Generate artifact attestations
                 uses: actions/attest-build-provenance@v2
+                if: github.ref_type == 'tag'
                 with:
                     subject-path: bin/SMAPI-${{env.VERSION}}-installer.zip
