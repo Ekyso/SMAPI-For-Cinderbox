@@ -21,5 +21,11 @@
      * If any file in a folder matches an entry, the entire folder is considered malicious.
     */
     "LooseFileBlacklist": [
+        // 2026-01: 'Alchemistry' (ModDrop:1731397, malicious reupload of legit mod)
+        {
+            "Name": "Auto_Alchemistry.bat",
+            "Hash": "8b749727775689a05cc92ab4d624ab8b",
+            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete the mod containing this file and run a complete anti-malware scan of your computer now to be safe."
+        }
     ]
 }

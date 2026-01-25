@@ -6,6 +6,7 @@
   * SMAPI now uses [automated and attested builds](https://www.patreon.com/posts/automated-builds-148417912) (thanks to DecidedlyHuman)!  
     _This improves the security and transparency of SMAPI builds. Every step to build SMAPI from the public source code is now public and verifiable, with file signatures to let players and tools confirm the build hasn't been tampered with._
   * SMAPI can now detect known malicious loose files in the `Mods` folder.
+  * Updated internal mod blacklist.
 
 ## 4.4.0
 Released 10 January 2026 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/147916705).
