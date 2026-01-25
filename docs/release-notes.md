@@ -157,7 +157,7 @@ Released 18 December 2024 for Stardew Valley 1.6.14 or later.
 >
 > Players on Linux or Windows can ignore this.
 
-# 4.1.9
+## 4.1.9
 Released 08 December 2024 for Stardew Valley 1.6.14 or later.
 
 * For players:
@@ -390,7 +390,7 @@ Released 24 March 2024 for Stardew Valley 1.6.0 or later.
     _Extra Map Layers mod caused visual issues like dark shadows in all locations with extra map layers, since the game now handles them automatically. SMAPI now disables Extra Map Layers and ignores dependencies on it._
   * When using a custom `Mods` folder path, SMAPI now logs the game folder path to simplify troubleshooting.
 
-# 4.0.1
+## 4.0.1
 Released 20 March 2024 for Stardew Valley 1.6.0 or later.
 
 * For players:
@@ -1044,7 +1044,7 @@ Released 03 May 2021 for Stardew Valley 1.5.4.
 * For players:
   * Fixed installer leaving an unneeded `StardewModdingAPI-x64.exe` file in 32-bit game folders.
 
-## 3.10
+## 3.10.0
 Released 03 May 2021 for Stardew Valley 1.5.4. See [release highlights](https://www.patreon.com/posts/50764911).
 
 * For players:
@@ -1142,7 +1142,7 @@ Released 25 January 2021 for Stardew Valley 1.5.4.
   * Fixed _tile contains an invalid TileSheet reference_ crash after mods change certain maps.
   * Fixed _patched game code_ issue shown for the bundled Error Handler mod.
 
-## 3.9
+## 3.9.0
 Released 22 January 2021 for Stardew Valley 1.5.4. See [release highlights](https://www.patreon.com/posts/46553874).
 
 * For players:
@@ -1238,7 +1238,7 @@ Released 26 December 2020 for Stardew Valley 1.5.1 or later.
 For the web UI:
   * Fixed edge cases in SMAPI log parsing.
 
-## 3.8
+## 3.8.0
 Released 21 December 2020 for Stardew Valley 1.5 or later. See [release highlights](https://www.patreon.com/posts/45294737).
 
 * For players:
@@ -1323,7 +1323,7 @@ Released 08 September 2020 for Stardew Valley 1.4.1 or later.
 * For players:
   * Fixed input-handling bugs in 3.7.
 
-## 3.7
+## 3.7.0
 Released 07 September 2020 for Stardew Valley 1.4.1 or later. See [release highlights](https://www.patreon.com/posts/41341767).
 
 * For players:
@@ -1379,7 +1379,7 @@ Released 21 June 2020 for Stardew Valley 1.4.1 or later.
 
 * Fixed event priority sorting.
 
-## 3.6
+## 3.6.0
 Released 20 June 2020 for Stardew Valley 1.4.1 or later. See [release highlights](https://www.patreon.com/posts/38441800).
 
 * For players:
@@ -1421,7 +1421,7 @@ Released 20 June 2020 for Stardew Valley 1.4.1 or later. See [release highlights
   * Merged the separate legacy redirects app on AWS into the main app on Azure.
   * Changed SMAPI's Harmony ID from `io.smapi` to `SMAPI` for readability in Harmony summaries.
 
-## 3.5
+## 3.5.0
 Released 27 April 2020 for Stardew Valley 1.4.1 or later. See [release highlights](https://www.patreon.com/posts/36471055).
 
 * For players:
@@ -1455,7 +1455,7 @@ Released 24 March 2020 for Stardew Valley 1.4.1 or later.
   * Asset changes now propagate to NPCs in an event (e.g. wedding sprites).
   * Fixed mouse input suppression not working in SMAPI 3.4.
 
-## 3.4
+## 3.4.0
 Released 22 March 2020 for Stardew Valley 1.4.1 or later. See [release highlights](https://www.patreon.com/posts/35161371).
 
 * For players:
@@ -1488,7 +1488,7 @@ Released 22 February 2020 for Stardew Valley 1.4.1 or later.
 
 * Fixed errors with custom spouse room mods in SMAPI 3.3.
 
-## 3.3
+## 3.3.0
 Released 22 February 2020 for Stardew Valley 1.4.1 or later. See [release highlights](https://www.patreon.com/posts/34248719).
 
 * For players:
@@ -1522,7 +1522,7 @@ Released 22 February 2020 for Stardew Valley 1.4.1 or later. See [release highli
   * Improved support for four-part versions to support SMAPI on Android.
   * The SMAPI log now prefixes the OS name with `Android` on Android.
 
-## 3.2
+## 3.2.0
 Released 01 February 2020 for Stardew Valley 1.4.1 or later. See [release highlights](https://www.patreon.com/posts/33659728).
 
 * For players:
@@ -1563,7 +1563,7 @@ Released 01 February 2020 for Stardew Valley 1.4.1 or later. See [release highli
   * The `/mods` web API endpoint now includes version mappings from the wiki.
   * Dropped API support for the pre-3.0 update-check format.
 
-## 3.1
+## 3.1.0
 Released 05 January 2019 for Stardew Valley 1.4.1 or later. See [release highlights](https://www.patreon.com/posts/32904041).
 
 * For players:
@@ -1624,7 +1624,7 @@ Released 02 December 2019 for Stardew Valley 1.4 or later.
 * For mod authors:
   * `SemanticVersion` now supports [semver 2.0](https://semver.org/) build metadata.
 
-## 3.0
+## 3.0.0
 Released 26 November 2019 for Stardew Valley 1.4.
 
 ### Release highlights

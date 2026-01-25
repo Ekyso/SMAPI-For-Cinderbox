@@ -1,7 +1,7 @@
 ← [README](README.md)
 
 # Release notes
-## 3.0 and later
+## 3.0.0 and later
 See [newer release notes](release-notes.md).
 
 ## 2.11.3
@@ -49,7 +49,7 @@ Released 17 March 2019 for Stardew Valley 1.3.36.
   * The log parser now collapses redundant sections by default.
   * Fixed log parser column resize bug.
 
-## 2.11
+## 2.11.0
 Released 01 March 2019 for Stardew Valley 1.3.36.
 
 * For players:
@@ -98,7 +98,7 @@ Released 30 December 2018 for Stardew Valley 1.3.32–33.
 * For players:
   * Fixed some mod integrations not working correctly in SMAPI 2.10.
 
-## 2.10
+## 2.10.0
 Released 29 December 2018 for Stardew Valley 1.3.32–33.
 
 * For players:
@@ -151,7 +151,7 @@ Released 07 December 2018 for Stardew Valley 1.3.32.
   * Fixed crash in SMAPI 2.9 when constructing certain buildings.
   * Fixed error when a map asset is reloaded in rare cases.
 
-## 2.9
+## 2.9.0
 Released 07 December 2018 for Stardew Valley 1.3.32.
 
 * For players:
@@ -190,7 +190,7 @@ Released 19 November 2018 for Stardew Valley 1.3.32.
 
 * Fixed installer error on Windows with SMAPI 2.8.
 
-## 2.8
+## 2.8.0
 Released 19 November 2018 for Stardew Valley 1.3.32.
 
 * For players:
@@ -259,7 +259,7 @@ Released 19 November 2018 for Stardew Valley 1.3.32.
   * Installer no longer special-cases Omegasis' older `SaveBackup` mod (now named `AdvancedSaveBackup`).
   * Fixed mod web API returning a concatenated name for mods with alternate names.
 
-## 2.7
+## 2.7.0
 Released 14 August 2018 for Stardew Valley 1.3.28.
 
 * For players:
@@ -290,7 +290,7 @@ Released 14 August 2018 for Stardew Valley 1.3.28.
   * Dropped support for pre-SMAPI-2.6 update checks in the web API.  
     _These are no longer useful, even if the player still has earlier versions of SMAPI. Older versions of SMAPI won't launch in Stardew Valley 1.3 (so they won't check for updates), and newer versions of SMAPI/mods won't work with older versions of the game._
 
-## 2.6
+## 2.6.0
 Released 01 August 2018 for Stardew Valley 1.3.27.
 
 * For players:
@@ -460,7 +460,7 @@ Released 24 February 2018 for Stardew Valley 1.2.30–1.2.33.
 * For players:
   * Fixed event error in rare cases.
 
-## 2.5
+## 2.5.0
 Released 24 February 2018 for Stardew Valley 1.2.30–1.2.33.
 
 * For players:
@@ -492,7 +492,7 @@ Released 24 February 2018 for Stardew Valley 1.2.30–1.2.33.
   * Overhauled mod DB format to be more concise, reduce the memory footprint, and support versioning/defaulting more fields.
   * Reimplemented log parser with serverside parsing and vue.js on the frontend.
 
-## 2.4
+## 2.4.0
 Released 24 January 2018 for Stardew Valley 1.2.30–1.2.33.
 
 * For players:
@@ -519,7 +519,7 @@ Released 24 January 2018 for Stardew Valley 1.2.30–1.2.33.
 * For SMAPI developers:
   * Overhauled input handling to support future input events.
 
-## 2.3
+## 2.3.0
 Released 26 December 2017 for Stardew Valley 1.2.30–1.2.33.
 
 * For players:
@@ -541,7 +541,7 @@ Released 26 December 2017 for Stardew Valley 1.2.30–1.2.33.
 * For the [log parser](https://smapi.io/log):
   * Fixed broken favicon.
 
-## 2.2
+## 2.2.0
 Released 02 December 2017 for Stardew Valley 1.2.30–1.2.33.
 
 * For players:
@@ -563,7 +563,7 @@ Released 02 December 2017 for Stardew Valley 1.2.30–1.2.33.
   * Fixed input events' `e.SuppressButton(button)` method ignoring specified button.
   * Fixed input events' `e.SuppressButton()` method not working with mouse buttons.
 
-## 2.1
+## 2.1.0
 Released 01 November 2017 for Stardew Valley 1.2.30–1.2.33.
 
 * For players:
@@ -593,7 +593,7 @@ Released 01 November 2017 for Stardew Valley 1.2.30–1.2.33.
 * For SMAPI developers:
   * Added the installer version and platform to the installer window title to simplify troubleshooting.
 
-## 2.0
+## 2.0.0
 Released 14 October 2017 for Stardew Valley 1.2.30–1.2.33.
 
 ### Release highlights
@@ -729,7 +729,7 @@ For players:
 For mod authors:
 * Fixed mod registry lookups by unique ID not being case-insensitive.
 
-## 1.15
+## 1.15.0
 Released 08 July 2017 for Stardew Valley 1.2.30–1.2.31.
 
 For players:
@@ -762,7 +762,7 @@ For SMAPI developers:
 * Added prototype SMAPI 2.0 support for version strings in `manifest.json` (not recommended for mods yet).
 * Compiling SMAPI now uses your `~/stardewvalley.targets` file if present.
 
-## 1.14
+## 1.14.0
 Released 02 July 2017 for Stardew Valley 1.2.30.
 
 For players:
@@ -797,7 +797,7 @@ For players:
 * Fixed errors when loading a mod with no name or version.
 * Fixed mods with no manifest `Name` field having no name (SMAPI will now shows their filename).
 
-## 1.13
+## 1.13.0
 Released 19 May 2017 for Stardew Valley 1.2.26–1.2.29.
 
 For players:
@@ -820,7 +820,7 @@ For mod developers:
 * Fixed maps not recognising custom tilesheets added through the SMAPI content API.
 * Internal refactoring for upcoming features.
 
-## 1.12
+## 1.12.0
 Released 03 May 2017 for Stardew Valley 1.2.26–1.2.29.
 
 For players:
@@ -836,7 +836,7 @@ For mod developers:
 * Fixed content API error when loading a PNG during early game init (e.g. in mod's `Entry`).
 * Fixed content API error when loading an XNB from the mod folder on macOS.
 
-## 1.11
+## 1.11.0
 Released 30 April 2017 for Stardew Valley 1.2.26.
 
 For players:
@@ -852,7 +852,7 @@ For mod developers:
 * `Monitor.ExitGameImmediately` now aborts SMAPI initialization and events more quickly.
 * Fixed value-changed events being raised when the player loads a save due to values being initialized.
 
-## 1.10
+## 1.10.0
 Released 24 April 2017 for Stardew Valley 1.2.26.
 
 For players:
@@ -872,7 +872,7 @@ For mod developers:
 * Fixed `monitor.ExitGameImmediately` not working correctly.
 * Fixed `Constants.SaveFolderName` not set for a new game until the save is created.
 
-## 1.9
+## 1.9.0
 Released 05 April 2017 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -914,7 +914,7 @@ For mod developers:
 For SMAPI developers:
 * Added support for debugging SMAPI on Linux/macOS if supported by the editor.
 
-## 1.8
+## 1.8.0
 Released 04 February 2017 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -939,7 +939,7 @@ For SMAPI developers:
   * no longer loads DLLs if they're not referenced;
   * reduces log verbosity.
 
-## 1.7
+## 1.7.0
 Released 19 January 2017 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -954,7 +954,7 @@ For mod developers:
 * Fixed some `LocationEvents`, `PlayerEvents`, and `TimeEvents` being fired during game startup.
 * Increased deprecation levels for `SObject`, `LogWriter` (not `Log`), and `Mod.Entry(ModHelper)` (not `Mod.Entry(IModHelper)`) to _pending removal_. Increased deprecation levels for `Mod.PerSaveConfigFolder`, `Mod.PerSaveConfigPath`, and `Version.VersionString` to _info_.
 
-## 1.6
+## 1.6.0
 Released 16 January 2017 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -979,7 +979,7 @@ For SMAPI developers:
   * Added support for custom incompatible-mod error text.
   * Fixed issue where `TrainerMod` used older logic to detect the game path.
 
-## 1.5
+## 1.5.0
 Released 27 December 2016 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -993,7 +993,7 @@ For developers:
     _This new implementation is [semver 2.0](https://semver.org/)-compliant, introduces `NewerThan(version)` and `OlderThan(version)` convenience methods, adds support for parsing a version string into a `SemanticVersion`, and fixes various bugs with the former implementation. This also replaces `Manifest` with `IManifest`._
   * Increased deprecation levels for `SObject`, `Extensions`, `LogWriter` (not `Log`), `SPlayer`, and `Mod.Entry(ModHelper)` (not `Mod.Entry(IModHelper)`).
 
-## 1.4
+## 1.4.0
 Released 12 December 2016 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -1012,14 +1012,14 @@ For developers:
   * Added `TypeLoadException` details when intercepted by SMAPI.
   * Fixed an issue where you couldn't debug into an assembly because it was copied into the `.cache` directory. That will now only happen if necessary.
 
-## 1.3
+## 1.3.0
 Released 04 December 2016 for Stardew Valley 1.1–1.11.
 
 For players:
   * You can now run most mods on any platform (e.g. run Windows mods on Linux/macOS).
   * Fixed the normal uninstaller not removing files added by the 'SMAPI for developers' installer.
 
-## 1.2
+## 1.2.0
 Released 25 November 2016 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -1041,7 +1041,7 @@ For players:
 For developers:
   * Fixed deprecation warnings being repeated if the mod can't be identified.
 
-## 1.1
+## 1.1.0
 Released 17 November 2016 for Stardew Valley 1.1–1.11.
 
 For players:
@@ -1059,7 +1059,7 @@ For developers:
   * Added optional `MinimumApiVersion` to `manifest.json`.
   * Added emergency interrupt feature for dangerous mods.
 
-## 1.0
+## 1.0.0
 Released 11 November 2016 for Stardew Valley 1.1–1.11.
 
 For players:
