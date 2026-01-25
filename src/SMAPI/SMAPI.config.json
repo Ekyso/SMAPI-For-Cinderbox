@@ -49,7 +49,7 @@ in future SMAPI versions.
      *
      * Not recommended for most players.
      */
-    "DeveloperMode": true,
+    "DeveloperMode": false,
 
     /**
      * Whether SMAPI should listen for console input. Disabling this will prevent you from using

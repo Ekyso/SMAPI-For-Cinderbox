@@ -9,6 +9,9 @@
   * SMAPI can now detect known malicious loose files in the `Mods` folder.
   * Updated internal mod blacklist.
 
+* For mod authors:
+  * SMAPI no longer has a separate 'for developers' version. Instead, you can now use [Generic Mod Config Menu](<https://www.nexusmods.com/stardewvalley/mods/5098>) to enable 'developer mode' in the console window options.
+
 ## 4.4.0
 Released 10 January 2026 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/147916705).
 

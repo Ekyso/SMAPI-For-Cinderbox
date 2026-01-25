@@ -87,23 +87,14 @@ jobs:
                     Write-Host "Building SMAPI $env:VERSION."
                     ./build/scripts/prepare-install-package.ps1 "$env:VERSION"
 
-            -   name: Rename build zips
-                run: |
-                    mv "bin/SMAPI ${{env.VERSION}} installer.zip" "bin/SMAPI-${{env.VERSION}}-installer.zip"
-                    mv "bin/SMAPI ${{env.VERSION}} installer for developers.zip" "bin/SMAPI-${{env.VERSION}}-installer-for-developers.zip"
+            -   name: Rename build zip
+                run: mv "bin/SMAPI ${{env.VERSION}} installer.zip" "bin/SMAPI-${{env.VERSION}}-installer.zip"
 
             -   name: Upload installer
                 uses: actions/upload-artifact@v4
                 with:
                     name: 'SMAPI ${{env.VERSION}} installer'
                     path: 'bin/SMAPI-${{env.VERSION}}-installer.zip'
-                    if-no-files-found: 'error'
-
-            -   name: Upload installer for developers
-                uses: actions/upload-artifact@v4
-                with:
-                    name: 'SMAPI ${{env.VERSION}} installer for developers'
-                    path: 'bin/SMAPI-${{env.VERSION}}-installer-for-developers.zip'
                     if-no-files-found: 'error'
 
             -   name: Create GitHub release
@@ -121,6 +112,4 @@ jobs:
             -   name: Generate artifact attestations
                 uses: actions/attest-build-provenance@v2
                 with:
-                    subject-path: |
-                        bin/SMAPI-${{env.VERSION}}-installer.zip
-                        bin/SMAPI-${{env.VERSION}}-installer-for-developers.zip
+                    subject-path: bin/SMAPI-${{env.VERSION}}-installer.zip

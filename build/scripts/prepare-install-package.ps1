@@ -154,7 +154,6 @@ Write-Output "----------------------------"
 # init paths
 $installAssets = "src/SMAPI.Installer/assets"
 $packagePath = "bin/SMAPI installer"
-$packageDevPath = "bin/SMAPI installer for developers"
 
 # init structure
 foreach ($folder in $folders) {
@@ -268,19 +267,13 @@ else {
     }
 }
 
-# split into main + for-dev folders
-Copy-Item -Recurse "$packagePath" "$packageDevPath"
+# convert bundle folder into final 'install.dat' files
 foreach ($folder in $folders) {
-    # disable developer mode in main package
-    In-Place-Regex -Path "$packagePath/internal/$folder/bundle/smapi-internal/config.json" -Search "`"DeveloperMode`": true" -Replace "`"DeveloperMode`": false"
+    $path = "$packagePath/internal/$folder"
 
-    # convert bundle folder into final 'install.dat' files
-    foreach ($path in @("$packagePath/internal/$folder", "$packageDevPath/internal/$folder"))
-    {
-        Compress-Archive -Path "$path/bundle/*" -CompressionLevel Optimal -DestinationPath "$path/install.dat"
-        if (!$skipBundleDeletion) {
-            Remove-Item -Recurse -Force "$path/bundle"
-        }
+    Compress-Archive -Path "$path/bundle/*" -CompressionLevel Optimal -DestinationPath "$path/install.dat"
+    if (!$skipBundleDeletion) {
+        Remove-Item -Recurse -Force "$path/bundle"
     }
 }
 
@@ -288,13 +281,9 @@ foreach ($folder in $folders) {
 ###########
 ### Create release zips
 ###########
-# rename folders
 Move-Item "$packagePath" "bin/SMAPI $version installer"
-Move-Item "$packageDevPath" "bin/SMAPI $version installer for developers"
 
-# package files
 Compress-Archive -Path "bin/SMAPI $version installer" -DestinationPath "bin/SMAPI $version installer.zip" -CompressionLevel Optimal
-Compress-Archive -Path "bin/SMAPI $version installer for developers" -DestinationPath "bin/SMAPI $version installer for developers.zip" -CompressionLevel Optimal
 
 Write-Output ""
 Write-Output "Done! Package created in ${pwd.Path}/bin."
