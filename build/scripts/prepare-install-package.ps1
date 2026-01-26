@@ -15,12 +15,12 @@
 ##########
 $windowsOnly = $false # Windows-only build
 $skipBundleDeletion = $false # skip bundle deletion (only applies when using WSL to finalize the build on Windows)
-    foreach ($arg in $args) {
-        if ($arg -eq "--windows-only" -and $IsWindows) {
-            $windowsOnly = $true
-        }
-        elseif ($arg -eq "--skip-bundle-deletion") {
-            $skipBundleDeletion = $true
+foreach ($arg in $args) {
+    if ($arg -eq "--windows-only" -and $IsWindows) {
+        $windowsOnly = $true
+    }
+    elseif ($arg -eq "--skip-bundle-deletion") {
+        $skipBundleDeletion = $true
     }
 }
 
@@ -156,6 +156,7 @@ $installAssets = "src/SMAPI.Installer/assets"
 $packagePath = "bin/SMAPI installer"
 
 # init structure
+Write-Host "Setting up structure..."
 foreach ($folder in $folders) {
     $folderPath = "$packagePath/internal/$folder/bundle/smapi-internal"
 
@@ -256,22 +257,37 @@ foreach ($folder in $folders) {
 }
 
 # mark scripts executable
+Write-Host "Setting file permissions..."
 if ($IsWindows) {
     Write-Warning "Can't set Unix file permissions on Windows. This may cause issues for Linux/macOS players."
 }
 else {
-    ForEach ($path in @("install on Linux.sh", "install on macOS.command", "bundle/unix-launcher.sh")) {
+    ForEach ($path in @("install on Linux.sh", "install on macOS.command", "internal/linux/bundle/unix-launcher.sh", "internal/macOS/bundle/unix-launcher.sh")) {
         if (Test-Path "$packagePath/$path" -PathType Leaf) {
             chmod 755 "$packagePath/$path"
+        }
+        else {
+            Write-Host "Couldn't set permissions for '$packagePath/$path': file does not exist."
         }
     }
 }
 
 # convert bundle folder into final 'install.dat' files
+Write-Host "Tucking SMAPI bundle into install.dat..."
 foreach ($folder in $folders) {
     $path = "$packagePath/internal/$folder"
 
-    Compress-Archive -Path "$path/bundle/*" -CompressionLevel Optimal -DestinationPath "$path/install.dat"
+    if ($IsWindows) {
+        Compress-Archive -Path "$path/bundle/*" -CompressionLevel Optimal -DestinationPath "$path/install.dat"
+    }
+    else {
+        # Compress-Archive doesn't keep Unix permissions, so use zip directly on Linux/macOS
+        pushd "$path/bundle" > /dev/null
+        zip "install.dat" * --recurse-paths --quiet
+        popd > /dev/null
+        mv "$path/bundle/install.dat" "$path/install.dat"
+    }
+
     if (!$skipBundleDeletion) {
         Remove-Item -Recurse -Force "$path/bundle"
     }
@@ -281,9 +297,18 @@ foreach ($folder in $folders) {
 ###########
 ### Create release zips
 ###########
+Write-Host "Creating release zip..."
 Move-Item "$packagePath" "bin/SMAPI $version installer"
 
-Compress-Archive -Path "bin/SMAPI $version installer" -DestinationPath "bin/SMAPI-$version-installer.zip" -CompressionLevel Optimal
+if ($IsWindows) {
+    Compress-Archive -Path "bin/SMAPI $version installer" -DestinationPath "bin/SMAPI-$version-installer.zip" -CompressionLevel Optimal
+}
+else {
+    # Compress-Archive doesn't keep Unix permissions, so use zip directly on Linux/macOS
+    pushd bin > /dev/null
+    zip -9 "SMAPI-$version-installer.zip" "SMAPI $version installer" --recurse-paths --quiet
+    popd > /dev/null
+}
 
 Write-Output ""
 Write-Output "Done! Package created in ${pwd.Path}/bin."

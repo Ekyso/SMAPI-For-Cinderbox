@@ -3,6 +3,7 @@
 # Release notes
 ## Upcoming release
 * For players:
+  * Fixed error installing SMAPI 4.5.0 on Linux/macOS.
   * Improved translations. Thanks to Maatsuki (updated Portuguese)!
 
 ## 4.5.0
