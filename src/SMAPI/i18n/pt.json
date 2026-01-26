@@ -11,7 +11,6 @@
     /*********
     ** Generic Mod Config Menu UI
     *********/
-    // TODO
     // 'SMAPI features' section
     "config.section.features": "Recursos do SMAPI",
 
@@ -24,7 +23,6 @@
     "config.read-console-input.name": "Ler entrada do console",
     "config.read-console-input.desc": "Define se o SMAPI deve escutar comandos digitados no console. Desativar isso impedirá o uso de comandos do console. Em alguns sistemas Linux específicos, desativar essa opção pode reduzir o uso de CPU.",
 
-
     // 'Console window' section
     "config.section.console-window": "Janela do console",
 
@@ -33,7 +31,6 @@
 
     "config.color-scheme.name": "Esquema de cores",
     "config.color-scheme.desc": "O esquema de cores aplicado ao texto na janela do console do SMAPI. Isso não afeta o jogo, os mods ou o arquivo de log do SMAPI.",
-
     "config.color-scheme.options.AutoDetect": "Detecção automática",
     "config.color-scheme.options.AutoDetect.on-windows": "Detecção automática (recomendado)",
     "config.color-scheme.options.DarkBackground": "Texto mais claro (para fundos escuros)",
