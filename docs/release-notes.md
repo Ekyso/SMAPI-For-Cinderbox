@@ -1,16 +1,19 @@
 ← [README](README.md)
 
 # Release notes
-## Upcoming release
+## 4.5.0
+Released 25 January 2026 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/149054246).
+
 * For players:
-  * Added in-game config UI via [Generic Mod Config Menu](<https://www.nexusmods.com/stardewvalley/mods/5098>).
+  * Added in-game config UI for SMAPI via [Generic Mod Config Menu](https://www.nexusmods.com/stardewvalley/mods/5098).
   * SMAPI now uses [automated and attested builds](https://www.patreon.com/posts/automated-builds-148417912) (thanks to DecidedlyHuman)!  
     _This improves the security and transparency of SMAPI builds. Every step to build SMAPI from the public source code is now public and verifiable, with file signatures to let players and tools confirm the build hasn't been tampered with._
   * SMAPI can now detect known malicious loose files in the `Mods` folder.
   * Updated internal mod blacklist.
 
 * For mod authors:
-  * SMAPI no longer has a separate 'for developers' version. Instead, you can now use [Generic Mod Config Menu](<https://www.nexusmods.com/stardewvalley/mods/5098>) to enable 'developer mode' in the console window options.
+  * SMAPI no longer has a separate 'for developers' version.  
+    _Instead, you can now use [Generic Mod Config Menu](https://www.nexusmods.com/stardewvalley/mods/5098) to enable 'developer mode' in the console window options._
 
 ## 4.4.0
 Released 10 January 2026 for Stardew Valley 1.6.14 or later. See [release highlights](https://www.patreon.com/posts/147916705).

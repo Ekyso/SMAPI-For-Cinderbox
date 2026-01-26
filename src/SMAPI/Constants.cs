@@ -49,7 +49,7 @@ internal static class EarlyConstants
     internal static int? LogScreenId { get; set; }
 
     /// <summary>SMAPI's current raw semantic version.</summary>
-    internal static string RawApiVersion = "4.4.0";
+    internal static string RawApiVersion = "4.5.0";
 }
 
 /// <summary>Contains SMAPI's constants and assumptions.</summary>
@@ -108,7 +108,7 @@ public static class Constants
 #if DEBUG
         true;
 #else
-            false;
+        false;
 #endif
 
     /// <summary>The URL of the SMAPI home page.</summary>
@@ -124,7 +124,7 @@ public static class Constants
     internal static string ApiUserConfigPath => Path.Combine(Constants.InternalFilesPath, "config.user.json");
 
     /// <summary>The file path for the per-mods-folder <see cref="ApiConfigPath"/> override file, which is applied over it.</summary>
-    internal static string ApiModGroupConfigPath => Path.Combine(ModsPath, "SMAPI-config.json");
+    internal static string ApiModGroupConfigPath => Path.Combine(Constants.ModsPath, "SMAPI-config.json");
 
     /// <summary>The file path for the SMAPI metadata file.</summary>
     internal static string ApiMetadataPath => Path.Combine(Constants.InternalFilesPath, "metadata.json");
