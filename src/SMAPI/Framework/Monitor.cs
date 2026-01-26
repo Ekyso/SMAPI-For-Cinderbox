@@ -13,9 +13,6 @@ internal class Monitor : IMonitor
     /*********
     ** Fields
     *********/
-    /// <summary>The mod ID, if applicable.</summary>
-    private readonly string ModId;
-
     /// <summary>The name of the module which logs messages using this instance.</summary>
     private readonly string Source;
 
@@ -41,6 +38,9 @@ internal class Monitor : IMonitor
     /*********
     ** Accessors
     *********/
+    /// <summary>The mod ID, if applicable.</summary>
+    public string ModId { get; }
+
     /// <summary>Whether to log basic contextual info (like buttons pressed and menus opened) even if <see cref="IsVerbose"/> is disabled.</summary>
     public static bool ForceLogContext { get; set; }
 
@@ -54,7 +54,11 @@ internal class Monitor : IMonitor
     public static LogLevel ContextLogLevel => Monitor.ForceLogContext ? LogLevel.Info : LogLevel.Trace;
 
     /// <inheritdoc />
-    public bool IsVerbose => field || Monitor.ForceVerboseLoggingForAll || Monitor.ForceVerboseLogging.Contains(this.ModId);
+    public bool IsVerbose
+    {
+        get => field || Monitor.ForceVerboseLoggingForAll || Monitor.ForceVerboseLogging.Contains(this.ModId);
+        set => field = value;
+    }
 
     /// <summary>Whether to show the full log stamps (with time/level/logger) in the console. If false, shows a simplified stamp with only the logger.</summary>
     internal bool ShowFullStampInConsole { get; set; }
@@ -73,10 +77,9 @@ internal class Monitor : IMonitor
     /// <param name="modId">The mod ID, if applicable.</param>
     /// <param name="source">The name of the module which logs messages using this instance.</param>
     /// <param name="logFile">The log file to which to write messages.</param>
-    /// <param name="colorConfig">The colors to use for text written to the SMAPI console.</param>
-    /// <param name="isVerbose">Whether verbose logging is enabled. This enables more detailed diagnostic messages than are normally needed.</param>
+    /// <param name="consoleWriter">Handles writing text to the console.</param>
     /// <param name="getScreenIdForLog">Get the screen ID that should be logged to distinguish between players in split-screen mode, if any.</param>
-    public Monitor(string modId, string source, LogFileManager logFile, ColorSchemeConfig colorConfig, bool isVerbose, Func<int?> getScreenIdForLog)
+    public Monitor(string modId, string source, LogFileManager logFile, IConsoleWriter consoleWriter, Func<int?> getScreenIdForLog)
     {
         // validate
         if (string.IsNullOrWhiteSpace(source))
@@ -86,8 +89,7 @@ internal class Monitor : IMonitor
         this.ModId = modId;
         this.Source = source;
         this.LogFile = logFile ?? throw new ArgumentNullException(nameof(logFile), "The log file manager cannot be null.");
-        this.ConsoleWriter = new ColorfulConsoleWriter(Constants.Platform, colorConfig);
-        this.IsVerbose = isVerbose;
+        this.ConsoleWriter = consoleWriter ?? throw new ArgumentNullException(nameof(consoleWriter), "The console writer cannot be null.");
         this.GetScreenIdForLog = getScreenIdForLog;
     }
 

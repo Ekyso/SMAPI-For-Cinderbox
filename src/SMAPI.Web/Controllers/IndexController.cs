@@ -57,8 +57,8 @@ internal class IndexController : Controller
     {
         // choose versions
         ReleaseVersion[] versions = await this.GetReleaseVersionsAsync();
-        ReleaseVersion? stableVersion = versions.LastOrDefault(version => !version.IsForDevs);
-        ReleaseVersion? stableVersionForDevs = versions.LastOrDefault(version => version.IsForDevs);
+        ReleaseVersion? stableVersion = versions.LastOrDefault();
+        ReleaseVersion? stableVersionForDevs = versions.LastOrDefault();
 
         // render view
         IndexVersionModel stableVersionModel = stableVersion != null
@@ -123,12 +123,11 @@ internal class IndexController : Controller
             if (asset.FileName.StartsWith("Z_"))
                 continue;
 
-            Match match = Regex.Match(asset.FileName, @"SMAPI-(?<version>[\d\.]+(?:-.+)?)-installer(?<forDevs>-for-developers)?.zip");
+            Match match = Regex.Match(asset.FileName, @"SMAPI-(?<version>[\d\.]+(?:-.+)?)-installer.zip");
             if (!match.Success || !SemanticVersion.TryParse(match.Groups["version"].Value, out ISemanticVersion? version))
                 continue;
-            bool isForDevs = match.Groups["forDevs"].Success;
 
-            yield return new ReleaseVersion(release, asset, version, isForDevs);
+            yield return new ReleaseVersion(release, asset, version);
         }
     }
 
@@ -147,9 +146,6 @@ internal class IndexController : Controller
         /// <summary>The SMAPI version.</summary>
         public ISemanticVersion Version { get; }
 
-        /// <summary>Whether this is a 'for developers' download.</summary>
-        public bool IsForDevs { get; }
-
 
         /*********
         ** Public methods
@@ -158,13 +154,11 @@ internal class IndexController : Controller
         /// <param name="release">The underlying GitHub release.</param>
         /// <param name="asset">The underlying download asset.</param>
         /// <param name="version">The SMAPI version.</param>
-        /// <param name="isForDevs">Whether this is a 'for developers' download.</param>
-        public ReleaseVersion(GitRelease release, GitAsset asset, ISemanticVersion version, bool isForDevs)
+        public ReleaseVersion(GitRelease release, GitAsset asset, ISemanticVersion version)
         {
             this.Release = release;
             this.Asset = asset;
             this.Version = version;
-            this.IsForDevs = isForDevs;
         }
     }
 }

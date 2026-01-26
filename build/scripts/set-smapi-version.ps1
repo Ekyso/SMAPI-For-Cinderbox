@@ -1,10 +1,4 @@
-#
-#
-# This is the PowerShell equivalent of ../unix/set-smapi-version.sh.
-# When making changes, both scripts should be updated.
-#
-#
-
+#!/usr/bin/env pwsh
 
 . "$PSScriptRoot\lib\in-place-regex.ps1"
 
@@ -15,7 +9,7 @@ if (!$version) {
 }
 
 # move to SMAPI root
-cd "$PSScriptRoot/../.."
+Set-Location "$PSScriptRoot/../.."
 
 # apply changes
 In-Place-Regex -Path "build/common.targets" -Search "<Version>.+</Version>" -Replace "<Version>$version</Version>"

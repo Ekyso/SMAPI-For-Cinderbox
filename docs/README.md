@@ -58,22 +58,22 @@ contributing translations.
 
 locale      | status
 ----------- | :----------------
-default     | ✓ [fully translated](../src/SMAPI/i18n/default.json)
-Chinese     | ✓ [fully translated](../src/SMAPI/i18n/zh.json)
-French      | ✓ [fully translated](../src/SMAPI/i18n/fr.json)
-German      | ✓ [fully translated](../src/SMAPI/i18n/de.json)
-Hungarian   | ✓ [fully translated](../src/SMAPI/i18n/hu.json)
-Indonesian  | ✓ [fully translated](../src/SMAPI/i18n/id.json)
-Italian     | ✓ [fully translated](../src/SMAPI/i18n/it.json)
-Japanese    | ✓ [fully translated](../src/SMAPI/i18n/ja.json)
-Korean      | ✓ [fully translated](../src/SMAPI/i18n/ko.json)
-[Polish]    | ✓ [fully translated](../src/SMAPI/i18n/pl.json)
-Portuguese  | ✓ [fully translated](../src/SMAPI/i18n/pt.json)
-Russian     | ✓ [fully translated](../src/SMAPI/i18n/ru.json)
-Spanish     | ✓ [fully translated](../src/SMAPI/i18n/es.json)
-[Thai]      | ✓ [fully translated](../src/SMAPI/i18n/th.json)
-Turkish     | ✓ [fully translated](../src/SMAPI/i18n/tr.json)
-[Ukrainian] | ✓ [fully translated](../src/SMAPI/i18n/uk.json)
+default     | ↻ [partly translated](../src/SMAPI/i18n/default.json)
+Chinese     | ↻ [partly translated](../src/SMAPI/i18n/zh.json)
+French      | ↻ [partly translated](../src/SMAPI/i18n/fr.json)
+German      | ↻ [partly translated](../src/SMAPI/i18n/de.json)
+Hungarian   | ↻ [partly translated](../src/SMAPI/i18n/hu.json)
+Indonesian  | ↻ [partly translated](../src/SMAPI/i18n/id.json)
+Italian     | ↻ [partly translated](../src/SMAPI/i18n/it.json)
+Japanese    | ↻ [partly translated](../src/SMAPI/i18n/ja.json)
+Korean      | ↻ [partly translated](../src/SMAPI/i18n/ko.json)
+[Polish]    | ↻ [partly translated](../src/SMAPI/i18n/pl.json)
+Portuguese  | ↻ [partly translated](../src/SMAPI/i18n/pt.json)
+Russian     | ↻ [partly translated](../src/SMAPI/i18n/ru.json)
+Spanish     | ↻ [partly translated](../src/SMAPI/i18n/es.json)
+[Thai]      | ↻ [partly translated](../src/SMAPI/i18n/th.json)
+Turkish     | ↻ [partly translated](../src/SMAPI/i18n/tr.json)
+[Ukrainian] | ↻ [partly translated](../src/SMAPI/i18n/uk.json)
 
 [Polish]: https://www.nexusmods.com/stardewvalley/mods/3616
 [Thai]: https://www.nexusmods.com/stardewvalley/mods/7052

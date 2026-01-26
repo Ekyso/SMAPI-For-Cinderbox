@@ -1,4 +1,4 @@
-﻿function In-Place-Regex {
+function In-Place-Regex {
     param (
         [Parameter(Mandatory)][string]$Path,
         [Parameter(Mandatory)][string]$Search,

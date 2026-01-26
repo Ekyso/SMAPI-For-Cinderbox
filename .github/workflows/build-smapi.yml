@@ -1,0 +1,113 @@
+name: Build SMAPI
+
+on:
+    push:
+        tags:
+            - "[0-9]+.[0-9]+.[0-9]+" # stable version tag
+        branches:
+            - develop
+            - build-test
+
+jobs:
+    build_and_release:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write # for creating releases
+            id-token: write # for creating attestations
+            attestations: write
+        steps:
+            -   name: Checkout code
+                uses: actions/checkout@v4
+                with:
+                    fetch-depth: 0
+
+            -   name: Get SMAPI assembly version
+                id: smapi-version
+                shell: pwsh
+                run: |
+                    [xml]$xml = Get-Content build/common.targets
+                    [string]$version = $xml.Project.PropertyGroup.Version
+                    $version = $version.Trim()
+
+                    $pattern = '^(\d+)\.(\d+)\.(\d+)$'
+                    if ($version -match $pattern) {
+                        $major = $Matches[1]
+                        $minor = $Matches[2]
+                        $patch = $Matches[3]
+                    }
+                    else {
+                        Write-Error "The version '$version' found in build/common.targets did not match the strict x.y.z format. Aborting."
+                        Write-Host 'Debug info:'
+                        Write-Host "Extracted version: $version"
+                        exit 1
+                    }
+
+                    "smapi_version=$version" | Out-File $env:GITHUB_OUTPUT -Append
+                    "smapi_major=$major"     | Out-File $env:GITHUB_OUTPUT -Append
+                    "smapi_minor=$minor"     | Out-File $env:GITHUB_OUTPUT -Append
+                    "smapi_patch=$patch"     | Out-File $env:GITHUB_OUTPUT -Append
+                    "VERSION=$major.$minor.$patch" | Out-File $env:GITHUB_ENV -Append
+
+                    Write-Host "Version: $major.$minor.$patch"
+
+            -   name: Verify SMAPI assembly version matches tag
+                if: github.ref_type == 'tag'
+                shell: pwsh
+                run: |
+                    if ($env:VERSION -ne '${{github.ref_name}}') {
+                        Write-Error "The pushed tag '${{github.ref_name}}' doesn't match the version '$env:VERSION' found in build/common.targets. Aborting."
+                        Write-Host 'Debug info:'
+                        Write-Host 'Tag: ${{github.ref_name}}'
+                        Write-Host "In common.targets: $env:VERSION"
+                        exit 1
+                    }
+
+            -   name: Update SMAPI assembly version
+                if: github.ref_type != 'tag'
+                shell: pwsh
+                run: |
+                    $updatedPatch = [int]${{steps.smapi-version.outputs.smapi_patch}} + 1
+                    $timestamp = Get-Date -Format 'yyyyMMdd-HHmm'
+                    $updatedVersion = "${{steps.smapi-version.outputs.smapi_major}}.${{steps.smapi-version.outputs.smapi_minor}}.$updatedPatch-alpha.$timestamp"
+
+                    "VERSION=$updatedVersion" | Out-File $env:GITHUB_ENV -Append
+
+                    Write-Host "This is a dev version. Building as version: $updatedVersion"
+
+                    ./build/scripts/set-smapi-version.ps1 "$updatedVersion"
+                    Write-Host 'Version updated.'
+
+            -   name: Checkout game reference assemblies
+                run: |
+                    git clone --depth 1 https://github.com/StardewModders/mod-reference-assemblies.git "$HOME/StardewValley"
+
+            -   name: Build SMAPI
+                shell: pwsh
+                run: |
+                    Write-Host "Building SMAPI $env:VERSION."
+                    ./build/scripts/prepare-install-package.ps1 "$env:VERSION"
+
+            -   name: Upload installer
+                uses: actions/upload-artifact@v4
+                with:
+                    name: 'SMAPI ${{env.VERSION}} installer'
+                    path: 'bin/SMAPI-${{env.VERSION}}-installer.zip'
+                    if-no-files-found: 'error'
+
+            -   name: Create GitHub release
+                uses: ncipollo/release-action@v1
+                if: github.ref_type == 'tag'
+                with:
+                    artifacts: 'bin/SMAPI-${{env.VERSION}}-installer.zip'
+                    token: '${{secrets.GITHUB_TOKEN}}'
+                    tag: '${{github.ref_name}}'
+                    name: '${{env.VERSION}}'
+                    body: |
+                        Draft.
+                    draft: true
+
+            -   name: Generate artifact attestations
+                uses: actions/attest-build-provenance@v2
+                if: github.ref_type == 'tag'
+                with:
+                    subject-path: bin/SMAPI-${{env.VERSION}}-installer.zip

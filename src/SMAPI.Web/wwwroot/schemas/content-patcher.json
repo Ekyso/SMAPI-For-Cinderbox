@@ -14,9 +14,9 @@
             "title": "Format version",
             "description": "The format version. You should always use the latest version to enable the latest features, avoid obsolete behavior, and reduce load times.",
             "type": "string",
-            "pattern": "^2\\.8\\.[0-9]+$",
+            "pattern": "^2\\.9\\.[0-9]+$",
             "@errorMessages": {
-                "pattern": "Incorrect value '@value'. You should always use the latest format version (currently 2.8.0) to enable the latest features, avoid obsolete behavior, and reduce load times."
+                "pattern": "Incorrect value '@value'. You should always use the latest format version (currently 2.9.0) to enable the latest features, avoid obsolete behavior, and reduce load times."
             }
         },
         "ConfigSchema": {
@@ -473,7 +473,7 @@
                                     "title": "Patch mode",
                                     "description": "How to apply FromArea to ToArea. Defaults to Replace.",
                                     "type": "string",
-                                    "enum": [ "Replace", "Overlay" ],
+                                    "enum": [ "Replace", "Overlay", "Mask" ],
                                     "default": "Replace"
                                 },
 

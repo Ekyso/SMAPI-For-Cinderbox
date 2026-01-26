@@ -191,8 +191,8 @@ internal class InteractiveInstaller
             ** show theme selector
             ****/
             // get theme writers
-            ColorfulConsoleWriter lightBackgroundWriter = new(context.Platform, ColorfulConsoleWriter.GetDefaultColorSchemeConfig(MonitorColorScheme.LightBackground));
-            ColorfulConsoleWriter darkBackgroundWriter = new(context.Platform, ColorfulConsoleWriter.GetDefaultColorSchemeConfig(MonitorColorScheme.DarkBackground));
+            ColorfulConsoleWriter lightBackgroundWriter = new(context.Platform, MonitorColorScheme.LightBackground, ColorfulConsoleWriter.GetDefaultColorSchemeConfig(MonitorColorScheme.LightBackground));
+            ColorfulConsoleWriter darkBackgroundWriter = new(context.Platform, MonitorColorScheme.DarkBackground, ColorfulConsoleWriter.GetDefaultColorSchemeConfig(MonitorColorScheme.DarkBackground));
 
             // print question
             this.PrintPlain("Which text looks more readable?");
