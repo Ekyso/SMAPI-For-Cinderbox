@@ -1,7 +1,9 @@
 ← [README](README.md)
 
 # Release notes
-## Upcoming release
+## 4.5.1
+Released 25 January 2026 for Stardew Valley 1.6.14 or later.
+
 * For players:
   * Fixed error installing SMAPI 4.5.0 on Linux/macOS.
   * Improved translations. Thanks to Maatsuki (updated Portuguese)!
