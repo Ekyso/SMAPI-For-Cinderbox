@@ -28,7 +28,7 @@
     "config.section.console-window": "Console window",
 
     "config.developer-mode.name": "Developer mode",
-    "config.developer-mode.desc": "Whether to show much more info in the SMAPI consoler window, intended for mod developers. Not recommended for most players.",
+    "config.developer-mode.desc": "Whether to show much more info in the SMAPI console window, intended for mod developers. Not recommended for most players.",
 
     "config.color-scheme.name": "Color scheme",
     "config.color-scheme.desc": "The color scheme to apply to text in the SMAPI console window. This has no effect on the game, mods, or SMAPI log file.",
