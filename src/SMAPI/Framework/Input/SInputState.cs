@@ -238,14 +238,14 @@ internal sealed class SInputState : InputState
                 mouseOverrides[button] = newState;
             else if (button.TryGetKeyboard(out Keys _))
                 keyboardOverrides[button] = newState;
-            else if (controller.IsConnected && button.TryGetController(out Buttons _))
+            else if (button.TryGetController(out Buttons _))
                 controllerOverrides[button] = newState;
         }
 
         // override states
         if (keyboardOverrides.Any())
             keyboard.OverrideButtons(keyboardOverrides);
-        if (controller.IsConnected && controllerOverrides.Any())
+        if (controllerOverrides.Any())
             controller.OverrideButtons(controllerOverrides);
         if (mouseOverrides.Any())
             mouse.OverrideButtons(mouseOverrides);
