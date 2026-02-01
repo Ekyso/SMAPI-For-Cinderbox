@@ -60,10 +60,10 @@ locale      | status
 ----------- | :----------------
 default     | ↻ [partly translated](../src/SMAPI/i18n/default.json)
 Chinese     | ↻ [partly translated](../src/SMAPI/i18n/zh.json)
-French      | ↻ [partly translated](../src/SMAPI/i18n/fr.json)
+French      | ✓ [fully translated](../src/SMAPI/i18n/fr.json)
 German      | ↻ [partly translated](../src/SMAPI/i18n/de.json)
 Hungarian   | ↻ [partly translated](../src/SMAPI/i18n/hu.json)
-Indonesian  | ↻ [partly translated](../src/SMAPI/i18n/id.json)
+Indonesian  | ✓ [fully translated](../src/SMAPI/i18n/id.json)
 Italian     | ↻ [partly translated](../src/SMAPI/i18n/it.json)
 Japanese    | ↻ [partly translated](../src/SMAPI/i18n/ja.json)
 Korean      | ↻ [partly translated](../src/SMAPI/i18n/ko.json)
