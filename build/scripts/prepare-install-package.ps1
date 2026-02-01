@@ -7,8 +7,6 @@
 #
 #
 
-. "$PSScriptRoot/lib/in-place-regex.ps1"
-
 
 ##########
 ## Read arguments
