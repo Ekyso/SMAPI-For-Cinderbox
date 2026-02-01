@@ -60,7 +60,7 @@ internal class JsonSettingsWrapper
     public void SaveOrDeleteFile()
     {
         if (this.Properties.Count == 0)
-            File.Delete(Constants.ApiUserConfigPath);
+            File.Delete(this.FilePath);
         else
         {
             string json = JsonConvert.SerializeObject(this.Properties, Formatting.Indented);
