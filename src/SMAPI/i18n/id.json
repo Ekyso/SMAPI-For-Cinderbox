@@ -13,43 +13,43 @@
     *********/
     // TODO
     // 'SMAPI features' section
-    "config.section.features": "SMAPI features",
+    "config.section.features": "Fitur SMAPI",
 
-    "config.check-for-updates.name": "Check for updates",
-    "config.check-for-updates.desc": "Whether to automatically check for newer versions of SMAPI and mods when you load the game. If new versions are available, an alert will be shown in the console. This doesn't affect the load time even if your connection is offline or slow, because it happens in the background.",
+    "config.check-for-updates.name": "Periksa pembaruan",
+    "config.check-for-updates.desc": "Menentukan apakah akan memeriksa versi terbaru SMAPI dan mod secara otomatis saat Anda memuat permainan. Jika versi terbaru tersedia, peringatan akan ditampilkan di konsol. Ini tidak memengaruhi waktu pemuatan meskipun koneksi Anda luring atau lambat, karena ini terjadi di latar belakang.",
 
-    "config.check-content-integrity.name": "Check content integrity",
-    "config.check-content-integrity.desc": "Whether SMAPI should check whether the game's content files are present and unmodified. This should nearly always be enabled. If disabled, SMAPI will log a warning for visibility when someone helps you troubleshoot game issues.",
+    "config.check-content-integrity.name": "Periksa integritas konten",
+    "config.check-content-integrity.desc": "Menentukan apakah SMAPI harus memeriksa apakah berkas konten permainan tersedia dan tidak dimodifikasi. Ini hampir selalu harus diaktifkan. Jika dinonaktifkan, SMAPI akan mencatat peringatan agar terlihat saat seseorang membantu Anda memecahkan masalah permainan.",
 
-    "config.read-console-input.name": "Read console input",
-    "config.read-console-input.desc": "Whether SMAPI should listen for console input. Disabling this will prevent you from using console commands. On some specific Linux systems, disabling this may reduce CPU usage.",
+    "config.read-console-input.name": "Baca input konsol",
+    "config.read-console-input.desc": "Menentukan apakah SMAPI harus mendengarkan input konsol. Menonaktifkan ini akan mencegah Anda menggunakan perintah konsol. Pada beberapa sistem Linux tertentu, menonaktifkan ini dapat mengurangi penggunaan CPU.",
 
     // 'Console window' section
-    "config.section.console-window": "Console window",
+    "config.section.console-window": "Jendela konsol",
 
-    "config.developer-mode.name": "Developer mode",
-    "config.developer-mode.desc": "Whether to show much more info in the SMAPI consoler window, intended for mod developers. Not recommended for most players.",
+    "config.developer-mode.name": "Mode pengembang",
+    "config.developer-mode.desc": "Menentukan apakah akan menampilkan lebih banyak info di jendela konsol SMAPI, ditujukan untuk pengembang mod. Tidak disarankan bagi sebagian besar pemain.",
 
-    "config.color-scheme.name": "Color scheme",
-    "config.color-scheme.desc": "The color scheme to apply to text in the SMAPI console window. This has no effect on the game, mods, or SMAPI log file.",
-    "config.color-scheme.options.AutoDetect": "Auto-detect",
-    "config.color-scheme.options.AutoDetect.on-windows": "Auto-detect (recommended)",
-    "config.color-scheme.options.DarkBackground": "Lighter text (for dark backgrounds)",
-    "config.color-scheme.options.LightBackground": "Darker text (for light backgrounds)",
-    "config.color-scheme.options.None": "No colors",
+    "config.color-scheme.name": "Skema warna",
+    "config.color-scheme.desc": "Skema warna yang diterapkan pada teks di jendela konsol SMAPI. Ini tidak memengaruhi permainan, mod, atau berkas log SMAPI.",
+    "config.color-scheme.options.AutoDetect": "Deteksi otomatis",
+    "config.color-scheme.options.AutoDetect.on-windows": "Deteksi otomatis (disarankan)",
+    "config.color-scheme.options.DarkBackground": "Teks lebih terang (untuk latar belakang gelap)",
+    "config.color-scheme.options.LightBackground": "Teks lebih gelap (untuk latar belakang terang)",
+    "config.color-scheme.options.None": "Tanpa warna",
 
     // 'Verbose logging' section
-    "config.section.verbose-logs": "Verbose logs",
-    "config.section.verbose-logs.explanation": "To help troubleshoot, SMAPI and many mods can send extra info to the SMAPI log (called 'verbose logging'). This may cause performance issues, and should usually be disabled.",
+    "config.section.verbose-logs": "Log terperinci",
+    "config.section.verbose-logs.explanation": "Untuk membantu pemecahan masalah, SMAPI dan banyak mod dapat mengirimkan info tambahan ke log SMAPI (disebut 'log terperinci'). Ini dapat menyebabkan masalah performa, dan biasanya harus dinonaktifkan.",
 
-    "config.enable-for.name": "Enable for",
-    "config.enable-for.desc": "Choose which mods have verbose logging enabled.",
-    "config.enable-for.options.all": "All (not recommended)",
-    "config.enable-for.options.selected": "Mods selected below",
+    "config.enable-for.name": "Aktifkan untuk",
+    "config.enable-for.desc": "Pilih mod mana yang akan mengaktifkan log terperinci.",
+    "config.enable-for.options.all": "Semua (tidak disarankan)",
+    "config.enable-for.options.selected": "Mod yang dipilih di bawah",
 
     "config.enable-for-smapi.name": "SMAPI",
-    "config.enable-for-smapi.desc": "Whether to enable verbose logs for SMAPI itself.",
+    "config.enable-for-smapi.desc": "Menentukan apakah akan mengaktifkan log terperinci untuk SMAPI itu sendiri.",
 
     "config.enable-for-mod.name": "{{modName}}",
-    "config.enable-for-mod.desc": "Whether to enable verbose logs for the '{{modName}}' mod."
+    "config.enable-for-mod.desc": "Menentukan apakah akan mengaktifkan log terperinci untuk mod '{{modName}}'."
 }
