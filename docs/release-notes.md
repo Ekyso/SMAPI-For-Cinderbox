@@ -1,17 +1,19 @@
 ← [README](README.md)
 
 # Release notes
-## Upcoming release
+## 4.5.2
+Released 14 March 2026 for Stardew Valley 1.6.14 or later.
+
 * For players:
-  * Minor performance optimizations.
+  * Improved performance a bit.
   * Fixed the Linux/macOS installer not saving the color scheme correctly in 4.5.0+.
-  * Fixed farmhouse fridge when a mod dynamically adds it in later.
   * Fixed typo in config UI text (thanks to QuentiumYT!).
   * Improved translations. Thanks to dekthaiinchina (updated Thai), dewanggatrustha (updated Indonesian), QuentiumYT (updated French), Timur13240
  (updated Russian), and vlcoo (updated Spanish)!
 
 * For mod authors:
   * Fixed input API ignoring controller overrides when there's no controller plugged in (thanks to spacechase0!).
+  * Fixed asset propagation for the farmhouse map not updating the farmhouse fridge position.
 
 ## 4.5.1
 Released 25 January 2026 for Stardew Valley 1.6.14 or later. See [build attestation](https://github.com/Pathoschild/SMAPI/attestations/17385144).
