@@ -1,11 +1,14 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <RootNamespace>StardewModdingAPI.Toolkit</RootNamespace>
     <Description>A library which encapsulates mod-handling logic for mod managers and tools. Not intended for use by mods.</Description>
-    <TargetFrameworks>net6.0; netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net6.0;netstandard2.0;net8.0-android</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
-    <PublishTrimmed Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))">true</PublishTrimmed>
+    <PublishTrimmed
+      Condition="$([MSBuild]::IsTargetFrameworkCompatible('$(TargetFramework)', 'net6.0'))"
+      >true</PublishTrimmed
+    >
   </PropertyGroup>
 
   <Import Project="..\..\build\common.targets" />

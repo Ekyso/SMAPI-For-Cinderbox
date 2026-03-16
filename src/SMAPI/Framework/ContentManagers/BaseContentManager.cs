@@ -55,7 +55,6 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
     /// <summary>Whether to check the game folder in the base <see cref="DoesAssetExist{T}(IAssetName)"/> implementation.</summary>
     protected bool CheckGameFolderForAssetExists;
 
-
     /*********
     ** Accessors
     *********/
@@ -71,7 +70,6 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
     /// <inheritdoc />
     public bool IsNamespaced { get; }
 
-
     /*********
     ** Public methods
     *********/
@@ -85,8 +83,28 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
     /// <param name="reflection">Simplifies access to private code.</param>
     /// <param name="onDisposing">A callback to invoke when the content manager is being disposed.</param>
     /// <param name="isNamespaced">Whether this content manager handles managed asset keys (e.g. to load assets from a mod folder).</param>
-    protected BaseContentManager(string name, IServiceProvider serviceProvider, string rootDirectory, CultureInfo currentCulture, ContentCoordinator coordinator, IMonitor monitor, Reflector reflection, Action<BaseContentManager> onDisposing, bool isNamespaced)
+    protected BaseContentManager(
+        string name,
+        IServiceProvider serviceProvider,
+        string rootDirectory,
+        CultureInfo currentCulture,
+        ContentCoordinator coordinator,
+        IMonitor monitor,
+        Reflector reflection,
+        Action<BaseContentManager> onDisposing,
+        bool isNamespaced
+    )
+#if SMAPI_FOR_ANDROID
+        // use absolute path so MonoGame's patched OpenStream uses File.OpenRead
+        // instead of loading from the APK assets/ folder
+        : base(
+            serviceProvider,
+            rootDirectory == "Content" ? Constants.ContentPath : rootDirectory,
+            currentCulture
+        )
+#else
         : base(serviceProvider, rootDirectory, currentCulture)
+#endif
     {
         // init
         this.Name = name;
@@ -99,18 +117,28 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
         this.IsNamespaced = isNamespaced;
 
         // get asset data
-        this.BaseDisposableReferences = reflection.GetField<List<IDisposable>?>(this, "disposableAssets").GetValue()
-            ?? throw new InvalidOperationException("Can't initialize content manager: the required 'disposableAssets' field wasn't found.");
+        this.BaseDisposableReferences =
+            reflection.GetField<List<IDisposable>?>(this, "disposableAssets").GetValue()
+            ?? throw new InvalidOperationException(
+                "Can't initialize content manager: the required 'disposableAssets' field wasn't found."
+            );
     }
 
     /// <inheritdoc />
-    [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Inherited from base method.")]
+    [SuppressMessage(
+        "ReSharper",
+        "InconsistentNaming",
+        Justification = "Inherited from base method."
+    )]
     public sealed override bool DoesAssetExist<T>(string? localized_asset_name)
     {
         if (string.IsNullOrWhiteSpace(localized_asset_name))
             return false;
 
-        IAssetName assetName = this.Coordinator.ParseAssetName(this.PrenormalizeRawAssetName(localized_asset_name), allowLocales: this.TryLocalizeKeys);
+        IAssetName assetName = this.Coordinator.ParseAssetName(
+            this.PrenormalizeRawAssetName(localized_asset_name),
+            allowLocales: this.TryLocalizeKeys
+        );
         return this.DoesAssetExist<T>(assetName);
     }
 
@@ -133,15 +161,29 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
     /// <inheritdoc />
     public sealed override T Load<T>(string assetName, LanguageCode language)
     {
-        IAssetName parsedAssetName = this.Coordinator.ParseAssetName(this.PrenormalizeRawAssetName(assetName), allowLocales: this.TryLocalizeKeys);
+        IAssetName parsedAssetName = this.Coordinator.ParseAssetName(
+            this.PrenormalizeRawAssetName(assetName),
+            allowLocales: this.TryLocalizeKeys
+        );
         return this.LoadLocalized<T>(parsedAssetName, language, true);
     }
 
     /// <inheritdoc />
-    [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Inherited from base method.")]
-    public sealed override T LoadImpl<T>(string base_asset_name, string localized_asset_name, LanguageCode language_code)
+    [SuppressMessage(
+        "ReSharper",
+        "InconsistentNaming",
+        Justification = "Inherited from base method."
+    )]
+    public sealed override T LoadImpl<T>(
+        string base_asset_name,
+        string localized_asset_name,
+        LanguageCode language_code
+    )
     {
-        IAssetName assetName = this.Coordinator.ParseAssetName(this.PrenormalizeRawAssetName(localized_asset_name), allowLocales: this.TryLocalizeKeys);
+        IAssetName assetName = this.Coordinator.ParseAssetName(
+            this.PrenormalizeRawAssetName(localized_asset_name),
+            allowLocales: this.TryLocalizeKeys
+        );
         return this.LoadExact<T>(assetName, useCache: true);
     }
 
@@ -155,11 +197,15 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
 
         // check for localized asset
         // ReSharper disable once LocalVariableHidesMember -- this is deliberate
-        Dictionary<string, string> localizedAssetNames = this.Coordinator.LocalizedAssetNames.Value;
+        var localizedAssetNames = this.Coordinator.LocalizedAssetNames.Value;
         if (!localizedAssetNames.TryGetValue(assetName.Name, out _))
         {
             string localeCode = this.GetLocale(language);
-            IAssetName localizedName = new AssetName(baseName: assetName.BaseName, localeCode: localeCode, languageCode: language);
+            IAssetName localizedName = new AssetName(
+                baseName: assetName.BaseName,
+                localeCode: localeCode,
+                languageCode: language
+            );
 
             if (this.DoesAssetExist<T>(localizedName))
             {
@@ -182,7 +228,10 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
         // use cached key
         string rawName = localizedAssetNames[assetName.Name];
         if (assetName.Name != rawName)
-            assetName = this.Coordinator.ParseAssetName(rawName, allowLocales: this.TryLocalizeKeys);
+            assetName = this.Coordinator.ParseAssetName(
+                rawName,
+                allowLocales: this.TryLocalizeKeys
+            );
         return this.LoadExact<T>(assetName, useCache: useCache);
     }
 
@@ -191,15 +240,25 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
         where T : notnull;
 
     /// <inheritdoc />
-    [SuppressMessage("ReSharper", "ParameterOnlyUsedForPreconditionCheck.Local", Justification = "Parameter is only used for assertion checks by design.")]
+    [SuppressMessage(
+        "ReSharper",
+        "ParameterOnlyUsedForPreconditionCheck.Local",
+        Justification = "Parameter is only used for assertion checks by design."
+    )]
     public string AssertAndNormalizeAssetName(string? assetName)
     {
         // NOTE: the game checks for ContentLoadException to handle invalid keys, so avoid
         // throwing other types like ArgumentException here.
         if (string.IsNullOrWhiteSpace(assetName))
-            throw new SContentLoadException(ContentLoadErrorType.InvalidName, "The asset key or local path is empty.");
+            throw new SContentLoadException(
+                ContentLoadErrorType.InvalidName,
+                "The asset key or local path is empty."
+            );
         if (assetName.Intersect(Path.GetInvalidPathChars()).Any())
-            throw new SContentLoadException(ContentLoadErrorType.InvalidName, "The asset key or local path contains invalid characters.");
+            throw new SContentLoadException(
+                ContentLoadErrorType.InvalidName,
+                "The asset key or local path contains invalid characters."
+            );
 
         return this.Cache.NormalizeKey(assetName);
     }
@@ -226,7 +285,6 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
     {
         return this.Cache.ContainsKey(assetName.Name);
     }
-
 
     /****
     ** Cache invalidation
@@ -266,7 +324,9 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
                 {
                     disposable.Dispose();
                 }
-                catch { /* ignore dispose errors */ }
+                catch
+                { /* ignore dispose errors */
+                }
             }
         }
         this.Disposables.Clear();
@@ -286,6 +346,13 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
         base.Unload();
     }
 
+#if SMAPI_FOR_ANDROID
+    /// <summary>Remove dead weak references from the disposables list to free memory.</summary>
+    internal void PruneDisposables()
+    {
+        this.Disposables.RemoveAll(weakRef => !weakRef.TryGetTarget(out _));
+    }
+#endif
 
     /*********
     ** Private methods
@@ -297,6 +364,9 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
     {
         // trim
         assetName = assetName?.Trim();
+
+        // normalize path separators
+        assetName = assetName?.Replace('\\', '/');
 
         // For legacy reasons, mods can pass .xnb file extensions to the content pipeline which
         // are then stripped. This will be re-added as needed when reading from raw files.
@@ -325,10 +395,18 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
         {
             if (!this.BaseLoadProxyCache.TryGetValue(typeof(T), out object? cacheEntry))
             {
-                MethodInfo method = typeof(ContentManager).GetMethod(nameof(ContentManager.Load)) ?? throw new InvalidOperationException($"Can't get required method '{nameof(ContentManager)}.{nameof(ContentManager.Load)}'.");
+                MethodInfo method =
+                    typeof(ContentManager).GetMethod(nameof(ContentManager.Load))
+                    ?? throw new InvalidOperationException(
+                        $"Can't get required method '{nameof(ContentManager)}.{nameof(ContentManager.Load)}'."
+                    );
                 method = method.MakeGenericMethod(typeof(T));
                 IntPtr pointer = method.MethodHandle.GetFunctionPointer();
-                this.BaseLoadProxyCache[typeof(T)] = cacheEntry = Activator.CreateInstance(typeof(Func<string, T>), this, pointer) ?? throw new InvalidOperationException($"Can't proxy required method '{nameof(ContentManager)}.{nameof(ContentManager.Load)}'.");
+                this.BaseLoadProxyCache[typeof(T)] = cacheEntry =
+                    Activator.CreateInstance(typeof(Func<string, T>), this, pointer)
+                    ?? throw new InvalidOperationException(
+                        $"Can't proxy required method '{nameof(ContentManager)}.{nameof(ContentManager.Load)}'."
+                    );
             }
 
             Func<string, T> baseLoad = (Func<string, T>)cacheEntry;
@@ -336,7 +414,10 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
             return baseLoad(assetName.Name);
         }
 
-        return this.ReadAsset<T>(assetName.Name, disposable => this.Disposables.Add(new WeakReference<IDisposable>(disposable)));
+        return this.ReadAsset<T>(
+            assetName.Name,
+            disposable => this.Disposables.Add(new WeakReference<IDisposable>(disposable))
+        );
     }
 
     /// <summary>Add tracking data to an asset and add it to the cache.</summary>

@@ -35,7 +35,6 @@ internal class GameContentManager : BaseContentManager
     /// <summary>A callback to invoke when an asset is fully loaded.</summary>
     private readonly Action<BaseContentManager, IAssetName> OnAssetLoaded;
 
-
     /*********
     ** Public methods
     *********/
@@ -50,8 +49,29 @@ internal class GameContentManager : BaseContentManager
     /// <param name="onDisposing">A callback to invoke when the content manager is being disposed.</param>
     /// <param name="onLoadingFirstAsset">A callback to invoke the first time *any* game content manager loads an asset.</param>
     /// <param name="onAssetLoaded">A callback to invoke when an asset is fully loaded.</param>
-    public GameContentManager(string name, IServiceProvider serviceProvider, string rootDirectory, CultureInfo currentCulture, ContentCoordinator coordinator, IMonitor monitor, Reflector reflection, Action<BaseContentManager> onDisposing, Action onLoadingFirstAsset, Action<BaseContentManager, IAssetName> onAssetLoaded)
-        : base(name, serviceProvider, rootDirectory, currentCulture, coordinator, monitor, reflection, onDisposing, isNamespaced: false)
+    public GameContentManager(
+        string name,
+        IServiceProvider serviceProvider,
+        string rootDirectory,
+        CultureInfo currentCulture,
+        ContentCoordinator coordinator,
+        IMonitor monitor,
+        Reflector reflection,
+        Action<BaseContentManager> onDisposing,
+        Action onLoadingFirstAsset,
+        Action<BaseContentManager, IAssetName> onAssetLoaded
+    )
+        : base(
+            name,
+            serviceProvider,
+            rootDirectory,
+            currentCulture,
+            coordinator,
+            monitor,
+            reflection,
+            onDisposing,
+            isNamespaced: false
+        )
     {
         this.OnLoadingFirstAsset = onLoadingFirstAsset;
         this.OnAssetLoaded = onAssetLoaded;
@@ -66,16 +86,29 @@ internal class GameContentManager : BaseContentManager
             return true;
 
         // managed asset
-        if (this.Coordinator.TryParseManagedAssetKey(assetName.Name, out string? contentManagerId, out IAssetName? relativePath))
+        if (
+            this.Coordinator.TryParseManagedAssetKey(
+                assetName.Name,
+                out string? contentManagerId,
+                out IAssetName? relativePath
+            )
+        )
             return this.Coordinator.DoesManagedAssetExist<T>(contentManagerId, relativePath);
 
         // custom asset from a loader
         string locale = this.GetLocale();
-        IAssetInfo info = new AssetInfo(locale, assetName, typeof(T), this.AssertAndNormalizeAssetName);
+        IAssetInfo info = new AssetInfo(
+            locale,
+            assetName,
+            typeof(T),
+            this.AssertAndNormalizeAssetName
+        );
         AssetOperationGroup? operations = this.Coordinator.GetAssetOperations(info);
         if (operations?.LoadOperations.Count > 0)
         {
-            if (!this.AssertMaxOneRequiredLoader(info, operations.LoadOperations, out string? error))
+            if (
+                !this.AssertMaxOneRequiredLoader(info, operations.LoadOperations, out string? error)
+            )
             {
                 this.Monitor.Log(error, LogLevel.Warn);
                 return false;
@@ -91,7 +124,10 @@ internal class GameContentManager : BaseContentManager
     public override T LoadExact<T>(IAssetName assetName, bool useCache)
     {
         if (typeof(IRawTextureData).IsAssignableFrom(typeof(T)))
-            throw new SContentLoadException(ContentLoadErrorType.Other, $"Can't load {nameof(IRawTextureData)} assets from the game content pipeline. This asset type is only available for mod files.");
+            throw new SContentLoadException(
+                ContentLoadErrorType.Other,
+                $"Can't load {nameof(IRawTextureData)} assets from the game content pipeline. This asset type is only available for mod files."
+            );
 
         // raise first-load callback
         if (GameContentManager.IsFirstLoad)
@@ -105,7 +141,13 @@ internal class GameContentManager : BaseContentManager
             return this.RawLoad<T>(assetName, useCache: true);
 
         // get managed asset
-        if (this.Coordinator.TryParseManagedAssetKey(assetName.Name, out string? contentManagerId, out IAssetName? relativePath))
+        if (
+            this.Coordinator.TryParseManagedAssetKey(
+                assetName.Name,
+                out string? contentManagerId,
+                out IAssetName? relativePath
+            )
+        )
         {
             T managedAsset = this.Coordinator.LoadManagedAsset<T>(contentManagerId, relativePath);
             this.TrackAsset(assetName, managedAsset, useCache);
@@ -114,24 +156,44 @@ internal class GameContentManager : BaseContentManager
 
         // load asset
         T data;
-        if (this.AssetsBeingLoaded.Contains(assetName.Name))
+        var assetsBeingLoaded = this.AssetsBeingLoaded;
+        if (assetsBeingLoaded.Contains(assetName.Name))
         {
             this.Monitor.Log($"Broke loop while loading asset '{assetName}'.", LogLevel.Warn);
-            this.Monitor.Log($"Bypassing mod loaders for this asset. Stack trace:\n{Environment.StackTrace}");
+            this.Monitor.Log(
+                $"Bypassing mod loaders for this asset. Stack trace:\n{Environment.StackTrace}"
+            );
             data = this.RawLoad<T>(assetName, useCache);
         }
         else
         {
-            data = this.AssetsBeingLoaded.Track(assetName.Name, () =>
-            {
-                IAssetInfo info = new AssetInfo(assetName.LocaleCode, assetName, typeof(T), this.AssertAndNormalizeAssetName);
-                AssetOperationGroup? operations = this.Coordinator.GetAssetOperations(info);
-                IAssetData asset =
-                    this.ApplyLoader<T>(info, operations?.LoadOperations)
-                    ?? new AssetDataForObject(info, this.RawLoad<T>(assetName, useCache), this.AssertAndNormalizeAssetName, this.Reflection);
-                asset = this.ApplyEditors<T>(info, asset, operations?.EditOperations);
-                return (T)asset.Data;
-            });
+            data = assetsBeingLoaded.Track(
+                assetName.Name,
+                () =>
+                {
+                    IAssetInfo info = new AssetInfo(
+                        assetName.LocaleCode,
+                        assetName,
+                        typeof(T),
+                        this.AssertAndNormalizeAssetName
+                    );
+                    AssetOperationGroup? operations = this.Coordinator.GetAssetOperations(info);
+
+                    IAssetData? loaderResult = this.ApplyLoader<T>(info, operations?.LoadOperations);
+
+                    IAssetData asset =
+                        loaderResult
+                        ?? new AssetDataForObject(
+                            info,
+                            this.RawLoad<T>(assetName, useCache),
+                            this.AssertAndNormalizeAssetName,
+                            this.Reflection
+                        );
+                    asset = this.ApplyEditors<T>(info, asset, operations?.EditOperations);
+
+                    return (T)asset.Data;
+                }
+            );
         }
 
         // update cache
@@ -147,7 +209,6 @@ internal class GameContentManager : BaseContentManager
     {
         return this.Coordinator.CreateGameContentManager("(temporary)");
     }
-
 
     /*********
     ** Private methods
@@ -181,11 +242,16 @@ internal class GameContentManager : BaseContentManager
         try
         {
             data = (T)loader.GetData(info);
-            this.Monitor.Log($"{mod.DisplayName} loaded asset '{info.Name}'{this.GetOnBehalfOfLabel(loader.OnBehalfOf)}.");
+            this.Monitor.Log(
+                $"{mod.DisplayName} loaded asset '{info.Name}'{this.GetOnBehalfOfLabel(loader.OnBehalfOf)}."
+            );
         }
         catch (Exception ex)
         {
-            mod.LogAsMod($"Mod crashed when loading asset '{info.Name}'{this.GetOnBehalfOfLabel(loader.OnBehalfOf)}. SMAPI will use the default asset instead. Error details:\n{ex.GetLogSummary()}", LogLevel.Error);
+            mod.LogAsMod(
+                $"Mod crashed when loading asset '{info.Name}'{this.GetOnBehalfOfLabel(loader.OnBehalfOf)}. SMAPI will use the default asset instead. Error details:\n{ex.GetLogSummary()}",
+                LogLevel.Error
+            );
             return null;
         }
         finally
@@ -204,25 +270,44 @@ internal class GameContentManager : BaseContentManager
     /// <param name="info">The basic asset metadata.</param>
     /// <param name="asset">The loaded asset.</param>
     /// <param name="editOperations">The edit operations to apply to the asset.</param>
-    private IAssetData ApplyEditors<T>(IAssetInfo info, IAssetData asset, List<AssetEditOperation>? editOperations)
+    private IAssetData ApplyEditors<T>(
+        IAssetInfo info,
+        IAssetData asset,
+        List<AssetEditOperation>? editOperations
+    )
         where T : notnull
     {
         if (editOperations?.Count is not > 0)
             return asset;
 
-        IAssetData GetNewData(object data) => new AssetDataForObject(info, data, this.AssertAndNormalizeAssetName, this.Reflection);
+        IAssetData GetNewData(object data) =>
+            new AssetDataForObject(info, data, this.AssertAndNormalizeAssetName, this.Reflection);
 
         // special case: if the asset was loaded with a more general type like 'object', call editors with the actual type instead.
         {
             Type actualType = asset.Data.GetType();
-            Type? actualOpenType = actualType.IsGenericType ? actualType.GetGenericTypeDefinition() : null;
+            Type? actualOpenType = actualType.IsGenericType
+                ? actualType.GetGenericTypeDefinition()
+                : null;
 
-            if (typeof(T) != actualType && (actualOpenType == typeof(Dictionary<,>) || actualOpenType == typeof(List<>) || actualType == typeof(Texture2D) || actualType == typeof(Map)))
+            if (
+                typeof(T) != actualType
+                && (
+                    actualOpenType == typeof(Dictionary<,>)
+                    || actualOpenType == typeof(List<>)
+                    || actualType == typeof(Texture2D)
+                    || actualType == typeof(Map)
+                )
+            )
             {
-                return (IAssetData)this.GetType()
-                    .GetMethod(nameof(this.ApplyEditors), BindingFlags.NonPublic | BindingFlags.Instance)!
-                    .MakeGenericMethod(actualType)
-                    .Invoke(this, [info, asset, editOperations])!;
+                return (IAssetData)
+                    this.GetType()
+                        .GetMethod(
+                            nameof(this.ApplyEditors),
+                            BindingFlags.NonPublic | BindingFlags.Instance
+                        )!
+                        .MakeGenericMethod(actualType)
+                        .Invoke(this, [info, asset, editOperations])!;
             }
         }
 
@@ -238,11 +323,16 @@ internal class GameContentManager : BaseContentManager
             try
             {
                 editor.ApplyEdit(asset);
-                this.Monitor.Log($"{mod.DisplayName} edited {info.Name}{this.GetOnBehalfOfLabel(editor.OnBehalfOf)}.");
+                this.Monitor.Log(
+                    $"{mod.DisplayName} edited {info.Name}{this.GetOnBehalfOfLabel(editor.OnBehalfOf)}."
+                );
             }
             catch (Exception ex)
             {
-                mod.LogAsMod($"Mod crashed when editing asset '{info.Name}'{this.GetOnBehalfOfLabel(editor.OnBehalfOf)}, which may cause errors in-game. Error details:\n{ex.GetLogSummary()}", LogLevel.Error);
+                mod.LogAsMod(
+                    $"Mod crashed when editing asset '{info.Name}'{this.GetOnBehalfOfLabel(editor.OnBehalfOf)}, which may cause errors in-game. Error details:\n{ex.GetLogSummary()}",
+                    LogLevel.Error
+                );
             }
             finally
             {
@@ -253,12 +343,18 @@ internal class GameContentManager : BaseContentManager
             // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract -- it's only guaranteed non-null after this method
             if (asset.Data == null)
             {
-                mod.LogAsMod($"Mod incorrectly set asset '{info.Name}'{this.GetOnBehalfOfLabel(editor.OnBehalfOf)} to a null value; ignoring override.", LogLevel.Warn);
+                mod.LogAsMod(
+                    $"Mod incorrectly set asset '{info.Name}'{this.GetOnBehalfOfLabel(editor.OnBehalfOf)} to a null value; ignoring override.",
+                    LogLevel.Warn
+                );
                 asset = GetNewData(prevAsset);
             }
             else if (asset.Data is not T)
             {
-                mod.LogAsMod($"Mod incorrectly set asset '{asset.Name}'{this.GetOnBehalfOfLabel(editor.OnBehalfOf)} to incompatible type '{asset.Data.GetType()}', expected '{typeof(T)}'; ignoring override.", LogLevel.Warn);
+                mod.LogAsMod(
+                    $"Mod incorrectly set asset '{asset.Name}'{this.GetOnBehalfOfLabel(editor.OnBehalfOf)} to incompatible type '{asset.Data.GetType()}', expected '{typeof(T)}'; ignoring override.",
+                    LogLevel.Warn
+                );
                 asset = GetNewData(prevAsset);
             }
         }
@@ -272,9 +368,15 @@ internal class GameContentManager : BaseContentManager
     /// <param name="loaders">The asset loaders to apply.</param>
     /// <param name="error">The error message to show to the user, if the method returns false.</param>
     /// <returns>Returns true if only one loader will apply, else false.</returns>
-    private bool AssertMaxOneRequiredLoader(IAssetInfo info, List<AssetLoadOperation> loaders, [NotNullWhen(false)] out string? error)
+    private bool AssertMaxOneRequiredLoader(
+        IAssetInfo info,
+        List<AssetLoadOperation> loaders,
+        [NotNullWhen(false)] out string? error
+    )
     {
-        AssetLoadOperation[] required = loaders.Where(p => p.Priority == AssetLoadPriority.Exclusive).ToArray();
+        AssetLoadOperation[] required = loaders
+            .Where(p => p.Priority == AssetLoadPriority.Exclusive)
+            .ToArray();
         if (required.Length <= 1)
         {
             error = null;
@@ -286,11 +388,13 @@ internal class GameContentManager : BaseContentManager
             .OrderBy(p => p)
             .Distinct()
             .ToArray();
-        string errorPhrase = loaderNames.Length > 1
-            ? $"Multiple mods want to provide the '{info.Name}' asset: {string.Join(", ", loaderNames)}"
-            : $"The '{loaderNames[0]}' mod wants to provide the '{info.Name}' asset multiple times";
+        string errorPhrase =
+            loaderNames.Length > 1
+                ? $"Multiple mods want to provide the '{info.Name}' asset: {string.Join(", ", loaderNames)}"
+                : $"The '{loaderNames[0]}' mod wants to provide the '{info.Name}' asset multiple times";
 
-        error = $"{errorPhrase}. An asset can't be loaded multiple times, so SMAPI will use the default asset instead. Uninstall one of the mods to fix this. (Message for modders: you should avoid {nameof(AssetLoadPriority)}.{nameof(AssetLoadPriority.Exclusive)} if possible to avoid conflicts.)";
+        error =
+            $"{errorPhrase}. An asset can't be loaded multiple times, so SMAPI will use the default asset instead. Uninstall one of the mods to fix this. (Message for modders: you should avoid {nameof(AssetLoadPriority)}.{nameof(AssetLoadPriority.Exclusive)} if possible to avoid conflicts.)";
         return false;
     }
 
@@ -315,7 +419,11 @@ internal class GameContentManager : BaseContentManager
     /// <param name="data">The loaded asset data.</param>
     /// <param name="loader">The loader which loaded the asset.</param>
     /// <returns>Returns whether the asset passed validation checks (after any fixes were applied).</returns>
-    private bool TryFixAndValidateLoadedAsset<T>(IAssetInfo info, [NotNullWhen(true)] T? data, AssetLoadOperation loader)
+    private bool TryFixAndValidateLoadedAsset<T>(
+        IAssetInfo info,
+        [NotNullWhen(true)] T? data,
+        AssetLoadOperation loader
+    )
         where T : notnull
     {
         IModMetadata mod = loader.Mod;
@@ -323,23 +431,41 @@ internal class GameContentManager : BaseContentManager
         // can't load a null asset
         if (data == null)
         {
-            mod.LogAsMod($"SMAPI blocked asset replacement for '{info.Name}': {this.GetOnBehalfOfLabel(loader.OnBehalfOf, parenthetical: false) ?? "mod"} incorrectly set asset to a null value.", LogLevel.Error);
+            mod.LogAsMod(
+                $"SMAPI blocked asset replacement for '{info.Name}': {this.GetOnBehalfOfLabel(loader.OnBehalfOf, parenthetical: false) ?? "mod"} incorrectly set asset to a null value.",
+                LogLevel.Error
+            );
             return false;
         }
 
         // when replacing a map, the vanilla tilesheets must have the same order and IDs
         if (data is Map loadedMap)
         {
-            TilesheetReference[] vanillaTilesheetRefs = this.Coordinator.GetVanillaTilesheetIds(info.Name.Name);
+            TilesheetReference[] vanillaTilesheetRefs = this.Coordinator.GetVanillaTilesheetIds(
+                info.Name.Name
+            );
             foreach (TilesheetReference vanillaSheet in vanillaTilesheetRefs)
             {
                 // add missing tilesheet
                 if (loadedMap.GetTileSheet(vanillaSheet.Id) == null)
                 {
-                    mod.Monitor!.LogOnce("SMAPI fixed maps loaded by this mod to prevent errors. See the log file for details.", LogLevel.Warn);
-                    this.Monitor.Log($"Fixed broken map replacement: {mod.DisplayName} loaded '{info.Name}' without a required tilesheet (id: {vanillaSheet.Id}, source: {vanillaSheet.ImageSource}).");
+                    mod.Monitor!.LogOnce(
+                        "SMAPI fixed maps loaded by this mod to prevent errors. See the log file for details.",
+                        LogLevel.Warn
+                    );
+                    this.Monitor.Log(
+                        $"Fixed broken map replacement: {mod.DisplayName} loaded '{info.Name}' without a required tilesheet (id: {vanillaSheet.Id}, source: {vanillaSheet.ImageSource})."
+                    );
 
-                    loadedMap.AddTileSheet(new TileSheet(vanillaSheet.Id, loadedMap, vanillaSheet.ImageSource, vanillaSheet.SheetSize, vanillaSheet.TileSize));
+                    loadedMap.AddTileSheet(
+                        new TileSheet(
+                            vanillaSheet.Id,
+                            loadedMap,
+                            vanillaSheet.ImageSource,
+                            vanillaSheet.SheetSize,
+                            vanillaSheet.TileSize
+                        )
+                    );
                 }
             }
         }

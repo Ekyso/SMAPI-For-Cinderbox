@@ -51,7 +51,6 @@ internal class AssemblyLoader : IDisposable
     /// <summary>Whether to include more technical details about broken mods in the TRACE logs. This is mainly useful for creating compatibility rewriters.</summary>
     private readonly bool LogTechnicalDetailsForBrokenMods;
 
-
     /*********
     ** Public methods
     *********/
@@ -61,7 +60,13 @@ internal class AssemblyLoader : IDisposable
     /// <param name="paranoidMode">Whether to detect paranoid mode issues.</param>
     /// <param name="rewriteMods">Whether to rewrite mods for compatibility.</param>
     /// <param name="logTechnicalDetailsForBrokenMods">Whether to include more technical details about broken mods in the TRACE logs. This is mainly useful for creating compatibility rewriters.</param>
-    public AssemblyLoader(Platform targetPlatform, IMonitor monitor, bool paranoidMode, bool rewriteMods, bool logTechnicalDetailsForBrokenMods)
+    public AssemblyLoader(
+        Platform targetPlatform,
+        IMonitor monitor,
+        bool paranoidMode,
+        bool rewriteMods,
+        bool logTechnicalDetailsForBrokenMods
+    )
     {
         this.Monitor = monitor;
         this.RewriteMods = rewriteMods;
@@ -76,7 +81,9 @@ internal class AssemblyLoader : IDisposable
         this.TypeAssemblies = new Dictionary<string, Assembly>();
         foreach (Assembly assembly in this.AssemblyMap.Targets)
         {
-            ModuleDefinition module = this.AssemblyMap.TargetModules[assembly];
+            if (!this.AssemblyMap.TargetModules.TryGetValue(assembly, out ModuleDefinition? module))
+                continue;
+
             foreach (TypeDefinition type in module.GetTypes())
             {
                 if (!type.IsPublic)
@@ -94,7 +101,9 @@ internal class AssemblyLoader : IDisposable
             timer = new();
             timer.Start();
         }
-        this.InstructionHandlers = new InstructionMetadata().GetHandlers(paranoidMode, this.RewriteMods, logTechnicalDetailsForBrokenMods).ToArray();
+        this.InstructionHandlers = new InstructionMetadata()
+            .GetHandlers(paranoidMode, this.RewriteMods, logTechnicalDetailsForBrokenMods)
+            .ToArray();
         if (logTechnicalDetailsForBrokenMods)
         {
             timer!.Stop();
@@ -119,19 +128,45 @@ internal class AssemblyLoader : IDisposable
                 where name != null
                 select name
             );
-            assemblies = this.GetReferencedLocalAssemblies(assemblyFile, visitedAssemblyNames, this.AssemblyDefinitionResolver).ToArray();
+            assemblies = this.GetReferencedLocalAssemblies(
+                    assemblyFile,
+                    visitedAssemblyNames,
+                    this.AssemblyDefinitionResolver
+                )
+                .ToArray();
         }
 
         // validate load
         if (!assemblies.Any() || assemblies[0].Status == AssemblyLoadStatus.Failed)
         {
-            throw new SAssemblyLoadFailedException(!assemblyFile.Exists
-                ? $"Could not load '{assemblyFile.FullName}' because it doesn't exist."
-                : $"Could not load '{assemblyFile.FullName}'."
+            throw new SAssemblyLoadFailedException(
+                !assemblyFile.Exists
+                    ? $"Could not load '{assemblyFile.FullName}' because it doesn't exist."
+                    : $"Could not load '{assemblyFile.FullName}'."
             );
         }
         if (assemblies.Last().Status == AssemblyLoadStatus.AlreadyLoaded) // mod assembly is last in dependency order
-            throw new SAssemblyLoadFailedException($"Could not load '{assemblyFile.FullName}' because it was already loaded. Do you have two copies of this mod?");
+        {
+            // return existing assembly if already loaded (e.g. as a dependency during transpiler processing)
+            string assemblyName = Path.GetFileNameWithoutExtension(assemblyFile.Name);
+            Assembly? existingAssembly = AppDomain
+                .CurrentDomain.GetAssemblies()
+                .FirstOrDefault(a =>
+                    string.Equals(
+                        a.GetName().Name,
+                        assemblyName,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                );
+            if (existingAssembly != null)
+            {
+                this.Monitor.Log($"      Using pre-loaded assembly '{assemblyFile.Name}'.");
+                return existingAssembly;
+            }
+            throw new SAssemblyLoadFailedException(
+                $"Could not load '{assemblyFile.FullName}' because it was already loaded. Do you have two copies of this mod?"
+            );
+        }
 
         // rewrite & load assemblies in leaf-to-root order
         bool oneAssembly = assemblies.Length == 1;
@@ -143,16 +178,28 @@ internal class AssemblyLoader : IDisposable
                 continue;
 
             // rewrite assembly
-            bool changed = this.RewriteAssembly(mod, assembly.Definition, loggedMessages, logPrefix: "      ");
+            bool changed = this.RewriteAssembly(
+                mod,
+                assembly.Definition,
+                loggedMessages,
+                logPrefix: "      "
+            );
 
             // detect broken assembly reference
-            foreach (AssemblyNameReference reference in assembly.Definition.MainModule.AssemblyReferences)
+            foreach (
+                AssemblyNameReference reference in assembly.Definition.MainModule.AssemblyReferences
+            )
             {
                 if (!reference.Name.StartsWith("System.") && !this.IsAssemblyLoaded(reference))
                 {
-                    this.Monitor.LogOnce(loggedMessages, $"      Broken code in {assembly.File.Name}: reference to missing assembly '{reference.FullName}'.");
+                    this.Monitor.LogOnce(
+                        loggedMessages,
+                        $"      Broken code in {assembly.File.Name}: reference to missing assembly '{reference.FullName}'."
+                    );
                     if (!assumeCompatible)
-                        throw new IncompatibleInstructionException($"Found a reference to missing assembly '{reference.FullName}' while loading assembly {assembly.File.Name}.");
+                        throw new IncompatibleInstructionException(
+                            $"Found a reference to missing assembly '{reference.FullName}' while loading assembly {assembly.File.Name}."
+                        );
                     mod.SetWarning(ModWarning.BrokenCodeLoaded);
                     break;
                 }
@@ -162,14 +209,37 @@ internal class AssemblyLoader : IDisposable
             if (changed)
             {
                 if (!oneAssembly)
-                    this.Monitor.Log($"      Loading assembly '{assembly.File.Name}' (rewritten)...");
+                    this.Monitor.Log(
+                        $"      Loading assembly '{assembly.File.Name}' (rewritten)..."
+                    );
 
-                // load assembly
+                // write rewritten assembly to disk for LoadFrom registration
                 using MemoryStream outAssemblyStream = new();
                 using MemoryStream outSymbolStream = new();
-                assembly.Definition.Write(outAssemblyStream, new WriterParameters { WriteSymbols = true, SymbolStream = outSymbolStream, SymbolWriterProvider = this.SymbolWriterProvider });
-                byte[] bytes = outAssemblyStream.ToArray();
-                lastAssembly = Assembly.Load(bytes, outSymbolStream.ToArray());
+                assembly.Definition.Write(
+                    outAssemblyStream,
+                    new WriterParameters
+                    {
+                        WriteSymbols = true,
+                        SymbolStream = outSymbolStream,
+                        SymbolWriterProvider = this.SymbolWriterProvider,
+                    }
+                );
+                string rewrittenPath = assembly.File.FullName;
+                using (var fileStream = File.Create(rewrittenPath))
+                    outAssemblyStream.WriteTo(fileStream);
+
+                // write updated PDB
+                string pdbPath = Path.ChangeExtension(rewrittenPath, ".pdb");
+                if (outSymbolStream.Length > 0)
+                {
+                    using (var fileStream = File.Create(pdbPath))
+                        outSymbolStream.WriteTo(fileStream);
+                }
+                else if (File.Exists(pdbPath))
+                    File.Delete(pdbPath);
+
+                lastAssembly = Assembly.UnsafeLoadFrom(rewrittenPath);
             }
             else
             {
@@ -199,10 +269,27 @@ internal class AssemblyLoader : IDisposable
             _ = this.AssemblyDefinitionResolver.Resolve(reference);
             return true;
         }
-        catch (AssemblyResolutionException)
+        catch (AssemblyResolutionException) { }
+
+#if SMAPI_FOR_ANDROID
+        // On Android, APK-bundled assemblies are invisible to Cecil but loadable at runtime.
+        string shortName = reference.Name;
+
+        foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
         {
-            return false;
+            if (asm.GetName().Name == shortName)
+                return true;
         }
+
+        try
+        {
+            Assembly.Load(new AssemblyName(shortName));
+            return true;
+        }
+        catch { }
+#endif
+
+        return false;
     }
 
     /// <summary>Resolve an assembly by its name.</summary>
@@ -216,8 +303,8 @@ internal class AssemblyLoader : IDisposable
     public static Assembly? ResolveAssembly(string name)
     {
         string shortName = name.Split(',', 2).First(); // get simple name (without version and culture)
-        return AppDomain.CurrentDomain
-            .GetAssemblies()
+        return AppDomain
+            .CurrentDomain.GetAssemblies()
             .FirstOrDefault(p => p.GetName().Name == shortName);
     }
 
@@ -227,7 +314,6 @@ internal class AssemblyLoader : IDisposable
         foreach (IDisposable instance in this.Disposables)
             instance.Dispose();
     }
-
 
     /*********
     ** Private methods
@@ -250,11 +336,17 @@ internal class AssemblyLoader : IDisposable
     /// <param name="visitedAssemblyNames">The assembly names that should be skipped.</param>
     /// <param name="assemblyResolver">A resolver which resolves references to known assemblies.</param>
     /// <returns>Returns the rewrite metadata for the preprocessed assembly.</returns>
-    private IEnumerable<AssemblyParseResult> GetReferencedLocalAssemblies(FileInfo file, HashSet<string> visitedAssemblyNames, IAssemblyResolver assemblyResolver)
+    private IEnumerable<AssemblyParseResult> GetReferencedLocalAssemblies(
+        FileInfo file,
+        HashSet<string> visitedAssemblyNames,
+        IAssemblyResolver assemblyResolver
+    )
     {
         // validate
         if (file.Directory == null)
-            throw new InvalidOperationException($"Could not get directory from file path '{file.FullName}'.");
+            throw new InvalidOperationException(
+                $"Could not get directory from file path '{file.FullName}'."
+            );
         if (!file.Exists)
             yield break; // not a local assembly
 
@@ -269,22 +361,62 @@ internal class AssemblyLoader : IDisposable
         try
         {
             byte[] assemblyBytes = File.ReadAllBytes(file.FullName);
-            Stream readStream = this.TrackForDisposal(new MemoryStream(assemblyBytes));
+            Stream readStream = new MemoryStream(assemblyBytes);
 
             try
             {
-                // read assembly with symbols
-                FileInfo symbolsFile = new(Path.Combine(Path.GetDirectoryName(file.FullName)!, Path.GetFileNameWithoutExtension(file.FullName)) + ".pdb");
+                FileInfo symbolsFile = new(
+                    Path.Combine(
+                        Path.GetDirectoryName(file.FullName)!,
+                        Path.GetFileNameWithoutExtension(file.FullName)
+                    ) + ".pdb"
+                );
                 if (symbolsFile.Exists)
-                    this.SymbolReaderProvider.TryAddSymbolData(file.Name, () => this.TrackForDisposal(symbolsFile.OpenRead()));
-                assembly = this.TrackForDisposal(AssemblyDefinition.ReadAssembly(readStream, new ReaderParameters(ReadingMode.Immediate) { AssemblyResolver = assemblyResolver, InMemory = true, ReadSymbols = true, SymbolReaderProvider = this.SymbolReaderProvider }));
+                {
+                    this.SymbolReaderProvider.TryAddSymbolData(
+                        file.Name,
+                        () => this.TrackForDisposal(symbolsFile.OpenRead())
+                    );
+                }
+                assembly = this.TrackForDisposal(
+                    AssemblyDefinition.ReadAssembly(
+                        readStream,
+                        new ReaderParameters(ReadingMode.Immediate)
+                        {
+                            AssemblyResolver = assemblyResolver,
+                            InMemory = true,
+                            ReadSymbols = true,
+                            SymbolReaderProvider = this.SymbolReaderProvider,
+                        }
+                    )
+                );
             }
-            catch (SymbolsNotMatchingException ex)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
-                // read assembly without symbols
-                this.Monitor.Log($"      Failed loading PDB for '{file.Name}'. Technical details:\n{ex}");
-                readStream.Position = 0;
-                assembly = this.TrackForDisposal(AssemblyDefinition.ReadAssembly(readStream, new ReaderParameters(ReadingMode.Immediate) { AssemblyResolver = assemblyResolver, InMemory = true }));
+                this.Monitor.Log(
+                    $"      Failed loading PDB for '{file.Name}'. Technical details:\n{ex}"
+                );
+                try
+                {
+                    readStream.Position = 0;
+                    assembly = this.TrackForDisposal(
+                        AssemblyDefinition.ReadAssembly(
+                            readStream,
+                            new ReaderParameters(ReadingMode.Immediate)
+                            {
+                                AssemblyResolver = assemblyResolver,
+                                InMemory = true,
+                            }
+                        )
+                    );
+                }
+                catch (Exception ex2) when (ex2 is not OutOfMemoryException)
+                {
+                    this.Monitor.Log(
+                        $"      Failed reading assembly '{file.Name}', skipping. Technical details:\n{ex2}"
+                    );
+                    assembly = null!;
+                }
             }
         }
         finally
@@ -292,6 +424,13 @@ internal class AssemblyLoader : IDisposable
             // clean up temporary search directory
             if (temporarySearchDir is not null)
                 this.AssemblyDefinitionResolver.RemoveSearchDirectory(temporarySearchDir);
+        }
+
+        // skip if both read attempts failed
+        if (assembly == null!)
+        {
+            yield return new AssemblyParseResult(file, null, AssemblyLoadStatus.Failed);
+            yield break;
         }
 
         // skip if already visited
@@ -304,8 +443,16 @@ internal class AssemblyLoader : IDisposable
         // yield referenced assemblies
         foreach (AssemblyNameReference dependency in assembly.MainModule.AssemblyReferences)
         {
-            FileInfo dependencyFile = new(Path.Combine(file.Directory.FullName, $"{dependency.Name}.dll"));
-            foreach (AssemblyParseResult result in this.GetReferencedLocalAssemblies(dependencyFile, visitedAssemblyNames, assemblyResolver))
+            FileInfo dependencyFile = new(
+                Path.Combine(file.Directory.FullName, $"{dependency.Name}.dll")
+            );
+            foreach (
+                AssemblyParseResult result in this.GetReferencedLocalAssemblies(
+                    dependencyFile,
+                    visitedAssemblyNames,
+                    assemblyResolver
+                )
+            )
                 yield return result;
         }
 
@@ -323,7 +470,12 @@ internal class AssemblyLoader : IDisposable
     /// <param name="logPrefix">A string to prefix to log messages.</param>
     /// <returns>Returns whether the assembly was modified.</returns>
     /// <exception cref="IncompatibleInstructionException">An incompatible CIL instruction was found while rewriting the assembly.</exception>
-    private bool RewriteAssembly(IModMetadata mod, AssemblyDefinition assembly, HashSet<string> loggedMessages, string logPrefix)
+    private bool RewriteAssembly(
+        IModMetadata mod,
+        AssemblyDefinition assembly,
+        HashSet<string> loggedMessages,
+        string logPrefix
+    )
     {
         ModuleDefinition module = assembly.MainModule;
         string filename = $"{assembly.Name.Name}.dll";
@@ -335,12 +487,19 @@ internal class AssemblyLoader : IDisposable
             for (int i = 0; i < module.AssemblyReferences.Count; i++)
             {
                 // remove old assembly reference
-                if (this.AssemblyMap.RemoveNames.Any(name => module.AssemblyReferences[i].Name == name))
+                if (
+                    this.AssemblyMap.RemoveNames.Any(name =>
+                        module.AssemblyReferences[i].Name == name
+                    )
+                )
                 {
                     platformChanged = true;
                     module.AssemblyReferences.RemoveAt(i);
                     i--;
-                    this.Monitor.LogOnce(loggedMessages, $"{logPrefix}Rewrote {filename} for OS...");
+                    this.Monitor.LogOnce(
+                        loggedMessages,
+                        $"{logPrefix}Rewrote {filename} for OS..."
+                    );
                 }
             }
             if (platformChanged)
@@ -350,7 +509,9 @@ internal class AssemblyLoader : IDisposable
                     module.AssemblyReferences.Add(target);
 
                 // rewrite type scopes to use target assemblies
-                IEnumerable<TypeReference> typeReferences = module.GetTypeReferences().OrderBy(p => p.FullName);
+                IEnumerable<TypeReference> typeReferences = module
+                    .GetTypeReferences()
+                    .OrderBy(p => p.FullName);
                 foreach (TypeReference type in typeReferences)
                     this.ChangeTypeScope(type);
 
@@ -405,7 +566,14 @@ internal class AssemblyLoader : IDisposable
         foreach (IInstructionHandler handler in handlers)
         {
             foreach (var flag in handler.Flags)
-                this.ProcessInstructionHandleResult(mod, handler, flag, loggedMessages, logPrefix, filename);
+                this.ProcessInstructionHandleResult(
+                    mod,
+                    handler,
+                    flag,
+                    loggedMessages,
+                    logPrefix,
+                    filename
+                );
         }
 
         return platformChanged || anyRewritten;
@@ -418,7 +586,14 @@ internal class AssemblyLoader : IDisposable
     /// <param name="loggedMessages">The messages already logged for the current mod.</param>
     /// <param name="logPrefix">A string to prefix to log messages.</param>
     /// <param name="filename">The assembly filename for log messages.</param>
-    private void ProcessInstructionHandleResult(IModMetadata mod, IInstructionHandler handler, InstructionHandleResult result, HashSet<string> loggedMessages, string logPrefix, string filename)
+    private void ProcessInstructionHandleResult(
+        IModMetadata mod,
+        IInstructionHandler handler,
+        InstructionHandleResult result,
+        HashSet<string> loggedMessages,
+        string logPrefix,
+        string filename
+    )
     {
         // get message template
         // ($phrase is replaced with the noun phrase or messages)
@@ -440,7 +615,8 @@ internal class AssemblyLoader : IDisposable
                 break;
 
             case InstructionHandleResult.DetectedSaveSerializer:
-                template = $"{logPrefix}Detected possible save serializer change ($phrase) in assembly {filename}.";
+                template =
+                    $"{logPrefix}Detected possible save serializer change ($phrase) in assembly {filename}.";
                 mod.SetWarning(ModWarning.ChangesSaveSerializer);
                 break;
 
@@ -450,17 +626,20 @@ internal class AssemblyLoader : IDisposable
                 break;
 
             case InstructionHandleResult.DetectedConsoleAccess:
-                template = $"{logPrefix}Detected direct console access ($phrase) in assembly {filename}.";
+                template =
+                    $"{logPrefix}Detected direct console access ($phrase) in assembly {filename}.";
                 mod.SetWarning(ModWarning.AccessesConsole);
                 break;
 
             case InstructionHandleResult.DetectedFilesystemAccess:
-                template = $"{logPrefix}Detected filesystem access ($phrase) in assembly {filename}.";
+                template =
+                    $"{logPrefix}Detected filesystem access ($phrase) in assembly {filename}.";
                 mod.SetWarning(ModWarning.AccessesFilesystem);
                 break;
 
             case InstructionHandleResult.DetectedShellAccess:
-                template = $"{logPrefix}Detected shell or process access ($phrase) in assembly {filename}.";
+                template =
+                    $"{logPrefix}Detected shell or process access ($phrase) in assembly {filename}.";
                 mod.SetWarning(ModWarning.AccessesShell);
                 break;
 
@@ -468,7 +647,9 @@ internal class AssemblyLoader : IDisposable
                 break;
 
             default:
-                throw new NotSupportedException($"Unrecognized instruction handler result '{result}'.");
+                throw new NotSupportedException(
+                    $"Unrecognized instruction handler result '{result}'."
+                );
         }
         if (template == null)
             return;
@@ -477,10 +658,21 @@ internal class AssemblyLoader : IDisposable
         string phrase;
         if (!handler.Phrases.Any())
             phrase = handler.DefaultPhrase;
-        else if (this.LogTechnicalDetailsForBrokenMods && result == InstructionHandleResult.NotCompatible)
-            phrase = "\n - " + string.Join(";\n - ", handler.Phrases.OrderBy(p => p, StringComparer.OrdinalIgnoreCase));
+        else if (
+            this.LogTechnicalDetailsForBrokenMods
+            && result == InstructionHandleResult.NotCompatible
+        )
+            phrase =
+                "\n - "
+                + string.Join(
+                    ";\n - ",
+                    handler.Phrases.OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                );
         else
-            phrase = string.Join(", ", handler.Phrases.OrderBy(p => p, StringComparer.OrdinalIgnoreCase));
+            phrase = string.Join(
+                ", ",
+                handler.Phrases.OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            );
 
         this.Monitor.LogOnce(loggedMessages, template.Replace("$phrase", phrase));
     }

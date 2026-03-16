@@ -26,6 +26,9 @@ internal sealed class SInputState : InputState
     /// <summary>The buttons to consider released until the actual button is released.</summary>
     private readonly HashSet<SButton> CustomReleasedKeys = [];
 
+    /// <summary>Buttons held persistently across frames until explicitly released via <see cref="ReleaseHeldButton"/>.</summary>
+    private readonly HashSet<SButton> PersistentPressedKeys = [];
+
     /// <summary>Whether there are new overrides in <see cref="CustomPressedKeys"/> or <see cref="CustomReleasedKeys"/> that haven't been applied to the previous state.</summary>
     private bool HasNewOverrides;
 
@@ -92,6 +95,11 @@ internal sealed class SInputState : InputState
 
             // apply overrides
             bool hasOverrides = false;
+
+            // merge persistent held buttons into one-shot set for this frame
+            foreach (var key in this.PersistentPressedKeys)
+                this.CustomPressedKeys.Add(key);
+
             if (this.CustomPressedKeys.Count > 0 || this.CustomReleasedKeys.Count > 0)
             {
                 // reset overrides that no longer apply
@@ -159,6 +167,23 @@ internal sealed class SInputState : InputState
 
         if (changed)
             this.HasNewOverrides = true;
+    }
+
+    /// <summary>Hold a button persistently across frames until <see cref="ReleaseHeldButton"/> is called.</summary>
+    /// <param name="button">The button to hold.</param>
+    public void HoldButton(SButton button)
+    {
+        this.PersistentPressedKeys.Add(button);
+        this.CustomReleasedKeys.Remove(button);
+        this.HasNewOverrides = true;
+    }
+
+    /// <summary>Release a button previously held via <see cref="HoldButton"/>.</summary>
+    /// <param name="button">The button to release.</param>
+    public void ReleaseHeldButton(SButton button)
+    {
+        this.PersistentPressedKeys.Remove(button);
+        this.HasNewOverrides = true;
     }
 
     /// <summary>Get whether a mod has indicated the key was already handled, so the game shouldn't handle it.</summary>
@@ -236,15 +261,19 @@ internal sealed class SInputState : InputState
     /// <param name="keyboard">The game's keyboard state for the current tick.</param>
     /// <param name="mouse">The game's mouse state for the current tick.</param>
     /// <returns>Returns whether any overrides were applied.</returns>
+    private readonly Dictionary<SButton, SButtonState> _keyboardOverridesPool = new();
+    private readonly Dictionary<SButton, SButtonState> _controllerOverridesPool = new();
+    private readonly Dictionary<SButton, SButtonState> _mouseOverridesPool = new();
+
     private bool ApplyOverrides(ISet<SButton> pressed, ISet<SButton> released, GamePadStateBuilder controller, KeyboardStateBuilder keyboard, MouseStateBuilder mouse)
     {
         if (pressed.Count == 0 && released.Count == 0)
             return false;
 
         // group keys by type
-        IDictionary<SButton, SButtonState> keyboardOverrides = new Dictionary<SButton, SButtonState>();
-        IDictionary<SButton, SButtonState> controllerOverrides = new Dictionary<SButton, SButtonState>();
-        IDictionary<SButton, SButtonState> mouseOverrides = new Dictionary<SButton, SButtonState>();
+        _keyboardOverridesPool.Clear();
+        _controllerOverridesPool.Clear();
+        _mouseOverridesPool.Clear();
         foreach (var button in pressed.Concat(released))
         {
             var newState = this.DeriveState(
@@ -253,20 +282,20 @@ internal sealed class SInputState : InputState
             );
 
             if (button is SButton.MouseLeft or SButton.MouseMiddle or SButton.MouseRight or SButton.MouseX1 or SButton.MouseX2)
-                mouseOverrides[button] = newState;
+                _mouseOverridesPool[button] = newState;
             else if (button.TryGetKeyboard(out Keys _))
-                keyboardOverrides[button] = newState;
+                _keyboardOverridesPool[button] = newState;
             else if (button.TryGetController(out Buttons _))
-                controllerOverrides[button] = newState;
+                _controllerOverridesPool[button] = newState;
         }
 
         // override states
-        if (keyboardOverrides.Any())
-            keyboard.OverrideButtons(keyboardOverrides);
-        if (controllerOverrides.Any())
-            controller.OverrideButtons(controllerOverrides);
-        if (mouseOverrides.Any())
-            mouse.OverrideButtons(mouseOverrides);
+        if (_keyboardOverridesPool.Count > 0)
+            keyboard.OverrideButtons(_keyboardOverridesPool);
+        if (_controllerOverridesPool.Count > 0)
+            controller.OverrideButtons(_controllerOverridesPool);
+        if (_mouseOverridesPool.Count > 0)
+            mouse.OverrideButtons(_mouseOverridesPool);
 
         return true;
     }

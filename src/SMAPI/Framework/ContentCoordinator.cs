@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -81,6 +82,12 @@ internal class ContentCoordinator : IDisposable
     /// <summary>The cached asset load/edit operations to apply, indexed by asset name.</summary>
     private readonly TickCacheDictionary<IAssetName, AssetOperationGroup?> AssetOperationsByKey = new();
 
+#if SMAPI_FOR_ANDROID
+    /// <summary>Shared cache for decoded PNG/JSON/OGG file data, or null if disabled.</summary>
+    internal readonly RawFileCache? RawFileCache;
+#endif
+
+
 
     /*********
     ** Accessors
@@ -95,8 +102,8 @@ internal class ContentCoordinator : IDisposable
     public string FullRootDirectory { get; }
 
     /// <summary>A lookup which tracks whether each given asset name has a localized form.</summary>
-    /// <remarks>This is a per-screen equivalent to the base game's <see cref="LocalizedContentManager.localizedAssetNames"/> field, since mods may provide different assets per-screen.</remarks>
-    public PerScreen<Dictionary<string, string>> LocalizedAssetNames { get; } = new(() => new());
+    /// <remarks>This is a per-screen equivalent to the base game's <see cref="LocalizedContentManager.localizedAssetNames"/> field, since mods may provide different assets per-screen. Uses <see cref="ConcurrentDictionary{TKey, TValue}"/> for thread safety on Android, where parallel location updates may access it concurrently.</remarks>
+    public PerScreen<ConcurrentDictionary<string, string>> LocalizedAssetNames { get; } = new(() => new());
 
 
     /*********
@@ -158,6 +165,10 @@ internal class ContentCoordinator : IDisposable
         this.VanillaContentManager = new LocalizedContentManager(serviceProvider, rootDirectory);
         this.CoreAssets = new CoreAssetPropagator(this.MainContentManager, contentManagerForAssetPropagation, this.Monitor, multiplayer, reflection, name => this.ParseAssetName(name, allowLocales: true));
         this.LocaleCodes = new Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>>(() => this.GetLocaleCodes(customLanguages: []));
+
+#if SMAPI_FOR_ANDROID
+        this.RawFileCache = StardewModdingAPI.Mobile.AndroidPaths.UseRawFileCache ? new RawFileCache() : null;
+#endif
     }
 
     /// <summary>Get a new content manager which handles reading files from the game content folder with support for interception.</summary>
@@ -269,8 +280,24 @@ internal class ContentCoordinator : IDisposable
             this.InvalidateCache((contentManager, _, _) => contentManager is GameContentManager);
 
         // clear the localized assets lookup (to match the logic in Game1.CleanupReturningToTitle)
-        foreach ((_, Dictionary<string, string> localizedAssets) in this.LocalizedAssetNames.GetActiveValues())
+        foreach ((_, ConcurrentDictionary<string, string> localizedAssets) in this.LocalizedAssetNames.GetActiveValues())
             localizedAssets.Clear();
+
+#if SMAPI_FOR_ANDROID
+        this.RawFileCache?.Clear();
+
+        this.VanillaTilesheets.Clear();
+
+        // prune dead weak references from content managers
+        this.ContentManagerLock.InReadLock(() =>
+        {
+            foreach (IContentManager contentManager in this.ContentManagers)
+            {
+                if (contentManager is BaseContentManager baseManager)
+                    baseManager.PruneDisposables();
+            }
+        });
+#endif
     }
 
     /// <summary>Parse a raw asset name.</summary>
@@ -363,6 +390,15 @@ internal class ContentCoordinator : IDisposable
     }
 
     /// <summary>Purge matched assets from the cache.</summary>
+    /// <param name="assetNames">The exact asset names to invalidate.</param>
+    /// <param name="dispose">Whether to dispose invalidated assets. This should only be <c>true</c> when they're being invalidated as part of a dispose, to avoid crashing the game.</param>
+    /// <returns>Returns the invalidated asset names.</returns>
+    public IEnumerable<IAssetName> InvalidateCache(ISet<IAssetName> assetNames, bool dispose = false)
+    {
+        return this.InvalidateCache(info => assetNames.Contains(info.Name), dispose);
+    }
+
+    /// <summary>Purge matched assets from the cache.</summary>
     /// <param name="predicate">Matches the asset keys to invalidate.</param>
     /// <param name="dispose">Whether to dispose invalidated assets. This should only be <c>true</c> when they're being invalidated as part of a dispose, to avoid crashing the game.</param>
     /// <returns>Returns the invalidated asset keys.</returns>
@@ -410,13 +446,13 @@ internal class ContentCoordinator : IDisposable
             // `Maps/MovieTheater.fr-FR`). When the asset is invalidated, we need to recheck
             // whether the asset is localized in case it stops providing it.
             {
-                Dictionary<string, string> localizedAssetNames = this.LocalizedAssetNames.Value;
+                ConcurrentDictionary<string, string> localizedAssetNames = this.LocalizedAssetNames.Value;
                 foreach (IAssetName assetName in invalidatedAssets.Keys)
                 {
-                    localizedAssetNames.Remove(assetName.Name);
+                    localizedAssetNames.TryRemove(assetName.Name, out _);
 
                     if (localizedAssetNames.TryGetValue(assetName.BaseName, out string? targetForBaseKey) && targetForBaseKey == assetName.Name)
-                        localizedAssetNames.Remove(assetName.BaseName);
+                        localizedAssetNames.TryRemove(assetName.BaseName, out _);
                 }
             }
 
@@ -542,6 +578,9 @@ internal class ContentCoordinator : IDisposable
         this.IsDisposed = true;
 
         this.Monitor.Log("Disposing the content coordinator. Content managers will no longer be usable after this point.");
+#if SMAPI_FOR_ANDROID
+        this.RawFileCache?.Dispose();
+#endif
         foreach (IContentManager contentManager in this.ContentManagers)
             contentManager.Dispose();
         this.ContentManagers.Clear();

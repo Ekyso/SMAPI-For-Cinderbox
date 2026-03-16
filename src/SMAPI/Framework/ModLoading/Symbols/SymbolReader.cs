@@ -1,8 +1,13 @@
+using System;
 using System.IO;
+using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Pdb;
 using Mono.Collections.Generic;
+#if SMAPI_FOR_ANDROID
+using Android.Util;
+#endif
 
 namespace StardewModdingAPI.Framework.ModLoading.Symbols;
 
@@ -32,7 +37,14 @@ internal class SymbolReader : ISymbolReader
     {
         this.Module = module;
         this.Stream = stream;
+#if SMAPI_FOR_ANDROID
+        // Pre-load Cecil symbol assemblies so DefaultSymbolReaderProvider can resolve them
+        // (Assembly.Load on Mono/Android can create assemblies invisible to the native JIT).
+        SymbolReader.EnsureCecilSymbolAssembliesLoaded();
+        this.Reader = new DefaultSymbolReaderProvider(throwIfNoSymbol: true).GetSymbolReader(module, stream);
+#else
         this.Reader = new NativePdbReaderProvider().GetSymbolReader(module, stream);
+#endif
     }
 
     /// <summary>Get the symbol writer provider for the assembly.</summary>
@@ -52,8 +64,13 @@ internal class SymbolReader : ISymbolReader
         catch
         {
             this.Reader.Dispose();
+            this.Stream.Position = 0;
+#if SMAPI_FOR_ANDROID
+            throw;
+#else
             this.Reader = new PortablePdbReaderProvider().GetSymbolReader(this.Module, this.Stream);
             return this.Reader.ProcessDebugHeader(header);
+#endif
         }
     }
 
@@ -76,4 +93,52 @@ internal class SymbolReader : ISymbolReader
     {
         this.Reader.Dispose();
     }
+
+#if SMAPI_FOR_ANDROID
+    /*********
+    ** Private methods
+    *********/
+    /// <summary>Whether Cecil symbol assemblies have been pre-loaded.</summary>
+    private static bool CecilSymbolAssembliesLoaded;
+
+    /// <summary>Pre-load Mono.Cecil.Pdb.dll and Mono.Cecil.Mdb.dll before DefaultSymbolReaderProvider resolves them dynamically.</summary>
+    private static void EnsureCecilSymbolAssembliesLoaded()
+    {
+        if (CecilSymbolAssembliesLoaded)
+            return;
+        CecilSymbolAssembliesLoaded = true;
+
+        const string tag = "SymbolReader";
+
+        string? cecilLocation = typeof(ModuleDefinition).Assembly.Location;
+        Log.Info(tag, $"Cecil assembly location: '{cecilLocation ?? "(null)"}'");
+        if (string.IsNullOrEmpty(cecilLocation))
+            return;
+
+        string? dir = Path.GetDirectoryName(cecilLocation);
+        if (string.IsNullOrEmpty(dir))
+            return;
+
+        foreach (var name in new[] { "Mono.Cecil.Pdb.dll", "Mono.Cecil.Mdb.dll" })
+        {
+            string path = Path.Combine(dir, name);
+            if (File.Exists(path))
+            {
+                try
+                {
+                    var asm = Assembly.LoadFrom(path);
+                    Log.Info(tag, $"Pre-loaded {name} from '{path}' -> {asm.FullName}");
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn(tag, $"Failed to pre-load {name}: {ex.Message}");
+                }
+            }
+            else
+            {
+                Log.Warn(tag, $"{name} not found at '{path}'");
+            }
+        }
+    }
+#endif
 }

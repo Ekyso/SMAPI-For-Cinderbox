@@ -28,10 +28,10 @@ internal class LogManager : IDisposable
     /// <summary>Create a monitor instance given the ID and name.</summary>
     private readonly Func<string, string, Monitor> GetMonitorImpl;
 
-    /// <summary>The console writer which sends color-coded text to the console.</summary>
+    /// <summary>Writes color-coded log text to the console.</summary>
     private readonly ColorfulConsoleWriter ConsoleWriter;
 
-    /// <summary>The monitors managed by SMAPI.</summary>
+    /// <summary>The monitors that have been created.</summary>
     private readonly List<Monitor> Monitors = [];
 
 
@@ -53,7 +53,7 @@ internal class LogManager : IDisposable
     ****/
     /// <summary>Construct an instance.</summary>
     /// <param name="logPath">The log file path to write.</param>
-    /// <param name="colorSchemeId">The color scheme ID in <paramref name="colorConfig"/> to use, or <see cref="MonitorColorScheme.AutoDetect"/> to select one automatically.</param>
+    /// <param name="colorSchemeId">The color scheme ID to use, or <see cref="MonitorColorScheme.AutoDetect"/> to select one automatically.</param>
     /// <param name="colorConfig">The colors to use for text written to the SMAPI console.</param>
     /// <param name="writeToConsole">Whether to output log messages to the console.</param>
     /// <param name="verboseLogging">The log contexts for which to enable verbose logging, which may show a lot more information to simplify troubleshooting.</param>
@@ -64,10 +64,24 @@ internal class LogManager : IDisposable
         // init log file
         this.LogFile = new LogFileManager(logPath);
 
-        // init monitor
+        // init console writer
         this.ConsoleWriter = new ColorfulConsoleWriter(Constants.Platform, colorSchemeId, colorConfig);
-        this.GetMonitorImpl = (id, name) => this.CreateAndRegisterMonitor(id, name, verboseLogging, getScreenIdForLog, writeToConsole, isDeveloperMode);
 
+#if SMAPI_FOR_ANDROID
+        AsyncLogQueue.Instance.SetTargets(this.LogFile, this.ConsoleWriter);
+#endif
+
+        // init monitor
+        this.GetMonitorImpl = (id, name) =>
+        {
+            Monitor monitor = new(id, name, this.LogFile, this.ConsoleWriter, getScreenIdForLog)
+            {
+                WriteToConsole = writeToConsole
+            };
+            this.ApplySettings(monitor, verboseLogging, isDeveloperMode);
+            this.Monitors.Add(monitor);
+            return monitor;
+        };
         this.Monitor = this.GetMonitor("SMAPI", "SMAPI");
         this.MonitorForGame = this.GetMonitor("game", "game");
 
@@ -77,6 +91,30 @@ internal class LogManager : IDisposable
         Console.InputEncoding = Encoding.Unicode;
         Console.OutputEncoding = Encoding.Unicode;
 #endif
+    }
+
+    /// <summary>Apply settings to existing monitors.</summary>
+    /// <param name="colorSchemeId">The color scheme ID to use, or <see cref="MonitorColorScheme.AutoDetect"/> to select one automatically.</param>
+    /// <param name="colorSchemes">The colors to use for text written to the SMAPI console.</param>
+    /// <param name="verboseLogging">The log contexts for which to enable verbose logging, which may show a lot more information to simplify troubleshooting.</param>
+    /// <param name="isDeveloperMode">Whether to enable full console output for developers.</param>
+    public void ApplySettings(MonitorColorScheme colorSchemeId, Dictionary<MonitorColorScheme, Dictionary<ConsoleLogLevel, ConsoleColor>> colorSchemes, HashSet<string> verboseLogging, bool isDeveloperMode)
+    {
+        foreach (Monitor monitor in this.Monitors)
+            this.ApplySettings(monitor, verboseLogging, isDeveloperMode);
+
+        this.ConsoleWriter.SetColors(colorSchemeId, colorSchemes);
+    }
+
+    /// <summary>Apply settings to an individual monitor.</summary>
+    /// <param name="monitor">The monitor to update.</param>
+    /// <param name="verboseLogging">The log contexts for which to enable verbose logging.</param>
+    /// <param name="isDeveloperMode">Whether to enable full console output for developers.</param>
+    private void ApplySettings(Monitor monitor, HashSet<string> verboseLogging, bool isDeveloperMode)
+    {
+        monitor.IsVerbose = verboseLogging.Contains("*") || verboseLogging.Contains(monitor.ModId);
+        monitor.ShowTraceInConsole = isDeveloperMode;
+        monitor.ShowFullStampInConsole = isDeveloperMode;
     }
 
     /// <summary>Get a monitor instance derived from SMAPI's current settings.</summary>
@@ -91,20 +129,9 @@ internal class LogManager : IDisposable
     /// <param name="title">The new window title.</param>
     public void SetConsoleTitle(string title)
     {
+#if !SMAPI_FOR_ANDROID
         Console.Title = title;
-    }
-
-    /// <summary>Apply the SMAPI settings to the log manager and its managed monitors.</summary>
-    /// <param name="colorSchemeId">The color scheme ID in <paramref name="colorSchemes"/> to use, or <see cref="MonitorColorScheme.AutoDetect"/> to select one automatically.</param>
-    /// <param name="colorSchemes">The colors to use for text written to the SMAPI console.</param>
-    /// <param name="verboseLogging">The log contexts for which to enable verbose logging, which may show a lot more information to simplify troubleshooting.</param>
-    /// <param name="isDeveloperMode">Whether to enable full console output for developers.</param>
-    public void ApplySettings(MonitorColorScheme colorSchemeId, Dictionary<MonitorColorScheme, Dictionary<ConsoleLogLevel, ConsoleColor>> colorSchemes, HashSet<string> verboseLogging, bool isDeveloperMode)
-    {
-        foreach (Monitor monitor in this.Monitors)
-            this.ApplySettings(monitor, verboseLogging, isDeveloperMode);
-
-        this.ConsoleWriter.SetColors(colorSchemeId, colorSchemes);
+#endif
     }
 
     /****
@@ -114,6 +141,16 @@ internal class LogManager : IDisposable
     [SuppressMessage("ReSharper", "FunctionNeverReturns", Justification = "The thread is aborted when the game exits.")]
     public void RunConsoleInputLoop(CommandManager commandManager, Action reloadTranslations, Action<string> handleInput, Func<bool> continueWhile)
     {
+#if SMAPI_FOR_ANDROID
+        commandManager
+            .Add(new HelpCommand(commandManager), this.Monitor)
+            .Add(new HarmonySummaryCommand(), this.Monitor)
+            .Add(new ReloadI18nCommand(reloadTranslations), this.Monitor);
+
+        // keep thread alive while the game is running
+        while (continueWhile())
+            Thread.Sleep(1000 / 10);
+#else
         // prepare console
         this.Monitor.Log("Type 'help' for help, or 'help <cmd>' for a command's usage", LogLevel.Info);
         commandManager
@@ -141,24 +178,36 @@ internal class LogManager : IDisposable
         // keep console thread alive while the game is running
         while (continueWhile())
             Thread.Sleep(1000 / 10);
+#endif
     }
 
     /// <summary>Show a 'press any key to exit' message, and exit when they press a key.</summary>
     public void PressAnyKeyToExit()
     {
+#if SMAPI_FOR_ANDROID
+        this.Monitor.Log("Game has ended.", LogLevel.Info);
+        Environment.Exit(0);
+#else
         this.Monitor.Log("Game has ended. Press any key to exit.", LogLevel.Info);
         this.PressAnyKeyToExit(showMessage: false);
+#endif
     }
 
     /// <summary>Show a 'press any key to exit' message, and exit when they press a key.</summary>
     /// <param name="showMessage">Whether to print a 'press any key to exit' message to the console.</param>
     public void PressAnyKeyToExit(bool showMessage)
     {
+#if SMAPI_FOR_ANDROID
+        if (showMessage)
+            this.Monitor.Log("Game has ended.");
+        Environment.Exit(0);
+#else
         if (showMessage)
             this.Monitor.Log("Game has ended. Press any key to exit.");
         Thread.Sleep(100);
         Console.ReadKey();
         Environment.Exit(0);
+#endif
     }
 
     /****
@@ -203,8 +252,10 @@ internal class LogManager : IDisposable
 
                     this.Monitor.Log("A new version of SMAPI was detected last time you played.", LogLevel.Error);
                     this.Monitor.Log($"You can update to {updateFound}: {url}.", LogLevel.Error);
+#if !SMAPI_FOR_ANDROID
                     this.Monitor.Log("Press any key to continue playing anyway. (This only appears when using a SMAPI beta.)", LogLevel.Info);
                     Console.ReadKey();
+#endif
                 }
             }
             File.Delete(Constants.UpdateMarker);
@@ -215,8 +266,10 @@ internal class LogManager : IDisposable
         {
             this.Monitor.Log("The game crashed last time you played. If it happens repeatedly, see 'get help' on https://smapi.io.", LogLevel.Error);
             this.Monitor.Log("If you ask for help, make sure to share your SMAPI log: https://smapi.io/log.", LogLevel.Error);
+#if !SMAPI_FOR_ANDROID
             this.Monitor.Log("Press any key to delete the crash data and continue playing.", LogLevel.Info);
             Console.ReadKey();
+#endif
             File.Delete(Constants.FatalCrashLog);
             File.Delete(Constants.FatalCrashMarker);
         }
@@ -293,7 +346,7 @@ internal class LogManager : IDisposable
                 this.Monitor.Newline();
                 this.Monitor.Log(mod.Error ?? "You should immediately delete this mod and perform a full anti-malware scan of your computer to be safe.", LogLevel.Error);
                 if (mod.ErrorDetails != null)
-                    this.Monitor.Log(mod.ErrorDetails);
+                    this.Monitor.Log(mod.ErrorDetails, LogLevel.Error);
 
                 this.PressAnyKeyToExit();
             }
@@ -342,6 +395,10 @@ internal class LogManager : IDisposable
     /// <inheritdoc />
     public void Dispose()
     {
+#if SMAPI_FOR_ANDROID
+        AsyncLogQueue.Instance.Flush();
+        AsyncLogQueue.Instance.Dispose();
+#endif
         this.LogFile.Dispose();
     }
 
@@ -349,38 +406,6 @@ internal class LogManager : IDisposable
     /*********
     ** Protected methods
     *********/
-    /// <summary>Create and register a monitor instance.</summary>
-    /// <param name="modId">The mod ID, if applicable.</param>
-    /// <param name="source">The name of the module which logs messages using this instance.</param>
-    /// <param name="verboseLogging">The log contexts for which to enable verbose logging, which may show a lot more information to simplify troubleshooting.</param>
-    /// <param name="getScreenIdForLog">Get the screen ID that should be logged to distinguish between players in split-screen mode, if any.</param>
-    /// <param name="writeToConsole">Whether to write anything to the console. This should be disabled if no console is available.</param>
-    /// <param name="isDeveloperMode">Whether to enable full console output for developers.</param>
-    private Monitor CreateAndRegisterMonitor(string modId, string source, HashSet<string> verboseLogging, Func<int?> getScreenIdForLog, bool writeToConsole, bool isDeveloperMode)
-    {
-        Monitor monitor = new(modId, source, this.LogFile, this.ConsoleWriter, getScreenIdForLog)
-        {
-            WriteToConsole = writeToConsole
-        };
-
-        this.ApplySettings(monitor, verboseLogging, isDeveloperMode);
-
-        this.Monitors.Add(monitor);
-
-        return monitor;
-    }
-
-    /// <summary>Apply the SMAPI settings to a managed monitor.</summary>
-    /// <param name="monitor">The monitor to update.</param>
-    /// <param name="verboseLogging">The log contexts for which to enable verbose logging, which may show a lot more information to simplify troubleshooting.</param>
-    /// <param name="isDeveloperMode">Whether to enable full console output for developers.</param>
-    private void ApplySettings(Monitor monitor, HashSet<string> verboseLogging, bool isDeveloperMode)
-    {
-        monitor.IsVerbose = verboseLogging.Contains("*") || verboseLogging.Contains(monitor.ModId);
-        monitor.ShowTraceInConsole = isDeveloperMode;
-        monitor.ShowFullStampInConsole = isDeveloperMode;
-    }
-
     /// <summary>Write a summary of mod warnings to the console and log.</summary>
     /// <param name="mods">The loaded mods.</param>
     /// <param name="skippedMods">The mods which could not be loaded.</param>
@@ -436,7 +461,7 @@ internal class LogManager : IDisposable
                         // log message
                         this.Monitor.Log(message, LogLevel.Error);
                         if (mod.ErrorDetails != null)
-                            this.Monitor.Log($"        ({mod.ErrorDetails})");
+                            this.Monitor.Log($"        ({mod.ErrorDetails})", LogLevel.Error);
                     }
 
                     this.Monitor.Newline();

@@ -14,15 +14,37 @@ internal class GameContentManagerForAssetPropagation : GameContentManager
     ** Fields
     *********/
     /// <summary>A unique value used in <see cref="Texture2D"/> to identify assets loaded through this instance.</summary>
-    private readonly string Tag = $"Pathoschild.SMAPI/LoadedBy:{nameof(GameContentManagerForAssetPropagation)}";
-
+    private readonly string Tag =
+        $"Pathoschild.SMAPI/LoadedBy:{nameof(GameContentManagerForAssetPropagation)}";
 
     /*********
     ** Public methods
     *********/
     /// <inheritdoc />
-    public GameContentManagerForAssetPropagation(string name, IServiceProvider serviceProvider, string rootDirectory, CultureInfo currentCulture, ContentCoordinator coordinator, IMonitor monitor, Reflector reflection, Action<BaseContentManager> onDisposing, Action onLoadingFirstAsset, Action<BaseContentManager, IAssetName> onAssetLoaded)
-        : base(name, serviceProvider, rootDirectory, currentCulture, coordinator, monitor, reflection, onDisposing, onLoadingFirstAsset, onAssetLoaded) { }
+    public GameContentManagerForAssetPropagation(
+        string name,
+        IServiceProvider serviceProvider,
+        string rootDirectory,
+        CultureInfo currentCulture,
+        ContentCoordinator coordinator,
+        IMonitor monitor,
+        Reflector reflection,
+        Action<BaseContentManager> onDisposing,
+        Action onLoadingFirstAsset,
+        Action<BaseContentManager, IAssetName> onAssetLoaded
+    )
+        : base(
+            name,
+            serviceProvider,
+            rootDirectory,
+            currentCulture,
+            coordinator,
+            monitor,
+            reflection,
+            onDisposing,
+            onLoadingFirstAsset,
+            onAssetLoaded
+        ) { }
 
     /// <inheritdoc />
     public override T LoadExact<T>(IAssetName assetName, bool useCache)
@@ -39,8 +61,6 @@ internal class GameContentManagerForAssetPropagation : GameContentManager
     /// <param name="texture">The texture to check.</param>
     public bool IsResponsibleFor(Texture2D? texture)
     {
-        return
-            texture?.Tag is string tag
-            && tag.Contains(this.Tag);
+        return texture?.Tag is string tag && tag.Contains(this.Tag);
     }
 }

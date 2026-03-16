@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace StardewModdingAPI.Framework.Utilities;
 
@@ -13,10 +13,13 @@ internal class TickCacheDictionary<TKey, TValue>
     ** Fields
     *********/
     /// <summary>The last game tick for which data was cached.</summary>
-    private uint? LastGameTick;
+    private volatile uint LastGameTick = uint.MaxValue;
 
     /// <summary>The underlying cached data.</summary>
-    private readonly Dictionary<TKey, TValue> Cache = new();
+    private readonly ConcurrentDictionary<TKey, TValue> Cache = new();
+
+    /// <summary>Lock for the tick-transition clear.</summary>
+    private readonly object ClearLock = new();
 
 
     /*********
@@ -28,16 +31,20 @@ internal class TickCacheDictionary<TKey, TValue>
     public TValue GetOrSet(TKey cacheKey, Func<TValue> get)
     {
         // clear cache on new tick
-        if (SCore.ProcessTicksElapsed != this.LastGameTick)
+        uint currentTick = SCore.ProcessTicksElapsed;
+        if (currentTick != this.LastGameTick)
         {
-            this.Cache.Clear();
-            this.LastGameTick = SCore.ProcessTicksElapsed;
+            lock (this.ClearLock)
+            {
+                if (currentTick != this.LastGameTick)
+                {
+                    this.Cache.Clear();
+                    this.LastGameTick = currentTick;
+                }
+            }
         }
 
-        // fetch value
-        if (!this.Cache.TryGetValue(cacheKey, out TValue? cached))
-            this.Cache[cacheKey] = cached = get();
-        return cached;
+        return this.Cache.GetOrAdd(cacheKey, _ => get());
     }
 
     /// <summary>Remove an entry from the cache.</summary>
@@ -45,7 +52,7 @@ internal class TickCacheDictionary<TKey, TValue>
     /// <returns>Returns whether the key was present in the dictionary.</returns>
     public bool Remove(TKey cacheKey)
     {
-        return this.Cache.Remove(cacheKey);
+        return this.Cache.TryRemove(cacheKey, out _);
     }
 }
 

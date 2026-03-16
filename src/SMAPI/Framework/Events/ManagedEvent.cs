@@ -43,6 +43,7 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
     public bool HasListeners { get; private set; }
 
 
+
     /*********
     ** Public methods
     *********/
@@ -148,6 +149,7 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
             }
         }
     }
+
 
 
     /*********

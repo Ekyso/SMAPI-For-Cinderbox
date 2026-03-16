@@ -1,28 +1,58 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>StardewModdingAPI</AssemblyName>
     <RootNamespace>StardewModdingAPI</RootNamespace>
     <Description>The modding API for Stardew Valley.</Description>
-    <TargetFramework>net6.0</TargetFramework>
-    <PlatformTarget>x64</PlatformTarget>
-    <OutputType>Exe</OutputType>
+    <TargetFrameworks>net6.0;net8.0-android</TargetFrameworks>
+    <PlatformTarget Condition="'$(TargetFramework)' != 'net8.0-android'">x64</PlatformTarget>
+    <OutputType Condition="'$(TargetFramework)' != 'net8.0-android'">Exe</OutputType>
+    <OutputType Condition="'$(TargetFramework)' == 'net8.0-android'">Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <ApplicationIcon>icon.ico</ApplicationIcon>
+    <ApplicationIcon Condition="'$(TargetFramework)' != 'net8.0-android'">icon.ico</ApplicationIcon>
 
     <!--copy dependency DLLs to bin folder so we can include them in installer bundle -->
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
     <!-- tiered compilation breaks Harmony -->
     <TieredCompilation>false</TieredCompilation>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationManifest Condition="'$(TargetFramework)' != 'net8.0-android'"
+      >app.manifest</ApplicationManifest
+    >
+
+    <!-- Sibling repo roots (override via -p: if your layout differs) -->
+    <CinderboxRoot Condition="'$(CinderboxRoot)' == ''"
+      >$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'Cinderbox'))</CinderboxRoot
+    >
+    <DesktopLibsPath Condition="'$(DesktopLibsPath)' == ''"
+      >$(CinderboxRoot)libs/desktop/</DesktopLibsPath
+    >
+    <HarmonyStagingPath Condition="'$(HarmonyStagingPath)' == ''"
+      >$(CinderboxRoot)staging/harmony/</HarmonyStagingPath
+    >
   </PropertyGroup>
 
   <Import Project="..\..\build\common.targets" />
 
   <ItemGroup>
-    <PackageReference Include="Mono.Cecil" />
-    <PackageReference Include="MonoMod.Common" />
+    <!-- Mono.Cecil: Use NuGet package for desktop, thin Harmony ships its own Cecil DLLs for Android -->
+    <PackageReference Include="Mono.Cecil" Condition="'$(TargetFramework)' != 'net8.0-android'" />
+    <!-- Android: Use NuGet Mono.Cecil for compile-time resolution; runtime DLLs come from staging/harmony/ -->
+    <PackageReference
+      Include="Mono.Cecil"
+      Condition="'$(TargetFramework)' == 'net8.0-android'"
+      PrivateAssets="all"
+    />
+    <!-- On Android, use Harmony's built-in CecilILGenerator (MonoModStubs.cs) instead of MonoMod.Common's version -->
+    <PackageReference
+      Include="MonoMod.Common"
+      Condition="'$(TargetFramework)' != 'net8.0-android'"
+    />
+    <PackageReference
+      Include="MonoMod.Common"
+      Condition="'$(TargetFramework)' == 'net8.0-android'"
+      Aliases="MonoModCommon"
+    />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Pathoschild.Http.FluentClient" />
     <PackageReference Include="Pintail" />
@@ -31,31 +61,81 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="..\..\build\0Harmony.dll" Private="True" />
-    <Reference Include="Stardew Valley" HintPath="$(GamePath)\Stardew Valley.dll" Private="False" />
-    <Reference Include="StardewValley.GameData" HintPath="$(GamePath)\StardewValley.GameData.dll" Private="False" />
-    <Reference Include="BmFont" HintPath="$(GamePath)\BmFont.dll" Private="False" />
-    <Reference Include="GalaxyCSharp" HintPath="$(GamePath)\GalaxyCSharp.dll" Private="False" />
-    <Reference Include="Lidgren.Network" HintPath="$(GamePath)\Lidgren.Network.dll" Private="False" />
-    <Reference Include="MonoGame.Framework" HintPath="$(GamePath)\MonoGame.Framework.dll" Private="False" />
-    <Reference Include="SkiaSharp" HintPath="$(GamePath)\SkiaSharp.dll" Private="False" />
-    <Reference Include="xTile" HintPath="$(GamePath)\xTile.dll" Private="False" />
+    <Reference Include="Stardew Valley">
+      <HintPath>$(DesktopLibsPath)Stardew Valley.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="StardewValley.GameData">
+      <HintPath>$(DesktopLibsPath)StardewValley.GameData.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MonoGame.Framework" Condition="'$(TargetFramework)' != 'net8.0-android'">
+      <HintPath>$(DesktopLibsPath)MonoGame.Framework.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="MonoGame.Framework" Condition="'$(TargetFramework)' == 'net8.0-android'">
+      <HintPath>$(CinderboxRoot)src\libs\MonoGame.Framework.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="xTile">
+      <HintPath>$(DesktopLibsPath)xTile.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="BmFont">
+      <HintPath>$(DesktopLibsPath)BmFont.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SkiaSharp" />
+    <!-- NVorbis: Used for OGG audio preloading in RawFileCache (Android only) -->
+    <PackageReference Include="NVorbis" Condition="'$(TargetFramework)' == 'net8.0-android'" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SMAPI.Toolkit.CoreInterfaces\SMAPI.Toolkit.CoreInterfaces.csproj" />
     <ProjectReference Include="..\SMAPI.Toolkit\SMAPI.Toolkit.csproj" />
+    <!-- Use thin Harmony DLL + MonoMod from staging/harmony/ -->
+    <Reference Include="0Harmony" Condition="'$(TargetFramework)' == 'net8.0-android'">
+      <HintPath>$(HarmonyStagingPath)0Harmony.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="MonoMod.Utils" Condition="'$(TargetFramework)' == 'net8.0-android'">
+      <HintPath>$(HarmonyStagingPath)MonoMod.Utils.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
-  <ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-android'">
     <Content Include="SMAPI.config.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\SMAPI.Web\wwwroot\SMAPI.blacklist.json" Link="SMAPI.blacklist.json" CopyToOutputDirectory="PreserveNewest" />
-    <Content Include="..\SMAPI.Web\wwwroot\SMAPI.metadata.json" Link="SMAPI.metadata.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content
+      Include="..\SMAPI.Web\wwwroot\SMAPI.blacklist.json"
+      Link="SMAPI.blacklist.json"
+      CopyToOutputDirectory="PreserveNewest"
+    />
+    <Content
+      Include="..\SMAPI.Web\wwwroot\SMAPI.metadata.json"
+      Link="SMAPI.metadata.json"
+      CopyToOutputDirectory="PreserveNewest"
+    />
 
     <None Update="i18n\*" CopyToOutputDirectory="PreserveNewest" />
     <None Update="steam_appid.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
-    <Compile Include="..\SMAPI.Toolkit\Framework\LowLevelEnvironmentUtility.cs" Link="Framework\Utilities\LowLevelEnvironmentUtility.cs" />
+  <!-- Android: Embed SMAPI internal files as resources for extraction at runtime -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-android'">
+    <EmbeddedResource Include="SMAPI.config.json" LogicalName="SMAPI.config.json" />
+    <EmbeddedResource Include="SMAPI.metadata.json" LogicalName="SMAPI.metadata.json" />
+    <EmbeddedResource Include="i18n\*.json" LogicalName="i18n.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile
+      Include="..\SMAPI.Toolkit\Framework\LowLevelEnvironmentUtility.cs"
+      Link="Framework\Utilities\LowLevelEnvironmentUtility.cs"
+    />
 
     <!-- app icon on Linux/macOS, and for some Windows users -->
     <EmbeddedResource Include="Icon.bmp" LogicalName="Icon.bmp" />

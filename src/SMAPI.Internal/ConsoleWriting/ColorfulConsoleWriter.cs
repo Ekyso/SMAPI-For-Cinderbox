@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using StardewModdingAPI.Toolkit.Utilities;
+#if SMAPI_FOR_ANDROID
+using Android.Util;
+#endif
 
 namespace StardewModdingAPI.Internal.ConsoleWriting;
 
@@ -63,6 +66,31 @@ internal class ColorfulConsoleWriter : IConsoleWriter
     /// <param name="level">The log level.</param>
     public void WriteLine(string message, ConsoleLogLevel level)
     {
+#if SMAPI_FOR_ANDROID
+        System.Diagnostics.Debug.WriteLine(message);
+
+        const string tag = "SMAPI";
+        switch (level)
+        {
+            case ConsoleLogLevel.Critical:
+            case ConsoleLogLevel.Error:
+                Log.Error(tag, message);
+                break;
+            case ConsoleLogLevel.Warn:
+            case ConsoleLogLevel.Alert:
+                Log.Warn(tag, message);
+                break;
+            case ConsoleLogLevel.Info:
+            case ConsoleLogLevel.Success:
+                Log.Info(tag, message);
+                break;
+            case ConsoleLogLevel.Debug:
+            case ConsoleLogLevel.Trace:
+            default:
+                Log.Debug(tag, message);
+                break;
+        }
+#else
         if (this.SupportsColor)
         {
             if (level == ConsoleLogLevel.Critical)
@@ -82,6 +110,7 @@ internal class ColorfulConsoleWriter : IConsoleWriter
         }
         else
             Console.WriteLine(message);
+#endif
     }
 
     /// <summary>Get the default color scheme config for cases where it's not configurable (e.g. the installer).</summary>
@@ -121,6 +150,9 @@ internal class ColorfulConsoleWriter : IConsoleWriter
     /// <summary>Test whether the current console supports color formatting.</summary>
     private bool TestColorSupport()
     {
+#if SMAPI_FOR_ANDROID
+        return false;
+#else
         try
         {
             Console.ForegroundColor = Console.ForegroundColor;
@@ -130,6 +162,7 @@ internal class ColorfulConsoleWriter : IConsoleWriter
         {
             return false; // Mono bug
         }
+#endif
     }
 
     /// <summary>Get the color scheme to use for the current console.</summary>
@@ -141,9 +174,13 @@ internal class ColorfulConsoleWriter : IConsoleWriter
         // get color scheme ID
         if (colorSchemeId == MonitorColorScheme.AutoDetect)
         {
+#if SMAPI_FOR_ANDROID
+            colorSchemeId = MonitorColorScheme.DarkBackground;
+#else
             colorSchemeId = platform == Platform.Mac
                 ? MonitorColorScheme.LightBackground // macOS doesn't provide console background color info, but it's usually white.
                 : ColorfulConsoleWriter.IsDark(Console.BackgroundColor) ? MonitorColorScheme.DarkBackground : MonitorColorScheme.LightBackground;
+#endif
         }
 
         // get colors for scheme

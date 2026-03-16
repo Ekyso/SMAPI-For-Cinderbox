@@ -95,6 +95,9 @@ internal static class LowLevelEnvironmentUtility
     /// </remarks>
     private static bool IsRunningAndroid()
     {
+#if SMAPI_FOR_ANDROID
+        return false; // report as Linux so PC mods work correctly
+#else
         using Process process = new()
         {
             StartInfo =
@@ -117,6 +120,7 @@ internal static class LowLevelEnvironmentUtility
         {
             return false;
         }
+#endif
     }
 
     /// <summary>Detect whether the code is running on macOS.</summary>

@@ -7,6 +7,10 @@ using StardewModdingAPI.Internal.ConsoleWriting;
 
 namespace StardewModdingAPI.Framework;
 
+#if SMAPI_FOR_ANDROID
+using AsyncQueue = StardewModdingAPI.Framework.Logging.AsyncLogQueue;
+#endif
+
 /// <summary>Encapsulates monitoring and logic for a given module.</summary>
 internal class Monitor : IMonitor
 {
@@ -34,6 +38,9 @@ internal class Monitor : IMonitor
     /// <summary>Get the screen ID that should be logged to distinguish between players in split-screen mode, if any.</summary>
     private readonly Func<int?> GetScreenIdForLog;
 
+    /// <summary>Backing field for <see cref="IsVerbose"/>.</summary>
+    private bool _isVerbose;
+
 
     /*********
     ** Accessors
@@ -56,8 +63,8 @@ internal class Monitor : IMonitor
     /// <inheritdoc />
     public bool IsVerbose
     {
-        get => field || Monitor.ForceVerboseLoggingForAll || Monitor.ForceVerboseLogging.Contains(this.ModId);
-        set => field = value;
+        get => this._isVerbose || Monitor.ForceVerboseLoggingForAll || Monitor.ForceVerboseLogging.Contains(this.ModId);
+        set => this._isVerbose = value;
     }
 
     /// <summary>Whether to show the full log stamps (with time/level/logger) in the console. If false, shows a simplified stamp with only the logger.</summary>
@@ -123,9 +130,13 @@ internal class Monitor : IMonitor
     /// <summary>Write a newline to the console and log file.</summary>
     internal void Newline()
     {
+#if SMAPI_FOR_ANDROID
+        AsyncQueue.Instance.EnqueueNewline(this.WriteToConsole);
+#else
         if (this.WriteToConsole)
             Console.WriteLine();
         this.LogFile.WriteLine("");
+#endif
     }
 
     /// <summary>Log a fatal error message.</summary>
@@ -159,12 +170,19 @@ internal class Monitor : IMonitor
         string fullMessage = $"{prefix} {message}";
         string consoleMessage = this.ShowFullStampInConsole ? fullMessage : $"[{source}] {message}";
 
+        // determine if we should write to console
+        bool writeToConsole = this.WriteToConsole && (this.ShowTraceInConsole || level != ConsoleLogLevel.Trace || Monitor.ForceVerboseLoggingForAll || Monitor.ForceVerboseLogging.Contains(this.ModId));
+
+#if SMAPI_FOR_ANDROID
+        AsyncQueue.Instance.Enqueue(consoleMessage, fullMessage, level, writeToConsole);
+#else
         // write to console
-        if (this.WriteToConsole && (this.ShowTraceInConsole || level != ConsoleLogLevel.Trace || Monitor.ForceVerboseLoggingForAll || Monitor.ForceVerboseLogging.Contains(this.ModId)))
+        if (writeToConsole)
             this.ConsoleWriter.WriteLine(consoleMessage, level);
 
         // write to log file
         this.LogFile.WriteLine(fullMessage);
+#endif
     }
 
     /// <summary>Generate a message prefix for the current time.</summary>

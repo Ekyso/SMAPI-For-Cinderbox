@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 
 namespace StardewModdingAPI.Framework.StateTracking.FieldWatchers;
 
@@ -15,6 +14,9 @@ internal class ComparableListWatcher<TValue> : BaseDisposableWatcher, ICollectio
 
     /// <summary>The values during the previous update.</summary>
     private HashSet<TValue> LastValues;
+
+    /// <summary>Working buffer for current values, swapped with <see cref="LastValues"/> each update.</summary>
+    private HashSet<TValue> WorkingBuffer;
 
     /// <summary>The pairs added since the last reset.</summary>
     private readonly List<TValue> AddedImpl = [];
@@ -51,6 +53,7 @@ internal class ComparableListWatcher<TValue> : BaseDisposableWatcher, ICollectio
         this.Name = name;
         this.CurrentValues = values;
         this.LastValues = new HashSet<TValue>(comparer);
+        this.WorkingBuffer = new HashSet<TValue>(comparer);
     }
 
     /// <inheritdoc />
@@ -69,11 +72,24 @@ internal class ComparableListWatcher<TValue> : BaseDisposableWatcher, ICollectio
             return;
         }
 
-        // detect changes
-        HashSet<TValue> curValues = new HashSet<TValue>(this.CurrentValues, this.LastValues.Comparer);
-        this.RemovedImpl.AddRange(from value in this.LastValues where !curValues.Contains(value) select value);
-        this.AddedImpl.AddRange(from value in curValues where !this.LastValues.Contains(value) select value);
-        this.LastValues = curValues;
+        // detect changes using double-buffer pattern
+        this.WorkingBuffer.Clear();
+        foreach (TValue item in this.CurrentValues)
+            this.WorkingBuffer.Add(item);
+
+        foreach (TValue value in this.LastValues)
+        {
+            if (!this.WorkingBuffer.Contains(value))
+                this.RemovedImpl.Add(value);
+        }
+        foreach (TValue value in this.WorkingBuffer)
+        {
+            if (!this.LastValues.Contains(value))
+                this.AddedImpl.Add(value);
+        }
+
+        // swap buffers
+        (this.LastValues, this.WorkingBuffer) = (this.WorkingBuffer, this.LastValues);
     }
 
     /// <inheritdoc />

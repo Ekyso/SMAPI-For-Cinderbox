@@ -24,6 +24,10 @@ internal class Program
     /// <summary>The assembly paths in the search folders indexed by assembly name.</summary>
     private static Dictionary<string, string>? AssemblyPathsByName;
 
+    /// <summary>Whether assembly resolution is currently in progress on this thread (prevents infinite recursion on Mono).</summary>
+    [ThreadStatic]
+    private static bool IsResolving;
+
 
     /*********
     ** Public methods
@@ -33,7 +37,9 @@ internal class Program
     public static void Main(string[] args)
     {
         Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture; // per StardewValley.Program.Main
+#if !SMAPI_FOR_ANDROID
         Console.Title = $"SMAPI {EarlyConstants.RawApiVersion}";
+#endif
 
         try
         {
@@ -46,12 +52,20 @@ internal class Program
         }
         catch (BadImageFormatException ex) when (ex.FileName == EarlyConstants.GameAssemblyName)
         {
+#if SMAPI_FOR_ANDROID
+            System.Diagnostics.Debug.WriteLine($"SMAPI failed to initialize because your game's {ex.FileName}.exe seems to be invalid.\nThis may be a pirated version which modified the executable in an incompatible way; if so, you can try a different download or buy a legitimate version.\n\nTechnical details:\n{ex}");
+#else
             Console.WriteLine($"SMAPI failed to initialize because your game's {ex.FileName}.exe seems to be invalid.\nThis may be a pirated version which modified the executable in an incompatible way; if so, you can try a different download or buy a legitimate version.\n\nTechnical details:\n{ex}");
+#endif
         }
         catch (Exception ex)
         {
+#if SMAPI_FOR_ANDROID
+            System.Diagnostics.Debug.WriteLine($"SMAPI failed to initialize: {ex}");
+#else
             Console.WriteLine($"SMAPI failed to initialize: {ex}");
             Program.PressAnyKeyToExit(true);
+#endif
         }
     }
 
@@ -63,6 +77,25 @@ internal class Program
     /// <param name="sender">The event sender.</param>
     /// <param name="e">The event arguments.</param>
     private static Assembly? CurrentDomain_AssemblyResolve(object? sender, ResolveEventArgs e)
+    {
+        // prevent infinite recursion (Assembly.Load can re-trigger AssemblyResolve on Mono)
+        if (Program.IsResolving)
+            return null;
+
+        Program.IsResolving = true;
+        try
+        {
+            return Program.ResolveAssembly(e);
+        }
+        finally
+        {
+            Program.IsResolving = false;
+        }
+    }
+
+    /// <summary>Resolve an assembly by name.</summary>
+    /// <param name="e">The event arguments.</param>
+    private static Assembly? ResolveAssembly(ResolveEventArgs e)
     {
         // cache assembly paths by name
         if (Program.AssemblyPathsByName == null)
@@ -90,14 +123,40 @@ internal class Program
         // resolve
         try
         {
-            string? searchName = new AssemblyName(e.Name).Name;
-            return searchName != null && Program.AssemblyPathsByName.TryGetValue(searchName, out string? assemblyPath)
-                ? Assembly.LoadFrom(assemblyPath)
-                : null;
+            AssemblyName requestedName = new AssemblyName(e.Name);
+            string? searchName = requestedName.Name;
+
+            // try to load from cached paths
+            if (searchName != null && Program.AssemblyPathsByName.TryGetValue(searchName, out string? assemblyPath))
+                return Assembly.LoadFrom(assemblyPath);
+
+            // handle version mismatches for .NET runtime assemblies
+            if (searchName != null)
+            {
+                foreach (Assembly loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    AssemblyName loadedName = loadedAssembly.GetName();
+                    if (string.Equals(loadedName.Name, searchName, StringComparison.OrdinalIgnoreCase))
+                        return loadedAssembly;
+                }
+
+                // try loading via the runtime (handles BCL assemblies not yet loaded)
+                try
+                {
+                    return Assembly.Load(new AssemblyName(searchName));
+                }
+                catch { /* not a loadable assembly */ }
+            }
+
+            return null;
         }
         catch (Exception ex)
         {
+#if SMAPI_FOR_ANDROID
+            System.Diagnostics.Debug.WriteLine($"Error resolving assembly: {ex}");
+#else
             Console.WriteLine($"Error resolving assembly: {ex}");
+#endif
             return null;
         }
     }
@@ -169,6 +228,9 @@ internal class Program
     /// <remarks>This is needed to resolve native DLLs like libSkiaSharp.</remarks>
     private static void AssertDepsJson()
     {
+#if SMAPI_FOR_ANDROID
+        // not applicable on Android
+#else
         string sourcePath = Path.Combine(Constants.GamePath, "Stardew Valley.deps.json");
         string targetPath = Path.Combine(Constants.GamePath, "StardewModdingAPI.deps.json");
 
@@ -185,6 +247,7 @@ internal class Program
             Thread.Sleep(2500);
             Environment.Exit(0);
         }
+#endif
     }
 
     /// <summary>Initialize SMAPI and launch the game.</summary>
@@ -238,6 +301,12 @@ internal class Program
     /// <param name="technicalMessage">An additional message to log with technical details.</param>
     private static void PrintErrorAndExit(string message, string? technicalMessage = null)
     {
+#if SMAPI_FOR_ANDROID
+        System.Diagnostics.Debug.WriteLine(message);
+        if (technicalMessage != null)
+            System.Diagnostics.Debug.WriteLine(technicalMessage);
+        Environment.Exit(1);
+#else
         Console.ForegroundColor = ConsoleColor.Red;
         Console.WriteLine(message);
         Console.ResetColor();
@@ -252,16 +321,21 @@ internal class Program
         }
 
         Program.PressAnyKeyToExit(showMessage: true);
+#endif
     }
 
     /// <summary>Show a 'press any key to exit' message, and exit when they press a key.</summary>
     /// <param name="showMessage">Whether to print a 'press any key to exit' message to the console.</param>
     private static void PressAnyKeyToExit(bool showMessage)
     {
+#if SMAPI_FOR_ANDROID
+        Environment.Exit(0);
+#else
         if (showMessage)
             Console.WriteLine("Game has ended. Press any key to exit.");
         Thread.Sleep(100);
         Console.ReadKey();
         Environment.Exit(0);
+#endif
     }
 }

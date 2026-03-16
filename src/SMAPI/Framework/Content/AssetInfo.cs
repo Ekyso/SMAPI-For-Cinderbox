@@ -12,6 +12,9 @@ internal class AssetInfo : IAssetInfo
     /// <summary>Normalizes an asset key to match the cache key.</summary>
     protected readonly Func<string, string> GetNormalizedPath;
 
+    /// <summary>Backing field for <see cref="NameWithoutLocale"/>.</summary>
+    private IAssetName? _nameWithoutLocale;
+
 
     /*********
     ** Accessors
@@ -23,7 +26,7 @@ internal class AssetInfo : IAssetInfo
     public IAssetName Name { get; }
 
     /// <inheritdoc />
-    public IAssetName NameWithoutLocale => field ??= this.Name.GetBaseAssetName();
+    public IAssetName NameWithoutLocale => this._nameWithoutLocale ??= this.Name.GetBaseAssetName();
 
     /// <inheritdoc />
     public Type DataType { get; }

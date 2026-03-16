@@ -24,7 +24,6 @@ internal interface IContentManager : IDisposable
     /// <summary>Whether this content manager can be targeted by managed asset keys (e.g. to load assets from a mod folder).</summary>
     bool IsNamespaced { get; }
 
-
     /*********
     ** Methods
     *********/
@@ -39,7 +38,11 @@ internal interface IContentManager : IDisposable
     /// <param name="assetName">The asset name relative to the loader root directory.</param>
     /// <param name="language">The language for which to load the asset.</param>
     /// <param name="useCache">Whether to read/write the loaded asset to the asset cache.</param>
-    T LoadLocalized<T>(IAssetName assetName, LocalizedContentManager.LanguageCode language, bool useCache)
+    T LoadLocalized<T>(
+        IAssetName assetName,
+        LocalizedContentManager.LanguageCode language,
+        bool useCache
+    )
         where T : notnull;
 
     /// <summary>Load an asset through the content pipeline, using the exact asset name without checking for localized variants.</summary>

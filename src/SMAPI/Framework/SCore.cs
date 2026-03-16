@@ -14,9 +14,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-#if SMAPI_FOR_WINDOWS
-using Microsoft.Win32;
-#endif
 using Newtonsoft.Json;
 using Pathoschild.Http.Client;
 using StardewModdingAPI.Enums;
@@ -36,9 +33,11 @@ using StardewModdingAPI.Framework.Reflection;
 using StardewModdingAPI.Framework.Rendering;
 using StardewModdingAPI.Framework.Serialization;
 using StardewModdingAPI.Framework.StateTracking.Snapshots;
+using StardewModdingAPI.Framework.Threading;
 using StardewModdingAPI.Framework.Utilities;
 using StardewModdingAPI.Integrations.GenericModConfigMenu;
 using StardewModdingAPI.Internal;
+using StardewModdingAPI.Mobile;
 using StardewModdingAPI.Toolkit;
 using StardewModdingAPI.Toolkit.Framework.Clients.WebApi;
 using StardewModdingAPI.Toolkit.Framework.ModBlacklistData;
@@ -56,12 +55,20 @@ using xTile.Display;
 using LanguageCode = StardewValley.LocalizedContentManager.LanguageCode;
 using MiniMonoModHotfix = MonoMod.Utils.MiniMonoModHotfix;
 using PathUtilities = StardewModdingAPI.Toolkit.Utilities.PathUtilities;
+#if SMAPI_FOR_WINDOWS
+using Microsoft.Win32;
+#endif
 
 namespace StardewModdingAPI.Framework;
 
 /// <summary>The core class which initializes and manages SMAPI.</summary>
 internal class SCore : IDisposable
 {
+#if SMAPI_FOR_ANDROID
+    /// <summary>External handler to wait for surface creation (provided by Launcher to avoid JIT/ACW issues).</summary>
+    public static Action<Android.Views.SurfaceView>? WaitForSurfaceHandler;
+#endif
+
     /*********
     ** Fields
     *********/
@@ -114,6 +121,17 @@ internal class SCore : IDisposable
     /// <summary>Manages SMAPI events for mods.</summary>
     private readonly EventManager EventManager;
 
+#if SMAPI_FOR_ANDROID
+    /// <summary>Event signaled when Android surface is created.</summary>
+    private static ManualResetEventSlim? SurfaceCreatedEvent;
+
+    /// <summary>Event signaled when GL context is ready and game thread starts.</summary>
+    private static ManualResetEventSlim? GLReadyEvent;
+
+    /// <summary>Event signaled when the game finishes initializing.</summary>
+    private static ManualResetEventSlim? GameInitializedEvent;
+#endif
+
     /****
     ** State
     ****/
@@ -156,6 +174,23 @@ internal class SCore : IDisposable
     /// <summary>The last <see cref="ProcessTicksElapsed"/> for which display events were raised.</summary>
     private readonly PerScreen<uint> LastRenderEventTick = new();
 
+    /****
+    ** Performance features
+    ****/
+    /// <summary>The event pipeline for processing mod events on background threads.</summary>
+    private EventPipeline? _eventPipeline;
+
+    /// <summary>A reusable snapshot of game state for worker threads.</summary>
+    private readonly GameStateSnapshot _gameStateSnapshot = new();
+
+    /// <summary>Whether to process mod events on background threads.</summary>
+    private bool _useAsyncModEvents;
+
+    /// <summary>Whether to pool mod event args objects to reduce GC.</summary>
+    private bool _useEventArgsPooling;
+
+    /// <summary>Whether to log performance metrics periodically.</summary>
+    private bool _performanceLogging;
 
     /*********
     ** Accessors
@@ -173,7 +208,6 @@ internal class SCore : IDisposable
 
     /// <summary>A specialized form of <see cref="TicksElapsed"/> which is incremented each time SMAPI performs a processing tick (whether that's a game update, one wait cycle while synchronizing code, etc).</summary>
     internal static uint ProcessTicksElapsed { get; private set; }
-
 
     /*********
     ** Public methods
@@ -200,7 +234,15 @@ internal class SCore : IDisposable
         this.ReloadSettings();
 
         // init basics
-        this.LogManager = new LogManager(logPath: logPath, colorSchemeId: this.Settings.ConsoleColorScheme, colorConfig: this.Settings.ConsoleColorSchemes, writeToConsole: writeToConsole, verboseLogging: this.Settings.VerboseLogging, isDeveloperMode: this.Settings.DeveloperMode, getScreenIdForLog: this.GetScreenIdForLog);
+        this.LogManager = new LogManager(
+            logPath: logPath,
+            colorSchemeId: this.Settings.ConsoleColorScheme,
+            colorConfig: this.Settings.ConsoleColorSchemes,
+            writeToConsole: writeToConsole,
+            verboseLogging: this.Settings.VerboseLogging,
+            isDeveloperMode: this.Settings.DeveloperMode,
+            getScreenIdForLog: this.GetScreenIdForLog
+        );
         this.CommandManager = new CommandManager(this.Monitor);
         this.EventManager = new EventManager(this.ModRegistry);
         SCore.DeprecationManager = new DeprecationManager(this.Monitor, this.ModRegistry);
@@ -213,15 +255,22 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_WINDOWS
         if (Constants.Platform != Platform.Windows)
         {
-            this.Monitor.Log("Oops! You're running Windows, but this version of SMAPI is for Linux or macOS. Please reinstall SMAPI to fix this.", LogLevel.Error);
+            this.Monitor.Log(
+                "Oops! You're running Windows, but this version of SMAPI is for Linux or macOS. Please reinstall SMAPI to fix this.",
+                LogLevel.Error
+            );
             this.LogManager.PressAnyKeyToExit();
         }
+#elif SMAPI_FOR_ANDROID
 #else
-            if (Constants.Platform == Platform.Windows)
-            {
-                this.Monitor.Log($"Oops! You're running {Constants.Platform}, but this version of SMAPI is for Windows. Please reinstall SMAPI to fix this.", LogLevel.Error);
-                this.LogManager.PressAnyKeyToExit();
-            }
+        if (Constants.Platform == Platform.Windows)
+        {
+            this.Monitor.Log(
+                $"Oops! You're running {Constants.Platform}, but this version of SMAPI is for Windows. Please reinstall SMAPI to fix this.",
+                LogLevel.Error
+            );
+            this.LogManager.PressAnyKeyToExit();
+        }
 #endif
     }
 
@@ -238,16 +287,21 @@ internal class SCore : IDisposable
                 new KeybindConverter(),
                 new PointConverter(),
                 new Vector2Converter(),
-                new RectangleConverter()
+                new RectangleConverter(),
             ];
             foreach (JsonConverter converter in converters)
                 this.Toolkit.JsonHelper.JsonSettings.Converters.Add(converter);
 
             // add error handlers
-            AppDomain.CurrentDomain.UnhandledException += (_, e) => this.Monitor.Log($"Critical app domain exception: {e.ExceptionObject}", LogLevel.Error);
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+                this.Monitor.Log(
+                    $"Critical app domain exception: {e.ExceptionObject}",
+                    LogLevel.Error
+                );
 
             // add more lenient assembly resolver
-            AppDomain.CurrentDomain.AssemblyResolve += (_, e) => AssemblyLoader.ResolveAssembly(e.Name);
+            AppDomain.CurrentDomain.AssemblyResolve += (_, e) =>
+                AssemblyLoader.ResolveAssembly(e.Name);
 
             // hook locale event
             LocalizedContentManager.OnLanguageChange += _ => this.OnLocaleChanged();
@@ -257,7 +311,14 @@ internal class SCore : IDisposable
             Task.Run(this.LogContentIntegrityIssues);
 
             // override game
-            this.Multiplayer = new SMultiplayer(this.Monitor, this.EventManager, this.Toolkit.JsonHelper, this.ModRegistry, this.OnModMessageReceived, this.Settings.LogNetworkTraffic);
+            this.Multiplayer = new SMultiplayer(
+                this.Monitor,
+                this.EventManager,
+                this.Toolkit.JsonHelper,
+                this.ModRegistry,
+                this.OnModMessageReceived,
+                this.Settings.LogNetworkTraffic
+            );
             SGame.CreateContentManagerImpl = this.CreateContentManager; // must be static since the game accesses it before the SGame constructor is called
             this.Game = new SGameRunner(
                 monitor: this.Monitor,
@@ -273,7 +334,6 @@ internal class SCore : IDisposable
                 gameLogger: new SGameLogger(this.GetMonitorForGame()),
                 multiplayer: this.Multiplayer,
                 exitGameImmediately: this.ExitGameImmediately,
-
                 onGameContentLoaded: this.OnInstanceContentLoaded,
                 onLoadStageChanged: this.OnLoadStageChanged,
                 onGameUpdating: this.OnGameUpdating,
@@ -308,19 +368,447 @@ internal class SCore : IDisposable
         this.Monitor.Log("Waiting for game to launch...", LogLevel.Debug);
         try
         {
+#if SMAPI_FOR_ANDROID
+            // Android launch sequence:
+            // 1. SetContentView on UI thread and wait for completion
+            // 2. Wait for Android surface
+            // 3. Capture UI thread SynchronizationContext
+            // 4. Call Run() from background thread (not UI thread)
+            this.Monitor.Log("Setting up Android game view...", LogLevel.Debug);
+            var activity = Mobile.SMAPIActivityTool.MainActivity;
+            if (activity != null)
+            {
+                // get the game view
+                var gameView = GameRunner.instance.Services.GetService<Android.Views.View>();
+                if (gameView == null)
+                {
+                    this.Monitor.Log(
+                        "Error: Could not get game View from services",
+                        LogLevel.Error
+                    );
+                    return;
+                }
+                this.Monitor.Log($"Got GameView: {gameView.GetType().FullName}", LogLevel.Debug);
+
+                // set content view on UI thread
+                this.Monitor.Log(
+                    "Setting ContentView on UI thread (synchronous)...",
+                    LogLevel.Debug
+                );
+                using var setContentViewComplete = new System.Threading.ManualResetEventSlim(false);
+                Exception? uiException = null;
+
+                activity.RunOnUiThread(() =>
+                {
+                    try
+                    {
+                        activity.SetContentView(gameView);
+                        this.Monitor.Log("SetContentView completed successfully", LogLevel.Debug);
+                    }
+                    catch (Exception ex)
+                    {
+                        uiException = ex;
+                        this.Monitor.Log($"SetContentView failed: {ex.Message}", LogLevel.Error);
+                    }
+                    finally
+                    {
+                        setContentViewComplete.Set();
+                    }
+                });
+
+                // wait for completion
+                if (!setContentViewComplete.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    this.Monitor.Log("SetContentView timed out after 5 seconds!", LogLevel.Error);
+                    return;
+                }
+
+                if (uiException != null)
+                {
+                    throw new Exception("SetContentView failed", uiException);
+                }
+
+                // wait for Android surface
+                this.Monitor.Log("Waiting for Android surface to be created...", LogLevel.Debug);
+
+                var gameViewType = gameView.GetType();
+                var surfaceView = gameView as Android.Views.SurfaceView;
+
+                if (SCore.WaitForSurfaceHandler != null)
+                {
+                    SCore.WaitForSurfaceHandler(surfaceView);
+                }
+                else
+                {
+                    this.Monitor.Log(
+                        "No WaitForSurfaceHandler registered - skipping explicit surface wait. Race conditions may occur.",
+                        LogLevel.Warn
+                    );
+                }
+
+                // capture UI thread's SynchronizationContext
+                this.Monitor.Log("Capturing UI thread SynchronizationContext...", LogLevel.Debug);
+                System.Threading.SynchronizationContext? uiSyncContext = null;
+                using var captureComplete = new System.Threading.ManualResetEventSlim(false);
+
+                activity.RunOnUiThread(() =>
+                {
+                    uiSyncContext = System.Threading.SynchronizationContext.Current;
+                    this.Monitor.Log(
+                        $"UI thread SynchronizationContext: {uiSyncContext?.GetType().Name ?? "NULL"}",
+                        LogLevel.Debug
+                    );
+                    captureComplete.Set();
+                });
+
+                if (!captureComplete.Wait(TimeSpan.FromSeconds(2)))
+                {
+                    this.Monitor.Log(
+                        "Failed to capture UI thread SynchronizationContext!",
+                        LogLevel.Warn
+                    );
+                }
+
+                // set captured context on this thread
+                if (uiSyncContext != null)
+                {
+                    System.Threading.SynchronizationContext.SetSynchronizationContext(
+                        uiSyncContext
+                    );
+                    this.Monitor.Log(
+                        $"Set UI SynchronizationContext on background thread: {uiSyncContext.GetType().Name}",
+                        LogLevel.Debug
+                    );
+                }
+                else
+                {
+                    this.Monitor.Log(
+                        "UI SynchronizationContext was null - using fallback",
+                        LogLevel.Warn
+                    );
+                    System.Threading.SynchronizationContext.SetSynchronizationContext(
+                        new System.Threading.SynchronizationContext()
+                    );
+                }
+
+                // Resume() must be called before Run() to avoid a race condition.
+                // MonoGame checks _internalState on start; if it's Exited_GameThread
+                // (the default), the render task cancels itself.
+                this.Monitor.Log(
+                    "Calling GameView.Resume() to set render thread state...",
+                    LogLevel.Debug
+                );
+                var resumeMethod = gameViewType.GetMethod(
+                    "Resume",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance
+                );
+                if (resumeMethod != null)
+                {
+                    using var resumeComplete = new System.Threading.ManualResetEventSlim(false);
+                    Exception? resumeException = null;
+
+                    activity.RunOnUiThread(() =>
+                    {
+                        try
+                        {
+                            resumeMethod.Invoke(gameView, null);
+                            this.Monitor.Log(
+                                "GameView.Resume() called successfully",
+                                LogLevel.Debug
+                            );
+                        }
+                        catch (Exception ex)
+                        {
+                            resumeException = ex;
+                            this.Monitor.Log(
+                                $"GameView.Resume() failed: {ex.Message}",
+                                LogLevel.Warn
+                            );
+                        }
+                        finally
+                        {
+                            resumeComplete.Set();
+                        }
+                    });
+
+                    if (!resumeComplete.Wait(TimeSpan.FromSeconds(2)))
+                    {
+                        this.Monitor.Log("GameView.Resume() timed out!", LogLevel.Warn);
+                    }
+                }
+                else
+                {
+                    this.Monitor.Log(
+                        "Could not find GameView.Resume() method - game loop may not start!",
+                        LogLevel.Warn
+                    );
+                }
+
+                // call Run() from background thread to create the render thread
+                this.IsGameRunning = true;
+                StardewValley.Program.releaseBuild = true;
+                this.Monitor.Log("Calling Game.Run() from background thread...", LogLevel.Debug);
+                this.Game.Run();
+                this.Monitor.Log(
+                    "Game.Run() returned (render thread setup complete)",
+                    LogLevel.Debug
+                );
+
+                // set Platform.IsActive = true (Resumed event doesn't fire since we don't inherit AndroidGameActivity)
+                this.Monitor.Log(
+                    "Setting Platform.IsActive = true (simulating AndroidGameActivity.Resumed event)...",
+                    LogLevel.Debug
+                );
+                try
+                {
+                    var gameField = gameViewType.GetField(
+                        "_game",
+                        System.Reflection.BindingFlags.NonPublic
+                            | System.Reflection.BindingFlags.Instance
+                    );
+                    var game = gameField?.GetValue(gameView);
+                    if (game != null)
+                    {
+                        var platformField = game.GetType()
+                            .GetField(
+                                "Platform",
+                                System.Reflection.BindingFlags.NonPublic
+                                    | System.Reflection.BindingFlags.Instance
+                            );
+                        var platform = platformField?.GetValue(game);
+                        if (platform != null)
+                        {
+                            var isActiveProp = platform
+                                .GetType()
+                                .GetProperty(
+                                    "IsActive",
+                                    System.Reflection.BindingFlags.Public
+                                        | System.Reflection.BindingFlags.NonPublic
+                                        | System.Reflection.BindingFlags.Instance
+                                );
+                            if (isActiveProp != null && isActiveProp.CanWrite)
+                            {
+                                isActiveProp.SetValue(platform, true);
+                                this.Monitor.Log(
+                                    "Platform.IsActive set to true via property setter",
+                                    LogLevel.Debug
+                                );
+                            }
+                            else
+                            {
+                                // fallback: set field directly
+                                var isActiveField = platform
+                                    .GetType()
+                                    .GetField(
+                                        "_isActive",
+                                        System.Reflection.BindingFlags.NonPublic
+                                            | System.Reflection.BindingFlags.Instance
+                                    );
+                                if (isActiveField != null)
+                                {
+                                    isActiveField.SetValue(platform, true);
+                                    this.Monitor.Log(
+                                        "Platform._isActive set to true via field setter",
+                                        LogLevel.Debug
+                                    );
+                                }
+                                else
+                                {
+                                    this.Monitor.Log(
+                                        "Could not find IsActive property or _isActive field on Platform!",
+                                        LogLevel.Warn
+                                    );
+                                }
+                            }
+                        }
+                        else
+                        {
+                            this.Monitor.Log("Platform is null!", LogLevel.Warn);
+                        }
+                    }
+                    else
+                    {
+                        this.Monitor.Log("Game object is null!", LogLevel.Warn);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.Monitor.Log(
+                        $"Failed to set Platform.IsActive: {ex.Message}",
+                        LogLevel.Warn
+                    );
+                }
+
+                // wait for GL context
+                this.Monitor.Log("Waiting for GL context...", LogLevel.Debug);
+                var glContextField = gameViewType.GetField(
+                    "glContextAvailable",
+                    System.Reflection.BindingFlags.NonPublic
+                        | System.Reflection.BindingFlags.Instance
+                );
+                var glSurfaceField = gameViewType.GetField(
+                    "glSurfaceAvailable",
+                    System.Reflection.BindingFlags.NonPublic
+                        | System.Reflection.BindingFlags.Instance
+                );
+                var stateField = gameViewType.GetField(
+                    "_internalState",
+                    System.Reflection.BindingFlags.NonPublic
+                        | System.Reflection.BindingFlags.Instance
+                );
+
+                SCore.GLReadyEvent = new ManualResetEventSlim(false);
+                var glWaitStart = DateTime.UtcNow;
+
+
+                EventHandler glHandler = (s, e) => SCore.GLReadyEvent?.Set();
+                Microsoft.Xna.Framework.MonoGameAndroidGameView.OnResumeGameThread += glHandler;
+
+                if (SCore.GLReadyEvent.Wait(TimeSpan.FromSeconds(5)))
+                {
+                    this.Monitor.Log(
+                        $"GL context ready (waited {(DateTime.UtcNow - glWaitStart).TotalMilliseconds:F0}ms)",
+                        LogLevel.Debug
+                    );
+                }
+                else
+                {
+                    this.Monitor.Log("GL context timeout - proceeding anyway", LogLevel.Warn);
+                }
+
+                Microsoft.Xna.Framework.MonoGameAndroidGameView.OnResumeGameThread -= glHandler;
+                SCore.GLReadyEvent.Dispose();
+                SCore.GLReadyEvent = null;
+
+                // fix GL surface if needed
+                activity.RunOnUiThread(() =>
+                {
+                    try
+                    {
+                        var glContext = glContextField?.GetValue(gameView);
+                        var glSurface = glSurfaceField?.GetValue(gameView);
+                        var state = stateField?.GetValue(gameView);
+
+                        this.Monitor.Log(
+                            $"GL state check - State: {state}, glContext: {glContext}, glSurface: {glSurface}",
+                            LogLevel.Debug
+                        );
+
+                        // create GL surface if context is ready but surface is not
+                        if (glContext?.ToString() == "True" && glSurface?.ToString() == "False")
+                        {
+                            this.Monitor.Log(
+                                "GL context available but surface not - attempting to create GL surface...",
+                                LogLevel.Debug
+                            );
+                            var createGLSurfaceMethod = gameViewType.GetMethod(
+                                "CreateGLSurface",
+                                System.Reflection.BindingFlags.NonPublic
+                                    | System.Reflection.BindingFlags.Instance
+                            );
+                            if (createGLSurfaceMethod != null)
+                            {
+                                createGLSurfaceMethod.Invoke(gameView, null);
+                                glSurface = glSurfaceField?.GetValue(gameView);
+                                this.Monitor.Log(
+                                    $"After CreateGLSurface: glSurfaceAvailable = {glSurface}",
+                                    LogLevel.Debug
+                                );
+                            }
+                        }
+
+                        // force state transition if stuck
+                        glContext = glContextField?.GetValue(gameView);
+                        glSurface = glSurfaceField?.GetValue(gameView);
+                        state = stateField?.GetValue(gameView);
+
+                        if (
+                            glContext?.ToString() == "True"
+                            && glSurface?.ToString() == "True"
+                            && state?.ToString() == "Resuming_UIThread"
+                        )
+                        {
+                            this.Monitor.Log(
+                                "Both GL flags true but state stuck - forcing transition to Running_GameThread...",
+                                LogLevel.Debug
+                            );
+                            var stateType = stateField?.FieldType;
+                            if (stateType != null && stateType.IsEnum)
+                            {
+                                var runningState = Enum.Parse(stateType, "Running_GameThread");
+                                stateField?.SetValue(gameView, runningState);
+                                this.Monitor.Log(
+                                    "Forced state transition to Running_GameThread",
+                                    LogLevel.Debug
+                                );
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Monitor.Log($"GL surface fix exception: {ex.Message}", LogLevel.Debug);
+                    }
+                });
+
+                // wait for game initialization
+                this.Monitor.Log("Waiting for game to initialize...", LogLevel.Debug);
+                SCore.GameInitializedEvent = new ManualResetEventSlim(false);
+                var gameWaitStart = DateTime.UtcNow;
+
+                if (SCore.GameInitializedEvent.Wait(TimeSpan.FromSeconds(10)))
+                {
+                    this.Monitor.Log(
+                        $"Game initialized (waited {(DateTime.UtcNow - gameWaitStart).TotalMilliseconds:F0}ms)",
+                        LogLevel.Debug
+                    );
+                }
+                else
+                {
+                    this.Monitor.Log("Game init timeout - continuing anyway", LogLevel.Warn);
+                }
+
+                SCore.GameInitializedEvent.Dispose();
+                SCore.GameInitializedEvent = null;
+
+                // wait for game exit
+                this.Monitor.Log(
+                    "Game loop running on render thread, waiting for exit...",
+                    LogLevel.Debug
+                );
+                while (!this.IsDisposed)
+                {
+                    System.Threading.Thread.Sleep(100);
+                }
+
+                this.Monitor.Log("Game exited, cleanup complete.", LogLevel.Debug);
+                return;
+            }
+            else
+            {
+                this.Monitor.Log(
+                    "Warning: MainActivity is null - cannot start game",
+                    LogLevel.Error
+                );
+            }
+#else
             this.IsGameRunning = true;
             StardewValley.Program.releaseBuild = true; // game's debug logic interferes with SMAPI opening the game window
             this.Game.Run();
+#endif
             this.Dispose(isError: false);
         }
         catch (NoSuitableGraphicsDeviceException ex)
         {
             string? graphicsCardName = this.TryGetGraphicsDeviceName();
-            string suggestedFix = Constants.TargetPlatform == GamePlatform.Windows
-                ? "You can usually fix this by running SMAPI on your dedicated graphics card. See instructions here:"
-                : "See common fixes here:";
+            string suggestedFix =
+                Constants.TargetPlatform == GamePlatform.Windows
+                    ? "You can usually fix this by running SMAPI on your dedicated graphics card. See instructions here:"
+                    : "See common fixes here:";
 
-            this.Monitor.Log($"Your graphics card{(graphicsCardName != null ? $" ({graphicsCardName})" : "")} isn't compatible with Stardew Valley. {suggestedFix} https://smapi.io/troubleshoot/no-suitable-gpu\n\nTechnical details:\n{ex.GetLogSummary()}", LogLevel.Error);
+            this.Monitor.Log(
+                $"Your graphics card{(graphicsCardName != null ? $" ({graphicsCardName})" : "")} isn't compatible with Stardew Valley. {suggestedFix} https://smapi.io/troubleshoot/no-suitable-gpu\n\nTechnical details:\n{ex.GetLogSummary()}",
+                LogLevel.Error
+            );
             this.LogManager.PressAnyKeyToExit();
             this.Dispose(isError: true);
         }
@@ -339,8 +827,17 @@ internal class SCore : IDisposable
         return this.LogManager.MonitorForGame;
     }
 
+#if SMAPI_FOR_ANDROID
+    /// <summary>Get the SMAPI monitor for Android components.</summary>
+    public IMonitor SMAPIMonitor => this.LogManager.Monitor;
+#endif
+
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
-    [SuppressMessage("ReSharper", "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract", Justification = "May be disposed before SMAPI is fully initialized.")]
+    [SuppressMessage(
+        "ReSharper",
+        "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract",
+        Justification = "May be disposed before SMAPI is fully initialized."
+    )]
     public void Dispose()
     {
         this.Dispose(isError: true); // if we got here, SMAPI didn't detect the exit before it happened
@@ -348,7 +845,11 @@ internal class SCore : IDisposable
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
     /// <param name="isError">Whether the process is exiting due to an error or crash.</param>
-    [SuppressMessage("ReSharper", "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract", Justification = "May be disposed before SMAPI is fully initialized.")]
+    [SuppressMessage(
+        "ReSharper",
+        "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract",
+        Justification = "May be disposed before SMAPI is fully initialized."
+    )]
     public void Dispose(bool isError)
     {
         // skip if already disposed
@@ -370,6 +871,10 @@ internal class SCore : IDisposable
             }
         }
 
+        // dispose performance features
+        _eventPipeline?.Dispose();
+        _eventPipeline = null;
+
         // dispose core components
         this.IsGameRunning = false;
         if (this.ExitState == ExitState.None || isError)
@@ -383,7 +888,10 @@ internal class SCore : IDisposable
         // by killing the entire process, but we can't set the error code if we do that.
         try
         {
-            FieldInfo? field = typeof(StardewValley.Program).GetField("_sdk", BindingFlags.NonPublic | BindingFlags.Static);
+            FieldInfo? field = typeof(StardewValley.Program).GetField(
+                "_sdk",
+                BindingFlags.NonPublic | BindingFlags.Static
+            );
             SDKHelper? sdk = field?.GetValue(null) as SDKHelper;
             sdk?.Shutdown();
         }
@@ -397,7 +905,6 @@ internal class SCore : IDisposable
         Environment.Exit(this.ExitState == ExitState.Crash ? 1 : 0);
     }
 
-
     /*********
     ** Private methods
     *********/
@@ -410,8 +917,19 @@ internal class SCore : IDisposable
             return;
         }
 
+#if SMAPI_FOR_ANDROID
+        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod init")}", LogLevel.Info);
+#endif
+
         // init TMX support
-        xTile.Format.FormatManager.Instance.RegisterMapFormat(new TMXTile.TMXFormat(Game1.tileSize / Game1.pixelZoom, Game1.tileSize / Game1.pixelZoom, Game1.pixelZoom, Game1.pixelZoom));
+        xTile.Format.FormatManager.Instance.RegisterMapFormat(
+            new TMXTile.TMXFormat(
+                Game1.tileSize / Game1.pixelZoom,
+                Game1.tileSize / Game1.pixelZoom,
+                Game1.pixelZoom,
+                Game1.pixelZoom
+            )
+        );
 
         // load mod data
         ModToolkit toolkit = new();
@@ -419,7 +937,11 @@ internal class SCore : IDisposable
 
         // load 'malicious mods' blacklist
         ModBlacklist? modBlacklist = null;
-        if (File.Exists(Constants.ApiBlacklistFetchedPath) && File.GetLastWriteTimeUtc(Constants.ApiBlacklistFetchedPath) > File.GetLastWriteTimeUtc(Constants.ApiBlacklistPath))
+        if (
+            File.Exists(Constants.ApiBlacklistFetchedPath)
+            && File.GetLastWriteTimeUtc(Constants.ApiBlacklistFetchedPath)
+                > File.GetLastWriteTimeUtc(Constants.ApiBlacklistPath)
+        )
         {
             try
             {
@@ -428,7 +950,10 @@ internal class SCore : IDisposable
             }
             catch (Exception ex)
             {
-                this.Monitor.Log("Couldn't load mod blacklist fetched from the SMAPI web server. Defaulting to the version included with the SMAPI install.", LogLevel.Warn);
+                this.Monitor.Log(
+                    "Couldn't load mod blacklist fetched from the SMAPI web server. Defaulting to the version included with the SMAPI install.",
+                    LogLevel.Warn
+                );
                 this.Monitor.Log(ex.GetLogSummary());
             }
         }
@@ -443,14 +968,23 @@ internal class SCore : IDisposable
         {
             bool foundMaliciousFiles = false;
 
-            foreach ((string filePath, LooseFileBlacklistEntryModel match) in modBlacklist.CheckLooseFiles(this.ModsPath))
+            foreach (
+                (
+                    string filePath,
+                    LooseFileBlacklistEntryModel match
+                ) in modBlacklist.CheckLooseFiles(this.ModsPath)
+            )
             {
                 foundMaliciousFiles = true;
 
                 this.Monitor.LogFatal("Malicious mod file detected.");
                 this.Monitor.Log($"File path: '{filePath}'", LogLevel.Error);
                 this.Monitor.Newline();
-                this.Monitor.Log(match.Message ?? "This file has been flagged as malicious. You should immediately delete the mod containing the file, and perform a full anti-malware scan of your computer to be safe.", LogLevel.Error);
+                this.Monitor.Log(
+                    match.Message
+                        ?? "This file has been flagged as malicious. You should immediately delete the mod containing the file, and perform a full anti-malware scan of your computer to be safe.",
+                    LogLevel.Error
+                );
             }
 
             if (foundMaliciousFiles)
@@ -464,51 +998,111 @@ internal class SCore : IDisposable
 
             // log loose files
             {
-                string[] looseFiles = new DirectoryInfo(this.ModsPath).GetFiles().Select(p => p.Name).ToArray();
+                string[] looseFiles = new DirectoryInfo(this.ModsPath)
+                    .GetFiles()
+                    .Select(p => p.Name)
+                    .ToArray();
                 if (looseFiles.Any())
                 {
-                    if (looseFiles.Any(name => name.Equals("manifest.json", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)))
+                    if (
+                        looseFiles.Any(name =>
+                            name.Equals("manifest.json", StringComparison.OrdinalIgnoreCase)
+                            || name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                        )
+                    )
                     {
-                        this.Monitor.Log($"Detected mod files directly inside the '{Path.GetFileName(this.ModsPath)}' folder. These will be ignored. Each mod must have its own subfolder instead.", LogLevel.Error);
+                        this.Monitor.Log(
+                            $"Detected mod files directly inside the '{Path.GetFileName(this.ModsPath)}' folder. These will be ignored. Each mod must have its own subfolder instead.",
+                            LogLevel.Error
+                        );
                     }
 
-                    this.Monitor.Log($"  Ignored loose files: {string.Join(", ", looseFiles.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))}");
+                    this.Monitor.Log(
+                        $"  Ignored loose files: {string.Join(", ", looseFiles.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))}"
+                    );
                 }
             }
 
             // load manifests
-            IModMetadata[] mods = resolver.ReadManifests(toolkit, this.ModsPath, modBlacklist, modDatabase, useCaseInsensitiveFilePaths: this.Settings.UseCaseInsensitivePaths).ToArray();
+            IModMetadata[] mods = resolver
+                .ReadManifests(
+                    toolkit,
+                    this.ModsPath,
+                    modBlacklist,
+                    modDatabase,
+                    useCaseInsensitiveFilePaths: this.Settings.UseCaseInsensitivePaths
+                )
+                .ToArray();
 
             // filter out ignored mods
             foreach (IModMetadata mod in mods.Where(p => p.IsIgnored))
-                this.Monitor.Log($"  Skipped {mod.GetRelativePathWithRoot()} (folder name starts with a dot).");
+                this.Monitor.Log(
+                    $"  Skipped {mod.GetRelativePathWithRoot()} (folder name starts with a dot)."
+                );
             mods = mods.Where(p => !p.IsIgnored).ToArray();
 
             // validate manifests
-            resolver.ValidateManifests(mods, Constants.ApiVersion, Constants.GameVersion, toolkit.GetUpdateUrl, getFileLookup: this.GetFileLookup);
+            resolver.ValidateManifests(
+                mods,
+                Constants.ApiVersion,
+                Constants.GameVersion,
+                toolkit.GetUpdateUrl,
+                getFileLookup: this.GetFileLookup
+            );
 
             // apply load order customizations
             if (this.Settings.ModsToLoadEarly.Any() || this.Settings.ModsToLoadLate.Any())
             {
-                HashSet<string> installedIds = new(mods.Select(p => p.Manifest?.UniqueID).Where(p => p is not null)!, StringComparer.OrdinalIgnoreCase);
+                HashSet<string> installedIds = new(
+                    mods.Select(p => p.Manifest?.UniqueID).Where(p => p is not null)!,
+                    StringComparer.OrdinalIgnoreCase
+                );
 
-                string[] missingEarlyMods = this.Settings.ModsToLoadEarly.Where(id => !installedIds.Contains(id)).OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
-                string[] missingLateMods = this.Settings.ModsToLoadLate.Where(id => !installedIds.Contains(id)).OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
-                string[] duplicateMods = this.Settings.ModsToLoadLate.Where(id => this.Settings.ModsToLoadEarly.Contains(id)).OrderBy(p => p, StringComparer.OrdinalIgnoreCase).ToArray();
+                string[] missingEarlyMods = this
+                    .Settings.ModsToLoadEarly.Where(id => !installedIds.Contains(id))
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                string[] missingLateMods = this
+                    .Settings.ModsToLoadLate.Where(id => !installedIds.Contains(id))
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                string[] duplicateMods = this
+                    .Settings.ModsToLoadLate.Where(id => this.Settings.ModsToLoadEarly.Contains(id))
+                    .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
 
                 if (missingEarlyMods.Any())
-                    this.Monitor.Log($"  The 'smapi-internal/config.json' file lists mod IDs in {nameof(this.Settings.ModsToLoadEarly)} which aren't installed: '{string.Join("', '", missingEarlyMods)}'.", LogLevel.Warn);
+                    this.Monitor.Log(
+                        $"  The 'smapi-internal/config.json' file lists mod IDs in {nameof(this.Settings.ModsToLoadEarly)} which aren't installed: '{string.Join("', '", missingEarlyMods)}'.",
+                        LogLevel.Warn
+                    );
                 if (missingLateMods.Any())
-                    this.Monitor.Log($"  The 'smapi-internal/config.json' file lists mod IDs in {nameof(this.Settings.ModsToLoadLate)} which aren't installed: '{string.Join("', '", missingLateMods)}'.", LogLevel.Warn);
+                    this.Monitor.Log(
+                        $"  The 'smapi-internal/config.json' file lists mod IDs in {nameof(this.Settings.ModsToLoadLate)} which aren't installed: '{string.Join("', '", missingLateMods)}'.",
+                        LogLevel.Warn
+                    );
                 if (duplicateMods.Any())
-                    this.Monitor.Log($"  The 'smapi-internal/config.json' file lists mod IDs which are in both {nameof(this.Settings.ModsToLoadEarly)} and {nameof(this.Settings.ModsToLoadLate)}: '{string.Join("', '", duplicateMods)}'. These will be loaded early.", LogLevel.Warn);
+                    this.Monitor.Log(
+                        $"  The 'smapi-internal/config.json' file lists mod IDs which are in both {nameof(this.Settings.ModsToLoadEarly)} and {nameof(this.Settings.ModsToLoadLate)}: '{string.Join("', '", duplicateMods)}'. These will be loaded early.",
+                        LogLevel.Warn
+                    );
 
-                mods = resolver.ApplyLoadOrderOverrides(mods, this.Settings.ModsToLoadEarly, this.Settings.ModsToLoadLate);
+                mods = resolver.ApplyLoadOrderOverrides(
+                    mods,
+                    this.Settings.ModsToLoadEarly,
+                    this.Settings.ModsToLoadLate
+                );
             }
 
             // load mods
             mods = resolver.ProcessDependencies(mods, modDatabase).ToArray();
+#if SMAPI_FOR_ANDROID
+            this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("before LoadMods")}", LogLevel.Info);
+#endif
             this.LoadMods(mods, this.Toolkit.JsonHelper, this.ContentCore, modDatabase);
+#if SMAPI_FOR_ANDROID
+            this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("after LoadMods")}", LogLevel.Info);
+#endif
 
             // check for software likely to cause issues
             this.CheckForSoftwareConflicts();
@@ -518,7 +1112,12 @@ internal class SCore : IDisposable
 
             // register config menu with Generic Mod Config Menu
             if (this.Settings.EnableConfigMenu)
-                new GenericModConfigMenuIntegration(this.Monitor, this.Translator, () => this.Settings, this.ReloadSettings).Register(this.ModRegistry);
+                new GenericModConfigMenuIntegration(
+                    this.Monitor,
+                    this.Translator,
+                    () => this.Settings,
+                    this.ReloadSettings
+                ).Register(this.ModRegistry);
         }
 
         // update window titles
@@ -531,8 +1130,8 @@ internal class SCore : IDisposable
         // start SMAPI console
         if (this.Settings.ListenForConsoleInput)
         {
-            new Thread(
-                () => this.LogManager.RunConsoleInputLoop(
+            new Thread(() =>
+                this.LogManager.RunConsoleInputLoop(
                     commandManager: this.CommandManager,
                     reloadTranslations: this.ReloadTranslations,
                     handleInput: input => this.RawCommandQueue.Add(input),
@@ -545,6 +1144,9 @@ internal class SCore : IDisposable
     /// <summary>Raised after an instance finishes loading its initial content.</summary>
     private void OnInstanceContentLoaded()
     {
+#if SMAPI_FOR_ANDROID
+        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("initial content loaded")}", LogLevel.Info);
+#endif
         // override map display device
         if (Constants.GameVersion.IsOlderThan("1.6.15"))
             Game1.mapDisplayDevice = this.GetMapDisplayDevice_OBSOLETE();
@@ -593,7 +1195,10 @@ internal class SCore : IDisposable
             if (HarmonyLib.Harmony.DEBUG && this.Settings.SuppressHarmonyDebugMode)
             {
                 HarmonyLib.Harmony.DEBUG = false;
-                this.Monitor.LogOnce("A mod enabled Harmony debug mode, which impacts performance and creates a file on your desktop. SMAPI will try to keep it disabled. (You can allow debug mode by editing the smapi-internal/config.json file.)", LogLevel.Warn);
+                this.Monitor.LogOnce(
+                    "A mod enabled Harmony debug mode, which impacts performance and creates a file on your desktop. SMAPI will try to keep it disabled. (You can allow debug mode by editing the smapi-internal/config.json file.)",
+                    LogLevel.Warn
+                );
             }
 
             /*********
@@ -610,28 +1215,54 @@ internal class SCore : IDisposable
                     int screenId;
                     try
                     {
-                        if (!this.CommandManager.TryParse(rawInput, out name, out args, out command, out screenId))
+                        if (
+                            !this.CommandManager.TryParse(
+                                rawInput,
+                                out name,
+                                out args,
+                                out command,
+                                out screenId
+                            )
+                        )
                         {
-                            this.Monitor.Log($"Unknown command '{(!string.IsNullOrWhiteSpace(name) ? name : rawInput)}'; type 'help' for a list of available commands.", LogLevel.Error);
+                            this.Monitor.Log(
+                                $"Unknown command '{(!string.IsNullOrWhiteSpace(name) ? name : rawInput)}'; type 'help' for a list of available commands.",
+                                LogLevel.Error
+                            );
                             continue;
                         }
                     }
                     catch (Exception ex)
                     {
-                        this.Monitor.Log($"Failed parsing that command:\n{ex.GetLogSummary()}", LogLevel.Error);
+                        this.Monitor.Log(
+                            $"Failed parsing that command:\n{ex.GetLogSummary()}",
+                            LogLevel.Error
+                        );
                         continue;
                     }
 
                     // queue command for screen
-                    this.ScreenCommandQueue.GetValueForScreen(screenId).Add(new(command, name, args));
+                    this.ScreenCommandQueue.GetValueForScreen(screenId)
+                        .Add(new(command, name, args));
                 }
             }
-
 
             /*********
             ** Run game update
             *********/
             runGameUpdate();
+
+#if SMAPI_FOR_ANDROID
+            /*********
+            ** Android game loop callbacks and timing fix
+            *********/
+            // Process registered game loop callbacks (used by AndroidSModHooks for task scheduling)
+            Mobile.AndroidGameLoopManager.UpdateFrame_OnGameUpdating(gameTime);
+
+            // Fix game update freeze on GameTick & IsFixedTimeStep by resetting
+            // _accumulatedElapsedTime if it exceeds 0.15 seconds
+            Mobile.AndroidGameLoopManager.ApplyTimingFix();
+#endif
 
             /*********
             ** Reset crash timer
@@ -641,11 +1272,16 @@ internal class SCore : IDisposable
         catch (Exception ex)
         {
             // log error
-            this.Monitor.Log($"An error occurred in the overridden update loop: {ex.GetLogSummary()}", LogLevel.Error);
+            this.Monitor.Log(
+                $"An error occurred in the overridden update loop: {ex.GetLogSummary()}",
+                LogLevel.Error
+            );
 
             // exit if irrecoverable
             if (!this.UpdateCrashTimer.Decrement())
-                this.ExitGameImmediately("The game crashed when updating, and SMAPI was unable to recover the game.");
+                this.ExitGameImmediately(
+                    "The game crashed when updating, and SMAPI was unable to recover the game."
+                );
         }
         finally
         {
@@ -663,6 +1299,12 @@ internal class SCore : IDisposable
         EventManager events = this.EventManager;
         bool verbose = this.Monitor.IsVerbose;
 
+        // Start frame timing
+        StardewModdingAPI.Mobile.AndroidGameLoopManager.BeginFrame();
+
+        // Apply results from background event processing
+        _eventPipeline?.ApplyResults(maxPerFrame: 20);
+
         try
         {
             /*********
@@ -670,7 +1312,10 @@ internal class SCore : IDisposable
             *********/
             if (this.JustReturnedToTitle)
             {
-                if (Game1.mapDisplayDevice is not SDisplayDevice && Constants.GameVersion.IsOlderThan("1.6.15"))
+                if (
+                    Game1.mapDisplayDevice is not SDisplayDevice
+                    && Constants.GameVersion.IsOlderThan("1.6.15")
+                )
                     Game1.mapDisplayDevice = this.GetMapDisplayDevice_OBSOLETE();
 
                 this.JustReturnedToTitle = false;
@@ -691,14 +1336,19 @@ internal class SCore : IDisposable
                     catch (Exception ex)
                     {
                         if (command.Mod != null)
-                            command.Mod.LogAsMod($"Mod failed handling that command:\n{ex.GetLogSummary()}", LogLevel.Error);
+                            command.Mod.LogAsMod(
+                                $"Mod failed handling that command:\n{ex.GetLogSummary()}",
+                                LogLevel.Error
+                            );
                         else
-                            this.Monitor.Log($"Failed handling that command:\n{ex.GetLogSummary()}", LogLevel.Error);
+                            this.Monitor.Log(
+                                $"Failed handling that command:\n{ex.GetLogSummary()}",
+                                LogLevel.Error
+                            );
                     }
                 }
                 commandQueue.Clear();
             }
-
 
             /*********
             ** Update input
@@ -812,7 +1462,11 @@ internal class SCore : IDisposable
                 Context.IsWorldReady = false;
                 instance.AfterLoadTimer.Reset();
             }
-            else if (Context.IsSaveLoaded && instance.AfterLoadTimer.Current > 0 && Game1.currentLocation != null)
+            else if (
+                Context.IsSaveLoaded
+                && instance.AfterLoadTimer.Current > 0
+                && Game1.currentLocation != null
+            )
             {
                 if (Game1.dayOfMonth != 0) // wait until new-game intro finishes (world not fully initialized yet)
                     instance.AfterLoadTimer.Decrement();
@@ -839,7 +1493,10 @@ internal class SCore : IDisposable
                 {
                     // raise after-create
                     instance.IsBetweenCreateEvents = false;
-                    this.Monitor.Log($"Context: after save creation, starting {Game1.currentSeason} {Game1.dayOfMonth} Y{Game1.year}.", Monitor.ContextLogLevel);
+                    this.Monitor.Log(
+                        $"Context: after save creation, starting {Game1.currentSeason} {Game1.dayOfMonth} Y{Game1.year}.",
+                        Monitor.ContextLogLevel
+                    );
                     this.OnLoadStageChanged(LoadStage.CreatedSaveFile);
                     events.SaveCreated.RaiseEmpty();
                 }
@@ -848,7 +1505,10 @@ internal class SCore : IDisposable
                 {
                     // raise after-save
                     instance.IsBetweenSaveEvents = false;
-                    this.Monitor.Log($"Context: after save, starting {Game1.currentSeason} {Game1.dayOfMonth} Y{Game1.year}.", Monitor.ContextLogLevel);
+                    this.Monitor.Log(
+                        $"Context: after save, starting {Game1.currentSeason} {Game1.dayOfMonth} Y{Game1.year}.",
+                        Monitor.ContextLogLevel
+                    );
                     events.Saved.RaiseEmpty();
                     events.DayStarted.RaiseEmpty();
                 }
@@ -857,7 +1517,10 @@ internal class SCore : IDisposable
                 ** Locale changed events
                 *********/
                 if (state.Locale.IsChanged)
-                    this.Monitor.Log($"Context: locale set to {state.Locale.New} ({this.ContentCore.GetLocaleCode(state.Locale.New)}).", Monitor.ContextLogLevel);
+                    this.Monitor.Log(
+                        $"Context: locale set to {state.Locale.New} ({this.ContentCore.GetLocaleCode(state.Locale.New)}).",
+                        Monitor.ContextLogLevel
+                    );
 
                 /*********
                 ** Load / return-to-title events
@@ -867,11 +1530,13 @@ internal class SCore : IDisposable
                 else if (Context.IsWorldReady && Context.LoadStage != LoadStage.Ready)
                 {
                     // print context
-                    string context = $"Context: loaded save '{Constants.SaveFolderName}', starting {Game1.currentSeason} {Game1.dayOfMonth} Y{Game1.year}, locale set to {this.ContentCore.GetLocale()}.";
+                    string context =
+                        $"Context: loaded save '{Constants.SaveFolderName}', starting {Game1.currentSeason} {Game1.dayOfMonth} Y{Game1.year}, locale set to {this.ContentCore.GetLocale()}.";
                     if (Context.IsMultiplayer)
                     {
                         int onlineCount = Game1.getOnlineFarmers().Count();
-                        context += $" {(Context.IsMainPlayer ? "Main player" : "Farmhand")} with {onlineCount} {(onlineCount == 1 ? "player" : "players")} online.";
+                        context +=
+                            $" {(Context.IsMainPlayer ? "Main player" : "Farmhand")} with {onlineCount} {(onlineCount == 1 ? "player" : "players")} online.";
                     }
                     else
                         context += " Single-player.";
@@ -897,10 +1562,15 @@ internal class SCore : IDisposable
                 if (state.WindowSize.IsChanged)
                 {
                     if (verbose)
-                        this.Monitor.Log($"Events: window size changed to {state.WindowSize.New}.", Monitor.ContextLogLevel);
+                        this.Monitor.Log(
+                            $"Events: window size changed to {state.WindowSize.New}.",
+                            Monitor.ContextLogLevel
+                        );
 
                     if (events.WindowResized.HasListeners)
-                        events.WindowResized.Raise(new WindowResizedEventArgs(state.WindowSize.Old, state.WindowSize.New));
+                        events.WindowResized.Raise(
+                            new WindowResizedEventArgs(state.WindowSize.Old, state.WindowSize.New)
+                        );
                 }
 
                 /*********
@@ -909,30 +1579,53 @@ internal class SCore : IDisposable
                 if (this.Game.IsActive)
                 {
                     // raise events
-                    bool isChatInput = Game1.IsChatting || (Context.IsMultiplayer && Context.IsWorldReady && Game1.activeClickableMenu == null && Game1.currentMinigame == null && inputState.IsAnyDown(Game1.options.chatButton));
+                    bool isChatInput =
+                        Game1.IsChatting
+                        || (
+                            Context.IsMultiplayer
+                            && Context.IsWorldReady
+                            && Game1.activeClickableMenu == null
+                            && Game1.currentMinigame == null
+                            && inputState.IsAnyDown(Game1.options.chatButton)
+                        );
                     if (!isChatInput)
                     {
                         ICursorPosition cursor = instance.Input.CursorPosition;
 
                         // raise cursor moved event
                         if (state.Cursor.IsChanged && events.CursorMoved.HasListeners)
-                            events.CursorMoved.Raise(new CursorMovedEventArgs(state.Cursor.Old!, state.Cursor.New!));
+                        {
+                            events.CursorMoved.Raise(new CursorMovedEventArgs(
+                                state.Cursor.Old!,
+                                state.Cursor.New!
+                            ));
+                        }
 
                         // raise mouse wheel scrolled
                         if (state.MouseWheelScroll.IsChanged)
                         {
                             if (verbose)
-                                this.Monitor.Log($"Events: mouse wheel scrolled to {state.MouseWheelScroll.New}.");
+                                this.Monitor.Log(
+                                    $"Events: mouse wheel scrolled to {state.MouseWheelScroll.New}."
+                                );
 
                             if (events.MouseWheelScrolled.HasListeners)
-                                events.MouseWheelScrolled.Raise(new MouseWheelScrolledEventArgs(cursor, state.MouseWheelScroll.Old, state.MouseWheelScroll.New));
+                                events.MouseWheelScrolled.Raise(
+                                    new MouseWheelScrolledEventArgs(
+                                        cursor,
+                                        state.MouseWheelScroll.Old,
+                                        state.MouseWheelScroll.New
+                                    )
+                                );
                         }
 
                         // raise input button events
                         if (inputState.ButtonStates.Count > 0)
                         {
                             if (events.ButtonsChanged.HasListeners)
-                                events.ButtonsChanged.Raise(new ButtonsChangedEventArgs(cursor, inputState));
+                                events.ButtonsChanged.Raise(
+                                    new ButtonsChangedEventArgs(cursor, inputState)
+                                );
 
                             bool raisePressed = events.ButtonPressed.HasListeners;
                             bool raiseReleased = events.ButtonReleased.HasListeners;
@@ -940,24 +1633,44 @@ internal class SCore : IDisposable
 
                             if (logInput || raisePressed || raiseReleased)
                             {
-                                foreach ((SButton button, SButtonState status) in inputState.ButtonStates)
+                                foreach (
+                                    (SButton button, SButtonState status) in inputState.ButtonStates
+                                )
                                 {
                                     switch (status)
                                     {
                                         case SButtonState.Pressed:
                                             if (logInput)
-                                                this.Monitor.Log($"Events: button {button} pressed.", Monitor.ContextLogLevel);
+                                                this.Monitor.Log(
+                                                    $"Events: button {button} pressed.",
+                                                    Monitor.ContextLogLevel
+                                                );
 
                                             if (raisePressed)
-                                                events.ButtonPressed.Raise(new ButtonPressedEventArgs(button, cursor, inputState));
+                                                events.ButtonPressed.Raise(
+                                                    new ButtonPressedEventArgs(
+                                                        button,
+                                                        cursor,
+                                                        inputState
+                                                    )
+                                                );
                                             break;
 
                                         case SButtonState.Released:
                                             if (logInput)
-                                                this.Monitor.Log($"Events: button {button} released.", Monitor.ContextLogLevel);
+                                                this.Monitor.Log(
+                                                    $"Events: button {button} released.",
+                                                    Monitor.ContextLogLevel
+                                                );
 
                                             if (raiseReleased)
-                                                events.ButtonReleased.Raise(new ButtonReleasedEventArgs(button, cursor, inputState));
+                                                events.ButtonReleased.Raise(
+                                                    new ButtonReleasedEventArgs(
+                                                        button,
+                                                        cursor,
+                                                        inputState
+                                                    )
+                                                );
                                             break;
                                     }
                                 }
@@ -975,11 +1688,16 @@ internal class SCore : IDisposable
                     IClickableMenu? now = state.ActiveMenu.New;
 
                     if (verbose || Monitor.ForceLogContext)
-                        this.Monitor.Log($"Context: menu changed from {was?.GetType().FullName ?? "none"} to {now?.GetType().FullName ?? "none"}.", Monitor.ContextLogLevel);
+                        this.Monitor.Log(
+                            $"Context: menu changed from {was?.GetType().FullName ?? "none"} to {now?.GetType().FullName ?? "none"}.",
+                            Monitor.ContextLogLevel
+                        );
 
                     // raise menu events
                     if (events.MenuChanged.HasListeners)
-                        events.MenuChanged.Raise(new MenuChangedEventArgs(was, now));
+                        events.MenuChanged.Raise(
+                            new MenuChangedEventArgs(was, now)
+                        );
                 }
 
                 /*********
@@ -990,20 +1708,32 @@ internal class SCore : IDisposable
                     bool raiseWorldEvents = !state.SaveId.IsChanged; // don't report changes from unloaded => loaded
 
                     // location list changes
-                    if (state.Locations.LocationList.IsChanged && (events.LocationListChanged.HasListeners || verbose))
+                    if (
+                        state.Locations.LocationList.IsChanged
+                        && (events.LocationListChanged.HasListeners || verbose)
+                    )
                     {
                         var added = state.Locations.LocationList.Added.ToArray();
                         var removed = state.Locations.LocationList.Removed.ToArray();
 
                         if (verbose)
                         {
-                            string addedText = added.Any() ? string.Join(", ", added.Select(p => p.Name)) : "none";
-                            string removedText = removed.Any() ? string.Join(", ", removed.Select(p => p.Name)) : "none";
-                            this.Monitor.Log($"Context: location list changed (added {addedText}; removed {removedText}).", Monitor.ContextLogLevel);
+                            string addedText = added.Any()
+                                ? string.Join(", ", added.Select(p => p.Name))
+                                : "none";
+                            string removedText = removed.Any()
+                                ? string.Join(", ", removed.Select(p => p.Name))
+                                : "none";
+                            this.Monitor.Log(
+                                $"Context: location list changed (added {addedText}; removed {removedText}).",
+                                Monitor.ContextLogLevel
+                            );
                         }
 
                         if (events.LocationListChanged.HasListeners)
-                            events.LocationListChanged.Raise(new LocationListChangedEventArgs(added, removed));
+                            events.LocationListChanged.Raise(
+                                new LocationListChangedEventArgs(added, removed)
+                            );
                     }
 
                     // raise location contents changed
@@ -1014,39 +1744,103 @@ internal class SCore : IDisposable
                             GameLocation location = locState.Location;
 
                             // buildings changed
-                            if (locState.Buildings.IsChanged && events.BuildingListChanged.HasListeners)
-                                events.BuildingListChanged.Raise(new BuildingListChangedEventArgs(location, locState.Buildings.Added, locState.Buildings.Removed));
+                            if (
+                                locState.Buildings.IsChanged
+                                && events.BuildingListChanged.HasListeners
+                            )
+                                events.BuildingListChanged.Raise(
+                                    new BuildingListChangedEventArgs(
+                                        location,
+                                        locState.Buildings.Added,
+                                        locState.Buildings.Removed
+                                    )
+                                );
 
                             // debris changed
                             if (locState.Debris.IsChanged && events.DebrisListChanged.HasListeners)
-                                events.DebrisListChanged.Raise(new DebrisListChangedEventArgs(location, locState.Debris.Added, locState.Debris.Removed));
+                                events.DebrisListChanged.Raise(
+                                    new DebrisListChangedEventArgs(
+                                        location,
+                                        locState.Debris.Added,
+                                        locState.Debris.Removed
+                                    )
+                                );
 
                             // large terrain features changed
-                            if (locState.LargeTerrainFeatures.IsChanged && events.LargeTerrainFeatureListChanged.HasListeners)
-                                events.LargeTerrainFeatureListChanged.Raise(new LargeTerrainFeatureListChangedEventArgs(location, locState.LargeTerrainFeatures.Added, locState.LargeTerrainFeatures.Removed));
+                            if (
+                                locState.LargeTerrainFeatures.IsChanged
+                                && events.LargeTerrainFeatureListChanged.HasListeners
+                            )
+                                events.LargeTerrainFeatureListChanged.Raise(
+                                    new LargeTerrainFeatureListChangedEventArgs(
+                                        location,
+                                        locState.LargeTerrainFeatures.Added,
+                                        locState.LargeTerrainFeatures.Removed
+                                    )
+                                );
 
                             // NPCs changed
                             if (locState.Npcs.IsChanged && events.NpcListChanged.HasListeners)
-                                events.NpcListChanged.Raise(new NpcListChangedEventArgs(location, locState.Npcs.Added, locState.Npcs.Removed));
+                                events.NpcListChanged.Raise(
+                                    new NpcListChangedEventArgs(
+                                        location,
+                                        locState.Npcs.Added,
+                                        locState.Npcs.Removed
+                                    )
+                                );
 
                             // objects changed
                             if (locState.Objects.IsChanged && events.ObjectListChanged.HasListeners)
-                                events.ObjectListChanged.Raise(new ObjectListChangedEventArgs(location, locState.Objects.Added, locState.Objects.Removed));
+                                events.ObjectListChanged.Raise(
+                                    new ObjectListChangedEventArgs(
+                                        location,
+                                        locState.Objects.Added,
+                                        locState.Objects.Removed
+                                    )
+                                );
 
                             // chest items changed
                             if (events.ChestInventoryChanged.HasListeners)
                             {
-                                foreach ((Chest chest, SnapshotItemListDiff diff) in locState.ChestItems)
-                                    events.ChestInventoryChanged.Raise(new ChestInventoryChangedEventArgs(chest, location, added: diff.Added, removed: diff.Removed, quantityChanged: diff.QuantityChanged));
+                                foreach (
+                                    (Chest chest, SnapshotItemListDiff diff) in locState.ChestItems
+                                )
+                                    events.ChestInventoryChanged.Raise(
+                                        new ChestInventoryChangedEventArgs(
+                                            chest,
+                                            location,
+                                            added: diff.Added,
+                                            removed: diff.Removed,
+                                            quantityChanged: diff.QuantityChanged
+                                        )
+                                    );
                             }
 
                             // terrain features changed
-                            if (locState.TerrainFeatures.IsChanged && events.TerrainFeatureListChanged.HasListeners)
-                                events.TerrainFeatureListChanged.Raise(new TerrainFeatureListChangedEventArgs(location, locState.TerrainFeatures.Added, locState.TerrainFeatures.Removed));
+                            if (
+                                locState.TerrainFeatures.IsChanged
+                                && events.TerrainFeatureListChanged.HasListeners
+                            )
+                                events.TerrainFeatureListChanged.Raise(
+                                    new TerrainFeatureListChangedEventArgs(
+                                        location,
+                                        locState.TerrainFeatures.Added,
+                                        locState.TerrainFeatures.Removed
+                                    )
+                                );
 
                             // furniture changed
-                            if (locState.Furniture.IsChanged && events.FurnitureListChanged.HasListeners)
-                                events.FurnitureListChanged.Raise(new FurnitureListChangedEventArgs(location, locState.Furniture.Added, locState.Furniture.Removed));
+                            if (
+                                locState.Furniture.IsChanged
+                                && events.FurnitureListChanged.HasListeners
+                            )
+                                events.FurnitureListChanged.Raise(
+                                    new FurnitureListChangedEventArgs(
+                                        location,
+                                        locState.Furniture.Added,
+                                        locState.Furniture.Removed
+                                    )
+                                );
                         }
                     }
 
@@ -1054,10 +1848,15 @@ internal class SCore : IDisposable
                     if (raiseWorldEvents && state.Time.IsChanged)
                     {
                         if (verbose)
-                            this.Monitor.Log($"Context: time changed to {state.Time.New}.", Monitor.ContextLogLevel);
+                            this.Monitor.Log(
+                                $"Context: time changed to {state.Time.New}.",
+                                Monitor.ContextLogLevel
+                            );
 
                         if (events.TimeChanged.HasListeners)
-                            events.TimeChanged.Raise(new TimeChangedEventArgs(state.Time.Old, state.Time.New));
+                            events.TimeChanged.Raise(
+                                new TimeChangedEventArgs(state.Time.Old, state.Time.New)
+                            );
                     }
 
                     // raise player events
@@ -1070,10 +1869,19 @@ internal class SCore : IDisposable
                         if (playerState.Location.IsChanged)
                         {
                             if (verbose)
-                                this.Monitor.Log($"Context: set location to {playerState.Location.New}.", Monitor.ContextLogLevel);
+                                this.Monitor.Log(
+                                    $"Context: set location to {playerState.Location.New}.",
+                                    Monitor.ContextLogLevel
+                                );
 
                             if (events.Warped.HasListeners)
-                                events.Warped.Raise(new WarpedEventArgs(player, playerState.Location.Old!, playerState.Location.New!));
+                                events.Warped.Raise(
+                                    new WarpedEventArgs(
+                                        player,
+                                        playerState.Location.Old!,
+                                        playerState.Location.New!
+                                    )
+                                );
                         }
 
                         // raise player leveled up a skill
@@ -1086,10 +1894,20 @@ internal class SCore : IDisposable
                                     continue;
 
                                 if (verbose)
-                                    this.Monitor.Log($"Events: player skill '{skill}' changed from {value.Old} to {value.New}.", Monitor.ContextLogLevel);
+                                    this.Monitor.Log(
+                                        $"Events: player skill '{skill}' changed from {value.Old} to {value.New}.",
+                                        Monitor.ContextLogLevel
+                                    );
 
                                 if (raiseLevelChanged)
-                                    events.LevelChanged.Raise(new LevelChangedEventArgs(player, skill, value.Old, value.New));
+                                    events.LevelChanged.Raise(
+                                        new LevelChangedEventArgs(
+                                            player,
+                                            skill,
+                                            value.Old,
+                                            value.New
+                                        )
+                                    );
                             }
                         }
 
@@ -1097,12 +1915,22 @@ internal class SCore : IDisposable
                         if (playerState.Inventory.IsChanged)
                         {
                             if (verbose)
-                                this.Monitor.Log("Events: player inventory changed.", Monitor.ContextLogLevel);
+                                this.Monitor.Log(
+                                    "Events: player inventory changed.",
+                                    Monitor.ContextLogLevel
+                                );
 
                             if (events.InventoryChanged.HasListeners)
                             {
                                 SnapshotItemListDiff inventory = playerState.Inventory;
-                                events.InventoryChanged.Raise(new InventoryChangedEventArgs(player, added: inventory.Added, removed: inventory.Removed, quantityChanged: inventory.QuantityChanged));
+                                events.InventoryChanged.Raise(
+                                    new InventoryChangedEventArgs(
+                                        player,
+                                        added: inventory.Added,
+                                        removed: inventory.Removed,
+                                        quantityChanged: inventory.QuantityChanged
+                                    )
+                                );
                             }
                         }
                     }
@@ -1115,13 +1943,57 @@ internal class SCore : IDisposable
                 if (instance.IsFirstTick && !Context.IsGameLaunched)
                 {
                     Context.IsGameLaunched = true;
+#if SMAPI_FOR_ANDROID
+                    SCore.GameInitializedEvent?.Set();
+                    this.InitializePerformanceFeatures();
+#endif
 
                     if (events.GameLaunched.HasListeners)
                         events.GameLaunched.Raise(new GameLaunchedEventArgs());
+
+#if SMAPI_FOR_ANDROID
+                    // Diagnostic: dump Harmony patches on SpriteBatch.Draw methods
+                    try
+                    {
+                        var spriteBatchDrawMethods = typeof(SpriteBatch).GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                            .Where(m => m.Name == "Draw" && m.GetParameters().Any(p => p.ParameterType == typeof(Texture2D)))
+                            .ToList();
+                        this.Monitor.Log($"[HARMONY-DIAG] Found {spriteBatchDrawMethods.Count} SpriteBatch.Draw(Texture2D...) overloads", StardewModdingAPI.LogLevel.Trace);
+                        foreach (var method in spriteBatchDrawMethods)
+                        {
+                            string sig = string.Join(", ", method.GetParameters().Select(p => p.ParameterType.Name));
+                            var patchInfo = HarmonyLib.Harmony.GetPatchInfo(method);
+                            if (patchInfo != null)
+                            {
+                                var prefixes = patchInfo.Prefixes?.ToList() ?? new();
+                                var postfixes = patchInfo.Postfixes?.ToList() ?? new();
+                                var transpilers = patchInfo.Transpilers?.ToList() ?? new();
+                                this.Monitor.Log($"[HARMONY-DIAG] Draw({sig}): {prefixes.Count} prefixes, {postfixes.Count} postfixes, {transpilers.Count} transpilers", StardewModdingAPI.LogLevel.Trace);
+                                foreach (var prefix in prefixes)
+                                    this.Monitor.Log($"[HARMONY-DIAG]   prefix: {prefix.owner} -> {prefix.PatchMethod.DeclaringType?.FullName}.{prefix.PatchMethod.Name}", StardewModdingAPI.LogLevel.Trace);
+                                foreach (var transpiler in transpilers)
+                                    this.Monitor.Log($"[HARMONY-DIAG]   transpiler: {transpiler.owner} -> {transpiler.PatchMethod.DeclaringType?.FullName}.{transpiler.PatchMethod.Name}", StardewModdingAPI.LogLevel.Trace);
+                            }
+                            else
+                            {
+                                this.Monitor.Log($"[HARMONY-DIAG] Draw({sig}): NO PATCHES", StardewModdingAPI.LogLevel.Warn);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        this.Monitor.Log($"[HARMONY-DIAG] Error checking patches: {ex.Message}", StardewModdingAPI.LogLevel.Error);
+                    }
+#endif
                 }
 
                 // preloaded
-                if (Context.IsSaveLoaded && Context.LoadStage != LoadStage.Loaded && Context.LoadStage != LoadStage.Ready && Game1.dayOfMonth != 0)
+                if (
+                    Context.IsSaveLoaded
+                    && Context.LoadStage != LoadStage.Loaded
+                    && Context.LoadStage != LoadStage.Ready
+                    && Game1.dayOfMonth != 0
+                )
                     this.OnLoadStageChanged(LoadStage.Loaded);
 
                 // additional languages initialized
@@ -1138,9 +2010,63 @@ internal class SCore : IDisposable
             {
                 bool isOneSecond = SCore.TicksElapsed % 60 == 0;
                 events.UnvalidatedUpdateTicking.RaiseEmpty();
-                events.UpdateTicking.RaiseEmpty();
+
+                // Capture game state snapshot for background workers (if async events enabled)
+                if (_useAsyncModEvents && _eventPipeline != null)
+                {
+                    _gameStateSnapshot.Capture();
+                    _eventPipeline.EnqueueEvent(
+                        new UpdateTickingEvent
+                        {
+                            TickNumber = (uint)SCore.TicksElapsed,
+                            GameTime = gameTime,
+                            Snapshot = _gameStateSnapshot,
+                            EnqueuedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp(),
+                        }
+                    );
+                }
+
+                // Use object pooling for update ticking events if enabled
+                if (_useEventArgsPooling)
+                {
+                    var tickingArgs = Framework.Events.EventArgsPool.UpdateTicking.Rent();
+                    try
+                    {
+                        events.UpdateTicking.Raise(tickingArgs);
+                    }
+                    finally
+                    {
+                        Framework.Events.EventArgsPool.UpdateTicking.Return(tickingArgs);
+                    }
+                }
+                else
+                {
+                    events.UpdateTicking.RaiseEmpty();
+                }
+
                 if (isOneSecond)
-                    events.OneSecondUpdateTicking.RaiseEmpty();
+                {
+                    if (_useEventArgsPooling)
+                    {
+                        var oneSecondArgs =
+                            Framework.Events.EventArgsPool.OneSecondUpdateTicking.Rent();
+                        try
+                        {
+                            events.OneSecondUpdateTicking.Raise(oneSecondArgs);
+                        }
+                        finally
+                        {
+                            Framework.Events.EventArgsPool.OneSecondUpdateTicking.Return(
+                                oneSecondArgs
+                            );
+                        }
+                    }
+                    else
+                    {
+                        events.OneSecondUpdateTicking.RaiseEmpty();
+                    }
+                }
+
                 try
                 {
                     instance.Input.ApplyOverrides(); // if mods added any new overrides since the update, process them now
@@ -1148,13 +2074,73 @@ internal class SCore : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    this.LogManager.MonitorForGame.Log($"An error occurred in the base update loop: {ex.GetLogSummary()}", LogLevel.Error);
+                    this.LogManager.MonitorForGame.Log(
+                        $"An error occurred in the base update loop: {ex.GetLogSummary()}",
+                        LogLevel.Error
+                    );
+                }
+
+                // Mark update complete for frame timing
+                StardewModdingAPI.Mobile.AndroidGameLoopManager.MarkUpdateComplete();
+
+                // Enqueue UpdateTicked event for background metrics collection
+                if (_useAsyncModEvents && _eventPipeline != null)
+                {
+                    _gameStateSnapshot.Capture(); // Capture post-update state
+                    _eventPipeline.EnqueueEvent(
+                        new UpdateTickedEvent
+                        {
+                            TickNumber = (uint)SCore.TicksElapsed,
+                            GameTime = gameTime,
+                            Snapshot = _gameStateSnapshot,
+                            EnqueuedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp(),
+                        }
+                    );
                 }
 
                 events.UnvalidatedUpdateTicked.RaiseEmpty();
-                events.UpdateTicked.RaiseEmpty();
+
+                // Use object pooling for update ticked events if enabled
+                if (_useEventArgsPooling)
+                {
+                    var tickedArgs = Framework.Events.EventArgsPool.UpdateTicked.Rent();
+                    try
+                    {
+                        events.UpdateTicked.Raise(tickedArgs);
+                    }
+                    finally
+                    {
+                        Framework.Events.EventArgsPool.UpdateTicked.Return(tickedArgs);
+                    }
+                }
+                else
+                {
+                    events.UpdateTicked.RaiseEmpty();
+                }
+
                 if (isOneSecond)
-                    events.OneSecondUpdateTicked.RaiseEmpty();
+                {
+                    if (_useEventArgsPooling)
+                    {
+                        var oneSecondTickedArgs =
+                            Framework.Events.EventArgsPool.OneSecondUpdateTicked.Rent();
+                        try
+                        {
+                            events.OneSecondUpdateTicked.Raise(oneSecondTickedArgs);
+                        }
+                        finally
+                        {
+                            Framework.Events.EventArgsPool.OneSecondUpdateTicked.Return(
+                                oneSecondTickedArgs
+                            );
+                        }
+                    }
+                    else
+                    {
+                        events.OneSecondUpdateTicked.RaiseEmpty();
+                    }
+                }
+
             }
 
             /*********
@@ -1165,13 +2151,144 @@ internal class SCore : IDisposable
         catch (Exception ex)
         {
             // log error
-            this.Monitor.Log($"An error occurred in the overridden update loop: {ex.GetLogSummary()}", LogLevel.Error);
+            this.Monitor.Log(
+                $"An error occurred in the overridden update loop: {ex.GetLogSummary()}",
+                LogLevel.Error
+            );
 
             // exit if irrecoverable
             if (!this.UpdateCrashTimer.Decrement())
-                this.ExitGameImmediately("The game crashed when updating, and SMAPI was unable to recover the game.");
+                this.ExitGameImmediately(
+                    "The game crashed when updating, and SMAPI was unable to recover the game."
+                );
         }
     }
+
+#if SMAPI_FOR_ANDROID
+    /// <summary>Initialize performance features based on AndroidPaths config.</summary>
+    private void InitializePerformanceFeatures()
+    {
+        try
+        {
+            _useAsyncModEvents = AndroidPaths.UseAsyncModEvents;
+            _useEventArgsPooling = AndroidPaths.UseEventArgsPooling;
+            _performanceLogging = AndroidPaths.PerformanceLogging;
+
+            if (_useAsyncModEvents)
+            {
+                int workerCount = EventPipeline.CalculateOptimalWorkerCount(
+                    AndroidPaths.ModEventThreads
+                );
+                _eventPipeline = new EventPipeline(
+                    processEvent: ProcessEventOnWorker,
+                    configuredWorkerCount: AndroidPaths.ModEventThreads
+                );
+
+                this.Monitor.Log(
+                    $"Async event pipeline enabled with {workerCount} workers "
+                        + $"(device has {EventPipeline.DeviceCoreCount} cores)",
+                    LogLevel.Debug
+                );
+            }
+            else
+            {
+                this.Monitor.Log("Async event pipeline disabled by config", LogLevel.Debug);
+            }
+
+            if (_useEventArgsPooling)
+                this.Monitor.Log("Object pooling enabled", LogLevel.Debug);
+
+            if (_performanceLogging)
+            {
+                AndroidGameLoopManager.EnablePerformanceLogging(this.Monitor);
+                this.Monitor.Log(
+                    "Performance metrics logging enabled (every 60 seconds)",
+                    LogLevel.Debug
+                );
+            }
+
+            // Apply Harmony performance patches (sprite optimization, parallel audio)
+            AndroidPatcher.ApplyPerformancePatches(
+                useOptimizedSpriteUpdates: AndroidPaths.UseOptimizedSpriteUpdates,
+                useOptimizedAnimalUpdates: AndroidPaths.UseOptimizedAnimalUpdates,
+                useOptimizedDelayedActions: AndroidPaths.UseOptimizedDelayedActions,
+                useOptimizedWeatherDrawing: AndroidPaths.UseOptimizedWeatherDrawing
+            );
+        }
+        catch (Exception ex)
+        {
+            this.Monitor.Log(
+                $"Error initializing performance features: {ex.Message}",
+                LogLevel.Warn
+            );
+            // Defaults: all features disabled for safety
+            _useAsyncModEvents = false;
+            _useEventArgsPooling = false;
+            _performanceLogging = false;
+        }
+    }
+
+    /// <summary>Process a game event on a worker thread.</summary>
+    /// <param name="evt">The event to process.</param>
+    private void ProcessEventOnWorker(GameEvent evt)
+    {
+        // Measure queue latency
+        long now = System.Diagnostics.Stopwatch.GetTimestamp();
+        double queueLatencyMs =
+            (now - evt.EnqueuedTimestamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+
+        // Start processing timer
+        var processingStart = System.Diagnostics.Stopwatch.GetTimestamp();
+        string eventType = "";
+
+        // Process the event based on type
+        // Note: We intentionally do NOT raise actual mod events here because most mods
+        // aren't thread-safe. Instead, we use workers for metrics collection and
+        // pre-computing safe, read-only analysis using the snapshot.
+        switch (evt)
+        {
+            case UpdateTickingEvent e:
+                eventType = "UpdateTicking";
+                // Safe read-only operations using the snapshot
+                // Example: Check if we need to trigger any time-based actions
+                if (e.Snapshot.IsWorldReady)
+                {
+                    // Pre-compute any analysis that could help the main thread
+                    // This runs on worker thread with snapshot data
+                    _ = e.Snapshot.TimeOfDay; // Access snapshot data safely
+                }
+                break;
+
+            case UpdateTickedEvent e:
+                eventType = "UpdateTicked";
+                // Safe read-only operations using the snapshot
+                if (e.Snapshot.IsWorldReady)
+                {
+                    _ = e.Snapshot.CurrentLocationName; // Access snapshot data safely
+                }
+                break;
+        }
+
+        // Measure processing time
+        double processingTimeMs =
+            (System.Diagnostics.Stopwatch.GetTimestamp() - processingStart)
+            * 1000.0
+            / System.Diagnostics.Stopwatch.Frequency;
+
+        // Queue metrics to be recorded on main thread
+        _eventPipeline?.EnqueueResult(
+            new MetricsResult
+            {
+                ModId = "SMAPI",
+                EventType = eventType,
+                QueueLatencyMs = queueLatencyMs,
+                ProcessingTimeMs = processingTimeMs,
+                TickNumber = evt.TickNumber,
+            }
+        );
+    }
+
+#endif
 
     /// <summary>Handle the game changing locale.</summary>
     private void OnLocaleChanged()
@@ -1240,8 +2357,11 @@ internal class SCore : IDisposable
             case LoadStage.Loaded:
                 // override chat box
                 Game1.onScreenMenus.Remove(Game1.chatBox);
-                Game1.onScreenMenus.Add(Game1.chatBox = new SChatBox(this.LogManager.MonitorForGame));
+                Game1.onScreenMenus.Add(
+                    Game1.chatBox = new SChatBox(this.LogManager.MonitorForGame)
+                );
                 break;
+
         }
 
         // raise events
@@ -1256,7 +2376,11 @@ internal class SCore : IDisposable
     /// <param name="step">The render step being started.</param>
     /// <param name="spriteBatch">The sprite batch being drawn (which might not always be open yet).</param>
     /// <param name="renderTarget">The render target being drawn.</param>
-    private void OnRenderingStep(RenderSteps step, SpriteBatch spriteBatch, RenderTarget2D? renderTarget)
+    private void OnRenderingStep(
+        RenderSteps step,
+        SpriteBatch spriteBatch,
+        RenderTarget2D? renderTarget
+    )
     {
         EventManager events = this.EventManager;
 
@@ -1285,14 +2409,23 @@ internal class SCore : IDisposable
 
         // raise generic rendering stage event
         if (events.RenderingStep.HasListeners)
-            this.RaiseRenderEvent(events.RenderingStep, spriteBatch, renderTarget, RenderingStepEventArgs.Instance(step));
+            this.RaiseRenderEvent(
+                events.RenderingStep,
+                spriteBatch,
+                renderTarget,
+                RenderingStepEventArgs.Instance(step)
+            );
     }
 
     /// <summary>Raised when the game finishes a render step in the draw loop.</summary>
     /// <param name="step">The render step being started.</param>
     /// <param name="spriteBatch">The sprite batch being drawn (which might not always be open yet).</param>
     /// <param name="renderTarget">The render target being drawn.</param>
-    private void OnRenderedStep(RenderSteps step, SpriteBatch spriteBatch, RenderTarget2D? renderTarget)
+    private void OnRenderedStep(
+        RenderSteps step,
+        SpriteBatch spriteBatch,
+        RenderTarget2D? renderTarget
+    )
     {
         var events = this.EventManager;
 
@@ -1313,7 +2446,12 @@ internal class SCore : IDisposable
 
         // raise generic rendering stage event
         if (events.RenderedStep.HasListeners)
-            this.RaiseRenderEvent(events.RenderedStep, spriteBatch, renderTarget, RenderedStepEventArgs.Instance(step));
+            this.RaiseRenderEvent(
+                events.RenderedStep,
+                spriteBatch,
+                renderTarget,
+                RenderedStepEventArgs.Instance(step)
+            );
     }
 
     /// <summary>Raised after an instance finishes a draw loop.</summary>
@@ -1321,6 +2459,9 @@ internal class SCore : IDisposable
     private void OnRendered(RenderTarget2D renderTarget)
     {
         this.RaiseRenderEvent(this.EventManager.Rendered, Game1.spriteBatch, renderTarget);
+
+        // Mark render complete for frame timing metrics
+        AndroidGameLoopManager.MarkRenderComplete();
     }
 
     /// <summary>Raise a rendering/rendered event, temporarily opening the given sprite batch if needed to let mods draw to it.</summary>
@@ -1328,7 +2469,11 @@ internal class SCore : IDisposable
     /// <param name="event">The event to raise.</param>
     /// <param name="spriteBatch">The sprite batch being drawn to the screen.</param>
     /// <param name="renderTarget">The render target being drawn to the screen.</param>
-    private void RaiseRenderEvent<TEventArgs>(ManagedEvent<TEventArgs> @event, SpriteBatch spriteBatch, RenderTarget2D? renderTarget)
+    private void RaiseRenderEvent<TEventArgs>(
+        ManagedEvent<TEventArgs> @event,
+        SpriteBatch spriteBatch,
+        RenderTarget2D? renderTarget
+    )
         where TEventArgs : EventArgs, new()
     {
         this.RaiseRenderEvent(@event, spriteBatch, renderTarget, Singleton<TEventArgs>.Instance);
@@ -1340,7 +2485,12 @@ internal class SCore : IDisposable
     /// <param name="spriteBatch">The sprite batch being drawn to the screen.</param>
     /// <param name="renderTarget">The render target being drawn to the screen.</param>
     /// <param name="eventArgs">The event arguments to pass to the event.</param>
-    private void RaiseRenderEvent<TEventArgs>(ManagedEvent<TEventArgs> @event, SpriteBatch spriteBatch, RenderTarget2D? renderTarget, TEventArgs eventArgs)
+    private void RaiseRenderEvent<TEventArgs>(
+        ManagedEvent<TEventArgs> @event,
+        SpriteBatch spriteBatch,
+        RenderTarget2D? renderTarget,
+        TEventArgs eventArgs
+    )
         where TEventArgs : EventArgs
     {
         if (!@event.HasListeners)
@@ -1355,13 +2505,18 @@ internal class SCore : IDisposable
         try
         {
             if (!wasOpen)
-                Game1.spriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp);
+                Game1.spriteBatch.Begin(
+                    SpriteSortMode.Deferred,
+                    BlendState.AlphaBlend,
+                    SamplerState.PointClamp
+                );
 
             if (!hadRenderTarget)
             {
-                renderTarget ??= Game1.game1.uiScreen?.IsDisposed != true
-                    ? Game1.game1.uiScreen
-                    : Game1.nonUIRenderTarget;
+                renderTarget ??=
+                    Game1.game1.uiScreen?.IsDisposed != true
+                        ? Game1.game1.uiScreen
+                        : Game1.nonUIRenderTarget;
 
                 if (renderTarget != null)
                     Game1.SetRenderTarget(renderTarget);
@@ -1393,7 +2548,9 @@ internal class SCore : IDisposable
     private void OnAssetLoaded(IContentManager contentManager, IAssetName assetName)
     {
         if (this.EventManager.AssetReady.HasListeners)
-            this.EventManager.AssetReady.Raise(new AssetReadyEventArgs(assetName, assetName.GetBaseAssetName()));
+            this.EventManager.AssetReady.Raise(
+                new AssetReadyEventArgs(assetName, assetName.GetBaseAssetName())
+            );
     }
 
     /// <summary>A callback invoked after assets have been invalidated from the content cache.</summary>
@@ -1401,7 +2558,12 @@ internal class SCore : IDisposable
     private void OnAssetsInvalidated(IList<IAssetName> assetNames)
     {
         if (this.EventManager.AssetsInvalidated.HasListeners)
-            this.EventManager.AssetsInvalidated.Raise(new AssetsInvalidatedEventArgs(assetNames, assetNames.Select(p => p.GetBaseAssetName())));
+            this.EventManager.AssetsInvalidated.Raise(
+                new AssetsInvalidatedEventArgs(
+                    assetNames,
+                    assetNames.Select(p => p.GetBaseAssetName())
+                )
+            );
     }
 
     /// <summary>Reload the SMAPI settings.</summary>
@@ -1409,24 +2571,42 @@ internal class SCore : IDisposable
     [MemberNotNull(nameof(SCore.Settings))]
     private void ReloadSettings()
     {
-        JsonSerializerSettings deserializerSettings = new() { NullValueHandling = NullValueHandling.Ignore };
+        JsonSerializerSettings deserializerSettings = new()
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+        };
 
         // load default settings
-        SConfig? settings = JsonConvert.DeserializeObject<SConfig>(File.ReadAllText(Constants.ApiConfigPath));
+        SConfig? settings = JsonConvert.DeserializeObject<SConfig>(
+            File.ReadAllText(Constants.ApiConfigPath)
+        );
         if (settings is null)
         {
             if (this.Settings is null)
-                throw new InvalidOperationException("The 'smapi-internal/config.json' file is missing or invalid. You can reinstall SMAPI to fix this.");
+                throw new InvalidOperationException(
+                    "The 'smapi-internal/config.json' file is missing or invalid. You can reinstall SMAPI to fix this."
+                );
 
-            this.Monitor.Log("Could not load updated settings from the 'smapi-internal/config.json' file. Keeping the settings as-is.", LogLevel.Warn);
+            this.Monitor.Log(
+                "Could not load updated settings from the 'smapi-internal/config.json' file. Keeping the settings as-is.",
+                LogLevel.Warn
+            );
             return;
         }
 
         // load user settings
         if (File.Exists(Constants.ApiUserConfigPath))
-            JsonConvert.PopulateObject(File.ReadAllText(Constants.ApiUserConfigPath), settings, deserializerSettings);
+            JsonConvert.PopulateObject(
+                File.ReadAllText(Constants.ApiUserConfigPath),
+                settings,
+                deserializerSettings
+            );
         if (File.Exists(Constants.ApiModGroupConfigPath))
-            JsonConvert.PopulateObject(File.ReadAllText(Constants.ApiModGroupConfigPath), settings, deserializerSettings);
+            JsonConvert.PopulateObject(
+                File.ReadAllText(Constants.ApiModGroupConfigPath),
+                settings,
+                deserializerSettings
+            );
         if (this.OverrideDeveloperMode.HasValue)
             settings.OverrideDeveloperMode(this.OverrideDeveloperMode.Value);
 
@@ -1435,7 +2615,12 @@ internal class SCore : IDisposable
 
         // update log manager if already initialized
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-        this.LogManager?.ApplySettings(settings.ConsoleColorScheme, settings.ConsoleColorSchemes, settings.VerboseLogging, this.OverrideDeveloperMode ?? settings.DeveloperMode);
+        this.LogManager?.ApplySettings(
+            settings.ConsoleColorScheme,
+            settings.ConsoleColorSchemes,
+            settings.VerboseLogging,
+            this.OverrideDeveloperMode ?? settings.DeveloperMode
+        );
     }
 
     /// <summary>Get the load/edit operations to apply to an asset by querying registered <see cref="IContentEvents.AssetRequested"/> event handlers.</summary>
@@ -1479,14 +2664,27 @@ internal class SCore : IDisposable
         IModMetadata? onBehalfOf = this.ModRegistry.Get(id);
         if (onBehalfOf == null)
         {
-            mod.LogAsModOnce($"{errorPrefix}: there's no content pack installed with that ID.", LogLevel.Warn);
+            mod.LogAsModOnce(
+                $"{errorPrefix}: there's no content pack installed with that ID.",
+                LogLevel.Warn
+            );
             return null;
         }
 
         // make sure it's a content pack for the requesting mod
-        if (!onBehalfOf.IsContentPack || !string.Equals(onBehalfOf.Manifest.ContentPackFor?.UniqueID, mod.Manifest.UniqueID, StringComparison.OrdinalIgnoreCase))
+        if (
+            !onBehalfOf.IsContentPack
+            || !string.Equals(
+                onBehalfOf.Manifest.ContentPackFor?.UniqueID,
+                mod.Manifest.UniqueID,
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
         {
-            mod.LogAsModOnce($"{errorPrefix}: that isn't a content pack for this mod.", LogLevel.Warn);
+            mod.LogAsModOnce(
+                $"{errorPrefix}: that isn't a content pack for this mod.",
+                LogLevel.Warn
+            );
             return null;
         }
 
@@ -1499,6 +2697,20 @@ internal class SCore : IDisposable
         // perform cleanup
         this.Multiplayer.CleanupOnMultiplayerExit();
         this.ContentCore.OnReturningToTitleScreen();
+
+#if SMAPI_FOR_ANDROID
+        // Clear mod-specific caches
+        Mobile.Patches.PortraiturePatch.ClearCache();
+
+        // Force full GC to reclaim large texture/data arrays on Mono
+        // (Mono's GC is less aggressive about compacting LOH than CoreCLR)
+        long before = GC.GetTotalMemory(false);
+        GC.Collect(2, GCCollectionMode.Forced);
+        GC.WaitForPendingFinalizers();
+        GC.Collect(2, GCCollectionMode.Forced);
+        long after = GC.GetTotalMemory(false);
+        this.Monitor.Log($"Title cleanup: GC recovered {(before - after) / 1048576}MB (before={before / 1048576}MB, after={after / 1048576}MB)");
+#endif
     }
 
     /// <summary>Raised before the game exits.</summary>
@@ -1515,7 +2727,10 @@ internal class SCore : IDisposable
         if (this.EventManager.ModMessageReceived.HasListeners)
         {
             // get mod IDs to notify
-            HashSet<string> modIds = new(message.ToModIds ?? this.ModRegistry.GetAllIds(), StringComparer.OrdinalIgnoreCase);
+            HashSet<string> modIds = new(
+                message.ToModIds ?? this.ModRegistry.GetAllIds(),
+                StringComparer.OrdinalIgnoreCase
+            );
             if (message.FromPlayerId == Game1.player?.UniqueMultiplayerID)
                 modIds.Remove(message.FromModId); // don't send a broadcast back to the sender
 
@@ -1537,7 +2752,10 @@ internal class SCore : IDisposable
     /// <summary>Constructor a content manager to read game content files.</summary>
     /// <param name="serviceProvider">The service provider to use to locate services.</param>
     /// <param name="rootDirectory">The root directory to search for content.</param>
-    private LocalizedContentManager CreateContentManager(IServiceProvider serviceProvider, string rootDirectory)
+    private LocalizedContentManager CreateContentManager(
+        IServiceProvider serviceProvider,
+        string rootDirectory
+    )
     {
         // Game1._temporaryContent initializing from SGame constructor
         // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract -- this is the method that initializes it
@@ -1579,14 +2797,18 @@ internal class SCore : IDisposable
     private SGame GetCurrentGameInstance()
     {
         return Game1.game1 as SGame
-               ?? throw new InvalidOperationException("The current game instance wasn't created by SMAPI.");
+            ?? throw new InvalidOperationException(
+                "The current game instance wasn't created by SMAPI."
+            );
     }
 
     /// <summary>Set the titles for the game and console windows.</summary>
     private void UpdateWindowTitles()
     {
-        string consoleTitle = $"SMAPI {Constants.ApiVersion} - running Stardew Valley {Constants.GameVersion}";
-        string gameTitle = $"Stardew Valley {Constants.GameVersion} - running SMAPI {Constants.ApiVersion}";
+        string consoleTitle =
+            $"SMAPI {Constants.ApiVersion} - running Stardew Valley {Constants.GameVersion}";
+        string gameTitle =
+            $"Stardew Valley {Constants.GameVersion} - running SMAPI {Constants.ApiVersion}";
 
         string suffix = "";
         if (this.ModRegistry.AreAllModsLoaded)
@@ -1606,7 +2828,11 @@ internal class SCore : IDisposable
 
         try
         {
-            string[] registryKeys = [@"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall", @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall"];
+            string[] registryKeys =
+            [
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            ];
 
             string[] installedNames = registryKeys
                 .SelectMany(registryKey =>
@@ -1615,35 +2841,48 @@ internal class SCore : IDisposable
                     if (key == null)
                         return Array.Empty<string>();
 
-                    return key
-                        .GetSubKeyNames()
+                    return key.GetSubKeyNames()
                         .Select(subkeyName =>
                         {
                             using RegistryKey? subkey = key.OpenSubKey(subkeyName);
                             string? displayName = (string?)subkey?.GetValue("DisplayName");
                             string? displayVersion = (string?)subkey?.GetValue("DisplayVersion");
 
-                            if (displayName != null && displayVersion != null && displayName.EndsWith($" {displayVersion}"))
-                                displayName = displayName.Substring(0, displayName.Length - displayVersion.Length - 1);
+                            if (
+                                displayName != null
+                                && displayVersion != null
+                                && displayName.EndsWith($" {displayVersion}")
+                            )
+                                displayName = displayName.Substring(
+                                    0,
+                                    displayName.Length - displayVersion.Length - 1
+                                );
 
                             return displayName;
                         })
                         .ToArray();
                 })
-                .Where(name => name != null && (name.Contains("MSI Afterburner") || name.Contains("RivaTuner")))
+                .Where(name =>
+                    name != null && (name.Contains("MSI Afterburner") || name.Contains("RivaTuner"))
+                )
                 .Select(name => name!)
                 .Distinct()
                 .OrderBy(name => name)
                 .ToArray();
 
             if (installedNames.Any())
-                this.Monitor.Log($"Found {string.Join(" and ", installedNames)} installed, which may conflict with SMAPI. If you experience errors or crashes, try disabling that software or adding an exception for SMAPI and Stardew Valley.", LogLevel.Warn);
+                this.Monitor.Log(
+                    $"Found {string.Join(" and ", installedNames)} installed, which may conflict with SMAPI. If you experience errors or crashes, try disabling that software or adding an exception for SMAPI and Stardew Valley.",
+                    LogLevel.Warn
+                );
             else
                 this.Monitor.Log("   None found!");
         }
         catch (Exception ex)
         {
-            this.Monitor.Log($"Failed when checking for conflicting software. Technical details:\n{ex}");
+            this.Monitor.Log(
+                $"Failed when checking for conflicting software. Technical details:\n{ex}"
+            );
         }
 #endif
     }
@@ -1674,7 +2913,14 @@ internal class SCore : IDisposable
                     {
                         // fetch update check
                         IDictionary<string, ModEntryModel> response = await client.GetModInfoAsync(
-                            mods: [new ModSearchEntryModel("Pathoschild.SMAPI", Constants.ApiVersion, [$"GitHub:{this.Settings.GitHubProjectName}"])],
+                            mods:
+                            [
+                                new ModSearchEntryModel(
+                                    "Pathoschild.SMAPI",
+                                    Constants.ApiVersion,
+                                    [$"GitHub:{this.Settings.GitHubProjectName}"]
+                                ),
+                            ],
                             apiVersion: Constants.ApiVersion,
                             gameVersion: Constants.GameVersion,
                             platform: Constants.Platform
@@ -1685,29 +2931,42 @@ internal class SCore : IDisposable
 
                         // log message
                         if (updateFound != null)
-                            this.Monitor.Log($"You can update SMAPI to {updateFound}: {updateUrl}", LogLevel.Alert);
+                            this.Monitor.Log(
+                                $"You can update SMAPI to {updateFound}: {updateUrl}",
+                                LogLevel.Alert
+                            );
                         else
                             this.Monitor.Log("   SMAPI okay.");
 
                         // show errors
                         if (updateInfo.Errors.Any())
                         {
-                            this.Monitor.Log("Couldn't check for a new version of SMAPI. This won't affect your game, but you may not be notified of new versions if this keeps happening.", LogLevel.Warn);
+                            this.Monitor.Log(
+                                "Couldn't check for a new version of SMAPI. This won't affect your game, but you may not be notified of new versions if this keeps happening.",
+                                LogLevel.Warn
+                            );
                             this.Monitor.Log($"Error: {string.Join("\n", updateInfo.Errors)}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        this.Monitor.Log("Couldn't check for a new version of SMAPI. This won't affect your game, but you won't be notified of new versions if this keeps happening.", LogLevel.Warn);
-                        this.Monitor.Log(ex is WebException && ex.InnerException == null
-                            ? $"Error: {ex.Message}"
-                            : $"Error: {ex.GetLogSummary()}"
+                        this.Monitor.Log(
+                            "Couldn't check for a new version of SMAPI. This won't affect your game, but you won't be notified of new versions if this keeps happening.",
+                            LogLevel.Warn
+                        );
+                        this.Monitor.Log(
+                            ex is WebException && ex.InnerException == null
+                                ? $"Error: {ex.Message}"
+                                : $"Error: {ex.GetLogSummary()}"
                         );
                     }
 
                     // show update message on next launch
                     if (updateFound != null)
-                        this.LogManager.WriteUpdateMarker(updateFound.ToString(), updateUrl ?? Constants.HomePageUrl);
+                        this.LogManager.WriteUpdateMarker(
+                            updateFound.ToString(),
+                            updateUrl ?? Constants.HomePageUrl
+                        );
                 }
 
                 // check mod versions
@@ -1721,19 +2980,32 @@ internal class SCore : IDisposable
                         List<ModSearchEntryModel> searchMods = [];
                         foreach (IModMetadata mod in mods)
                         {
-                            if (!mod.HasId() || suppressUpdateChecks.Contains(mod.Manifest.UniqueID))
+                            if (
+                                !mod.HasId() || suppressUpdateChecks.Contains(mod.Manifest.UniqueID)
+                            )
                                 continue;
 
-                            string[] updateKeys = mod
-                                .GetUpdateKeys(validOnly: true)
+                            string[] updateKeys = mod.GetUpdateKeys(validOnly: true)
                                 .Select(p => p.ToString())
                                 .ToArray();
-                            searchMods.Add(new ModSearchEntryModel(mod.Manifest.UniqueID, mod.Manifest.Version, updateKeys.ToArray(), isBroken: mod.Status == ModMetadataStatus.Failed));
+                            searchMods.Add(
+                                new ModSearchEntryModel(
+                                    mod.Manifest.UniqueID,
+                                    mod.Manifest.Version,
+                                    updateKeys.ToArray(),
+                                    isBroken: mod.Status == ModMetadataStatus.Failed
+                                )
+                            );
                         }
 
                         // fetch results
                         this.Monitor.Log($"   Checking for updates to {searchMods.Count} mods...");
-                        IDictionary<string, ModEntryModel> results = await client.GetModInfoAsync(searchMods.ToArray(), apiVersion: Constants.ApiVersion, gameVersion: Constants.GameVersion, platform: Constants.Platform);
+                        IDictionary<string, ModEntryModel> results = await client.GetModInfoAsync(
+                            searchMods.ToArray(),
+                            apiVersion: Constants.ApiVersion,
+                            gameVersion: Constants.GameVersion,
+                            platform: Constants.Platform
+                        );
 
                         // extract update alerts & errors
                         var updates = new List<Tuple<IModMetadata, ISemanticVersion, string>>();
@@ -1741,55 +3013,89 @@ internal class SCore : IDisposable
                         foreach (IModMetadata mod in mods.OrderBy(p => p.DisplayName))
                         {
                             // link to update-check data
-                            if (!mod.HasId() || !results.TryGetValue(mod.Manifest.UniqueID, out ModEntryModel? result))
+                            if (
+                                !mod.HasId()
+                                || !results.TryGetValue(
+                                    mod.Manifest.UniqueID,
+                                    out ModEntryModel? result
+                                )
+                            )
                                 continue;
                             mod.SetUpdateData(result);
 
                             // handle errors
                             if (result.Errors.Any())
                             {
-                                errors.AppendLine(result.Errors.Length == 1
-                                    ? $"   {mod.DisplayName}: {result.Errors[0]}"
-                                    : $"   {mod.DisplayName}:\n      - {string.Join("\n      - ", result.Errors)}"
+                                errors.AppendLine(
+                                    result.Errors.Length == 1
+                                        ? $"   {mod.DisplayName}: {result.Errors[0]}"
+                                        : $"   {mod.DisplayName}:\n      - {string.Join("\n      - ", result.Errors)}"
                                 );
                             }
 
                             // handle update
                             if (result.SuggestedUpdate != null)
-                                updates.Add(Tuple.Create(mod, result.SuggestedUpdate.Version, result.SuggestedUpdate.Url));
+                                updates.Add(
+                                    Tuple.Create(
+                                        mod,
+                                        result.SuggestedUpdate.Version,
+                                        result.SuggestedUpdate.Url
+                                    )
+                                );
                         }
 
                         // show update errors
                         if (errors.Length != 0)
-                            this.Monitor.Log("Got update-check errors for some mods:\n" + errors.ToString().TrimEnd());
+                            this.Monitor.Log(
+                                "Got update-check errors for some mods:\n"
+                                    + errors.ToString().TrimEnd()
+                            );
 
                         // show update alerts
                         if (updates.Any())
                         {
                             this.Monitor.Newline();
-                            this.Monitor.Log($"You can update {updates.Count} mod{(updates.Count != 1 ? "s" : "")}:", LogLevel.Alert);
-                            foreach ((IModMetadata mod, ISemanticVersion newVersion, string newUrl) in updates)
-                                this.Monitor.Log($"   {mod.DisplayName} {newVersion}: {newUrl} (you have {mod.Manifest.Version})", LogLevel.Alert);
+                            this.Monitor.Log(
+                                $"You can update {updates.Count} mod{(updates.Count != 1 ? "s" : "")}:",
+                                LogLevel.Alert
+                            );
+                            foreach (
+                                (
+                                    IModMetadata mod,
+                                    ISemanticVersion newVersion,
+                                    string newUrl
+                                ) in updates
+                            )
+                                this.Monitor.Log(
+                                    $"   {mod.DisplayName} {newVersion}: {newUrl} (you have {mod.Manifest.Version})",
+                                    LogLevel.Alert
+                                );
                         }
                         else
                             this.Monitor.Log("   All mods up to date.");
                     }
                     catch (Exception ex)
                     {
-                        this.Monitor.Log("Couldn't check for new mod versions. This won't affect your game, but you won't be notified of mod updates if this keeps happening.", LogLevel.Warn);
-                        this.Monitor.Log(ex is WebException && ex.InnerException == null
-                            ? ex.Message
-                            : ex.ToString()
+                        this.Monitor.Log(
+                            "Couldn't check for new mod versions. This won't affect your game, but you won't be notified of mod updates if this keeps happening.",
+                            LogLevel.Warn
+                        );
+                        this.Monitor.Log(
+                            ex is WebException && ex.InnerException == null
+                                ? ex.Message
+                                : ex.ToString()
                         );
                     }
                 }
             }
             catch (Exception ex)
             {
-                this.Monitor.Log("Couldn't check for updates. This won't affect your game, but you won't be notified of SMAPI or mod updates if this keeps happening.", LogLevel.Warn);
-                this.Monitor.Log(ex is WebException && ex.InnerException == null
-                    ? ex.Message
-                    : ex.ToString()
+                this.Monitor.Log(
+                    "Couldn't check for updates. This won't affect your game, but you won't be notified of SMAPI or mod updates if this keeps happening.",
+                    LogLevel.Warn
+                );
+                this.Monitor.Log(
+                    ex is WebException && ex.InnerException == null ? ex.Message : ex.ToString()
                 );
             }
         }
@@ -1802,10 +3108,15 @@ internal class SCore : IDisposable
                 using IClient client = new FluentClient();
                 string serverHash;
                 {
-                    IResponse response = await client.SendAsync(HttpMethod.Head, this.Settings.BlacklistUrl);
+                    IResponse response = await client.SendAsync(
+                        HttpMethod.Head,
+                        this.Settings.BlacklistUrl
+                    );
                     byte[] hashBytes =
                         response.Message.Content.Headers.ContentMD5
-                        ?? throw new InvalidOperationException("Can't fetch Content-MD5 header from the web server.");
+                        ?? throw new InvalidOperationException(
+                            "Can't fetch Content-MD5 header from the web server."
+                        );
 
                     serverHash = FileUtilities.GetHashString(hashBytes);
                 }
@@ -1822,21 +3133,27 @@ internal class SCore : IDisposable
                 IResponse newData = await client.GetAsync(this.Settings.BlacklistUrl);
                 ModBlacklistModel? newModel = await newData.As<ModBlacklistModel?>();
                 if (newModel?.Blacklist.Length is not >= 0)
-                    throw new InvalidOperationException("Can't deserialize mod blacklist from the web server, skipping update.");
+                    throw new InvalidOperationException(
+                        "Can't deserialize mod blacklist from the web server, skipping update."
+                    );
 
                 // save new file
                 await using (Stream downloadStream = await newData.AsStream())
                 await using (FileStream stream = File.OpenWrite(Constants.ApiBlacklistFetchedPath))
                     await downloadStream.CopyToAsync(stream);
 
-                this.Monitor.Log($"   Mod blacklist updated to match the server (updated from {localHash} to {serverHash}). The changes will take effect on the next SMAPI launch.");
+                this.Monitor.Log(
+                    $"   Mod blacklist updated to match the server (updated from {localHash} to {serverHash}). The changes will take effect on the next SMAPI launch."
+                );
             }
             catch (Exception ex)
             {
-                this.Monitor.Log("Couldn't check for updates to the mod blacklist. This won't affect your game, but SMAPI may not block new malicious mods.", LogLevel.Warn);
-                this.Monitor.Log(ex is WebException && ex.InnerException == null
-                    ? ex.Message
-                    : ex.ToString()
+                this.Monitor.Log(
+                    "Couldn't check for updates to the mod blacklist. This won't affect your game, but SMAPI may not block new malicious mods.",
+                    LogLevel.Warn
+                );
+                this.Monitor.Log(
+                    ex is WebException && ex.InnerException == null ? ex.Message : ex.ToString()
                 );
             }
         }
@@ -1847,7 +3164,10 @@ internal class SCore : IDisposable
     {
         if (!this.Settings.CheckContentIntegrity)
         {
-            this.Monitor.Log("You disabled content integrity checks, so you won't be notified if a game content file is missing or corrupted.", LogLevel.Warn);
+            this.Monitor.Log(
+                "You disabled content integrity checks, so you won't be notified if a game content file is missing or corrupted.",
+                LogLevel.Warn
+            );
             return;
         }
 
@@ -1857,7 +3177,10 @@ internal class SCore : IDisposable
         FileInfo hashesFile = new(Path.Combine(contentPath, "ContentHashes.json"));
         if (!hashesFile.Exists)
         {
-            this.Monitor.Log($"The game's '{hashesFile.Name}' content file doesn't exist, so SMAPI can't check if the game's content files are valid.", LogLevel.Warn);
+            this.Monitor.Log(
+                $"The game's '{hashesFile.Name}' content file doesn't exist, so SMAPI can't check if the game's content files are valid.",
+                LogLevel.Warn
+            );
             return;
         }
 
@@ -1865,10 +3188,15 @@ internal class SCore : IDisposable
         Dictionary<string, string> hashes;
         try
         {
-            var data = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText(hashesFile.FullName));
+            var data = JsonConvert.DeserializeObject<Dictionary<string, string>>(
+                File.ReadAllText(hashesFile.FullName)
+            );
             if (data?.Count is not > 0)
             {
-                this.Monitor.Log($"The game's '{hashesFile.Name}' content file could not be loaded, so SMAPI can't check if the game's content files are valid.", LogLevel.Error);
+                this.Monitor.Log(
+                    $"The game's '{hashesFile.Name}' content file could not be loaded, so SMAPI can't check if the game's content files are valid.",
+                    LogLevel.Error
+                );
                 return;
             }
 
@@ -1876,7 +3204,10 @@ internal class SCore : IDisposable
         }
         catch (Exception ex)
         {
-            this.Monitor.Log($"The game's '{hashesFile.Name}' content file could not be loaded, so SMAPI can't check if the game's content files are valid.\nTechnical details: {ex.GetLogSummary()}", LogLevel.Error);
+            this.Monitor.Log(
+                $"The game's '{hashesFile.Name}' content file could not be loaded, so SMAPI can't check if the game's content files are valid.\nTechnical details: {ex.GetLogSummary()}",
+                LogLevel.Error
+            );
             return;
         }
 
@@ -1884,9 +3215,17 @@ internal class SCore : IDisposable
         List<string>? modifiedFiles = null;
         using (MD5 md5 = MD5.Create())
         {
-            foreach (string assetPath in Directory.GetFiles(contentPath, "*", SearchOption.AllDirectories))
+            foreach (
+                string assetPath in Directory.GetFiles(
+                    contentPath,
+                    "*",
+                    SearchOption.AllDirectories
+                )
+            )
             {
-                string relativePath = PathUtilities.NormalizeAssetName(Path.GetRelativePath(contentPath, assetPath));
+                string relativePath = PathUtilities.NormalizeAssetName(
+                    Path.GetRelativePath(contentPath, assetPath)
+                );
 
                 if (hashes.TryGetValue(relativePath, out string? expectedHash))
                 {
@@ -1916,12 +3255,15 @@ internal class SCore : IDisposable
         {
             this.Monitor.Log(
                 $"""
-                 Some of the game's content files were modified or corrupted. This may cause game crashes, errors, or other issues.
-                 See https://smapi.io/reset-content for help fixing this.
+                Some of the game's content files were modified or corrupted. This may cause game crashes, errors, or other issues.
+                See https://smapi.io/reset-content for help fixing this.
 
-                 Affected assets:
-                    - {string.Join("\n   - ", modifiedFiles.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))}
-                 """,
+                Affected assets:
+                   - {string.Join(
+                    "\n   - ",
+                    modifiedFiles.OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                )}
+                """,
                 LogLevel.Warn
             );
         }
@@ -1948,27 +3290,74 @@ internal class SCore : IDisposable
     /// <param name="jsonHelper">The JSON helper with which to read mods' JSON files.</param>
     /// <param name="contentCore">The content manager to use for mod content.</param>
     /// <param name="modDatabase">Handles access to SMAPI's internal mod metadata list.</param>
-    private void LoadMods(IModMetadata[] mods, JsonHelper jsonHelper, ContentCoordinator contentCore, ModDatabase modDatabase)
+    private void LoadMods(
+        IModMetadata[] mods,
+        JsonHelper jsonHelper,
+        ContentCoordinator contentCore,
+        ModDatabase modDatabase
+    )
     {
         this.Monitor.Log("Loading mods...", LogLevel.Debug);
 
         // load mods
         IList<IModMetadata> skippedMods = new List<IModMetadata>();
-        using (AssemblyLoader modAssemblyLoader = new(Constants.Platform, this.Monitor, this.Settings.ParanoidWarnings, this.Settings.RewriteMods, this.Settings.LogTechnicalDetailsForBrokenMods))
+        using (
+            AssemblyLoader modAssemblyLoader = new(
+                Constants.Platform,
+                this.Monitor,
+                this.Settings.ParanoidWarnings,
+                this.Settings.RewriteMods,
+                this.Settings.LogTechnicalDetailsForBrokenMods
+            )
+        )
         {
-            // init
             HashSet<string> suppressUpdateChecks = this.Settings.SuppressUpdateChecks;
             IInterfaceProxyFactory proxyFactory = new InterfaceProxyFactory();
 
-            // load mods
+#if SMAPI_FOR_ANDROID
+            int assemblyModCount = 0;
+            int contentPackCount = 0;
+#endif
             foreach (IModMetadata mod in mods)
             {
-                if (!this.TryLoadMod(mod, mods, modAssemblyLoader, proxyFactory, jsonHelper, contentCore, modDatabase, suppressUpdateChecks, out ModFailReason? failReason, out string? errorPhrase, out string? errorDetails))
+                if (
+                    !this.TryLoadMod(
+                        mod,
+                        mods,
+                        modAssemblyLoader,
+                        proxyFactory,
+                        jsonHelper,
+                        contentCore,
+                        modDatabase,
+                        suppressUpdateChecks,
+                        out ModFailReason? failReason,
+                        out string? errorPhrase,
+                        out string? errorDetails
+                    )
+                )
                 {
-                    mod.SetStatus(ModMetadataStatus.Failed, failReason.Value, errorPhrase, errorDetails);
+                    mod.SetStatus(
+                        ModMetadataStatus.Failed,
+                        failReason.Value,
+                        errorPhrase,
+                        errorDetails
+                    );
                     skippedMods.Add(mod);
                 }
+#if SMAPI_FOR_ANDROID
+                else if (mod.IsContentPack)
+                    contentPackCount++;
+                else
+                    assemblyModCount++;
+
+                // log memory every 10 mods to track growth
+                if ((assemblyModCount + contentPackCount) % 10 == 0)
+                    this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after loading {assemblyModCount} mods + {contentPackCount} packs")}", LogLevel.Info);
+#endif
             }
+#if SMAPI_FOR_ANDROID
+            this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"all mods loaded: {assemblyModCount} mods + {contentPackCount} packs")}", LogLevel.Info);
+#endif
         }
 
         IModMetadata[] loaded = this.ModRegistry.GetAll().ToArray();
@@ -1979,18 +3368,32 @@ internal class SCore : IDisposable
         this.ModRegistry.AreAllModsLoaded = true;
 
         // log mod info
-        this.LogManager.LogModInfo(loaded, loadedContentPacks, loadedMods, skippedMods.ToArray(), this.Settings.ParanoidWarnings, this.Settings.LogTechnicalDetailsForBrokenMods, this.Settings.FixHarmony);
+        this.LogManager.LogModInfo(
+            loaded,
+            loadedContentPacks,
+            loadedMods,
+            skippedMods.ToArray(),
+            this.Settings.ParanoidWarnings,
+            this.Settings.LogTechnicalDetailsForBrokenMods,
+            this.Settings.FixHarmony
+        );
 
         // initialize translations
         this.ReloadTranslations(loaded);
 
         // initialize loaded non-content-pack mods
         this.Monitor.Log("Launching mods...", LogLevel.Debug);
+#if SMAPI_FOR_ANDROID
+        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod Entry() calls")}", LogLevel.Debug);
+        int entryCount = 0;
+#endif
         foreach (IModMetadata metadata in loadedMods)
         {
             IMod mod =
                 metadata.Mod
-                ?? throw new InvalidOperationException($"The '{metadata.DisplayName}' mod is not initialized correctly."); // should never happen, but avoids nullability warnings
+                ?? throw new InvalidOperationException(
+                    $"The '{metadata.DisplayName}' mod is not initialized correctly."
+                ); // should never happen, but avoids nullability warnings
 
             // initialize mod
             Context.HeuristicModsRunningCode.Push(metadata);
@@ -2002,7 +3405,10 @@ internal class SCore : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    metadata.LogAsMod($"Mod crashed on entry and might not work correctly. Technical details:\n{ex.GetLogSummary()}", LogLevel.Error);
+                    metadata.LogAsMod(
+                        $"Mod crashed on entry and might not work correctly. Technical details:\n{ex.GetLogSummary()}",
+                        LogLevel.Error
+                    );
                 }
 
                 // get mod API
@@ -2012,7 +3418,10 @@ internal class SCore : IDisposable
                     if (api != null && !api.GetType().IsPublic)
                     {
                         api = null;
-                        this.Monitor.Log($"{metadata.DisplayName} provides an API instance with a non-public type. This isn't currently supported, so the API won't be available to other mods.", LogLevel.Warn);
+                        this.Monitor.Log(
+                            $"{metadata.DisplayName} provides an API instance with a non-public type. This isn't currently supported, so the API won't be available to other mods.",
+                            LogLevel.Warn
+                        );
                     }
 
                     if (api != null)
@@ -2021,19 +3430,59 @@ internal class SCore : IDisposable
                 }
                 catch (Exception ex)
                 {
-                    this.Monitor.Log($"Failed loading mod-provided API for {metadata.DisplayName}. Integrations with other mods may not work. Error: {ex.GetLogSummary()}", LogLevel.Error);
+                    this.Monitor.Log(
+                        $"Failed loading mod-provided API for {metadata.DisplayName}. Integrations with other mods may not work. Error: {ex.GetLogSummary()}",
+                        LogLevel.Error
+                    );
                 }
 
                 // validate mod doesn't implement both GetApi() and GetApi(mod)
-                if (metadata.Api != null && mod.GetType().GetMethod(nameof(Mod.GetApi), [typeof(IModInfo)])!.DeclaringType != typeof(Mod))
-                    metadata.LogAsMod($"Mod implements both {nameof(Mod.GetApi)}() and {nameof(Mod.GetApi)}({nameof(IModInfo)}), which isn't allowed. The latter will be ignored.", LogLevel.Error);
+                if (
+                    metadata.Api != null
+                    && mod.GetType()
+                        .GetMethod(nameof(Mod.GetApi), [typeof(IModInfo)])!
+                        .DeclaringType != typeof(Mod)
+                )
+                    metadata.LogAsMod(
+                        $"Mod implements both {nameof(Mod.GetApi)}() and {nameof(Mod.GetApi)}({nameof(IModInfo)}), which isn't allowed. The latter will be ignored.",
+                        LogLevel.Error
+                    );
             }
             Context.HeuristicModsRunningCode.TryPop(out _);
+#if SMAPI_FOR_ANDROID
+            entryCount++;
+            if (entryCount % 10 == 0)
+                this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after {entryCount}/{loadedMods.Length} mod Entry() calls")}", LogLevel.Debug);
+#endif
         }
+
+#if SMAPI_FOR_ANDROID
+        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after all {loadedMods.Length} mod Entry() calls")}", LogLevel.Debug);
+#endif
 
         // unlock mod integrations
         this.ModRegistry.AreAllModsInitialized = true;
 
+        // Apply Android mod compatibility fixes after all mods have loaded and patched
+#if SMAPI_FOR_ANDROID
+        if (Mobile.AndroidPatcher.Harmony != null)
+        {
+            Mobile.Patches.SpaceCorePatch3Fix.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.LookupAnythingPatch.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.FashionSensePatches.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.PortraiturePatch.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.CustomFarmLoaderPatch.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.MobilePhonePatch.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.QuickSavePatch.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.UnofficialModUpdateMenuPatch.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.DailyScreenshotPatch.Apply(Mobile.AndroidPatcher.Harmony);
+            Mobile.Patches.AlternativeTexturesPatches.Apply(Mobile.AndroidPatcher.Harmony);
+        }
+#endif
+
+#if SMAPI_FOR_ANDROID
+        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("mods loaded and ready")}", LogLevel.Info);
+#endif
         this.Monitor.Log("Mods loaded and ready!", LogLevel.Debug);
     }
 
@@ -2050,7 +3499,19 @@ internal class SCore : IDisposable
     /// <param name="errorReasonPhrase">The user-facing reason phrase explaining why the mod couldn't be loaded (if applicable).</param>
     /// <param name="errorDetails">More detailed info about the error intended for developers (if any).</param>
     /// <returns>Returns whether the mod was successfully loaded.</returns>
-    private bool TryLoadMod(IModMetadata mod, IModMetadata[] mods, AssemblyLoader assemblyLoader, IInterfaceProxyFactory proxyFactory, JsonHelper jsonHelper, ContentCoordinator contentCore, ModDatabase modDatabase, HashSet<string> suppressUpdateChecks, [NotNullWhen(false)] out ModFailReason? failReason, out string? errorReasonPhrase, out string? errorDetails)
+    private bool TryLoadMod(
+        IModMetadata mod,
+        IModMetadata[] mods,
+        AssemblyLoader assemblyLoader,
+        IInterfaceProxyFactory proxyFactory,
+        JsonHelper jsonHelper,
+        ContentCoordinator contentCore,
+        ModDatabase modDatabase,
+        HashSet<string> suppressUpdateChecks,
+        [NotNullWhen(false)] out ModFailReason? failReason,
+        out string? errorReasonPhrase,
+        out string? errorDetails
+    )
     {
         errorDetails = null;
 
@@ -2058,33 +3519,42 @@ internal class SCore : IDisposable
         IFileLookup fileLookup = this.GetFileLookup(mod.DirectoryPath);
         IManifest? manifest = mod.Manifest;
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract -- mod may be invalid at this point
-        FileInfo? assemblyFile = manifest?.EntryDll != null
-            ? fileLookup.GetFile(manifest.EntryDll)
-            : null;
+        FileInfo? assemblyFile =
+            manifest?.EntryDll != null ? fileLookup.GetFile(manifest.EntryDll) : null;
 
         // log entry
         {
             string relativePath = mod.GetRelativePathWithRoot();
 
             if (mod.IsContentPack)
-                this.Monitor.Log($"   {mod.DisplayName} (from {relativePath}, ID: {manifest?.UniqueID}) [content pack]...");
+                this.Monitor.Log(
+                    $"   {mod.DisplayName} (from {relativePath}, ID: {manifest?.UniqueID}) [content pack]..."
+                );
             else if (manifest?.EntryDll != null)
             {
                 this.TryGetAssemblyVersion(assemblyFile?.FullName, out string? assemblyVersion);
-                this.Monitor.Log($"   {mod.DisplayName} (from {relativePath}{Path.DirectorySeparatorChar}{manifest.EntryDll}, ID: {manifest.UniqueID}, assembly version: {assemblyVersion ?? "<unknown>"})..."); // don't use Path.Combine here, since EntryDLL might not be valid
+                this.Monitor.Log(
+                    $"   {mod.DisplayName} (from {relativePath}{Path.DirectorySeparatorChar}{manifest.EntryDll}, ID: {manifest.UniqueID}, assembly version: {assemblyVersion ?? "<unknown>"})..."
+                ); // don't use Path.Combine here, since EntryDLL might not be valid
             }
             else
-                this.Monitor.Log($"   {mod.DisplayName} (from {relativePath}, ID: {manifest?.UniqueID ?? "<unknown>"})...");
+                this.Monitor.Log(
+                    $"   {mod.DisplayName} (from {relativePath}, ID: {manifest?.UniqueID ?? "<unknown>"})..."
+                );
         }
 
         // add warning for missing update key
-        if (mod.HasId() && !suppressUpdateChecks.Contains(manifest!.UniqueID) && !mod.HasValidUpdateKeys())
+        if (
+            mod.HasId()
+            && !suppressUpdateChecks.Contains(manifest!.UniqueID)
+            && !mod.HasValidUpdateKeys()
+        )
             mod.SetWarning(ModWarning.NoUpdateKeys);
 
         // validate status
         if (mod.Status == ModMetadataStatus.Failed)
         {
-            this.Monitor.Log($"      Failed: {mod.ErrorDetails ?? mod.Error}");
+            this.Monitor.Log($"      Failed: {mod.ErrorDetails ?? mod.Error}", LogLevel.Error);
             failReason = mod.FailReason ?? ModFailReason.LoadFailed;
             errorReasonPhrase = mod.Error;
             return false;
@@ -2103,9 +3573,9 @@ internal class SCore : IDisposable
                 continue;
 
             // mark failed
-            string dependencyName = mods
-                .FirstOrDefault(otherMod => otherMod.HasId(dependency.UniqueID))
-                ?.DisplayName ?? dependency.UniqueID;
+            string dependencyName =
+                mods.FirstOrDefault(otherMod => otherMod.HasId(dependency.UniqueID))?.DisplayName
+                ?? dependency.UniqueID;
             errorReasonPhrase = $"it needs the '{dependencyName}' mod, which couldn't be loaded.";
             failReason = ModFailReason.MissingDependencies;
             return false;
@@ -2115,10 +3585,34 @@ internal class SCore : IDisposable
         if (mod.IsContentPack)
         {
             IMonitor monitor = this.LogManager.GetMonitor(manifest.UniqueID, mod.DisplayName);
-            GameContentHelper gameContentHelper = new(this.ContentCore, mod, mod.DisplayName, monitor, this.Reflection);
-            IModContentHelper modContentHelper = new ModContentHelper(this.ContentCore, mod.DirectoryPath, mod, mod.DisplayName, gameContentHelper.GetUnderlyingContentManager(), this.Reflection);
-            TranslationHelper translationHelper = new(mod, contentCore.GetLocale(), contentCore.Language);
-            IContentPack contentPack = new ContentPack(mod.DirectoryPath, manifest, modContentHelper, translationHelper, jsonHelper, fileLookup);
+            GameContentHelper gameContentHelper = new(
+                this.ContentCore,
+                mod,
+                mod.DisplayName,
+                monitor,
+                this.Reflection
+            );
+            IModContentHelper modContentHelper = new ModContentHelper(
+                this.ContentCore,
+                mod.DirectoryPath,
+                mod,
+                mod.DisplayName,
+                gameContentHelper.GetUnderlyingContentManager(),
+                this.Reflection
+            );
+            TranslationHelper translationHelper = new(
+                mod,
+                contentCore.GetLocale(),
+                contentCore.Language
+            );
+            IContentPack contentPack = new ContentPack(
+                mod.DirectoryPath,
+                manifest,
+                modContentHelper,
+                translationHelper,
+                jsonHelper,
+                fileLookup
+            );
             mod.SetMod(contentPack, monitor, translationHelper);
             this.ModRegistry.Add(mod);
 
@@ -2126,7 +3620,6 @@ internal class SCore : IDisposable
             failReason = null;
             return true;
         }
-
         // load as mod
         else
         {
@@ -2134,13 +3627,27 @@ internal class SCore : IDisposable
             Assembly modAssembly;
             try
             {
-                modAssembly = assemblyLoader.Load(mod, assemblyFile!, assumeCompatible: mod.DataRecord?.Status == ModStatus.AssumeCompatible);
+                modAssembly = assemblyLoader.Load(
+                    mod,
+                    assemblyFile!,
+                    assumeCompatible: mod.DataRecord?.Status == ModStatus.AssumeCompatible
+                );
                 this.ModRegistry.TrackAssemblies(mod, modAssembly);
             }
-            catch (IncompatibleInstructionException) // details already in trace logs
+            catch (IncompatibleInstructionException ex)
             {
-                string[] updateUrls = new[] { modDatabase.GetModPageUrlFor(manifest.UniqueID), "https://smapi.io/mods" }.Where(p => p != null).ToArray()!;
-                errorReasonPhrase = $"it's no longer compatible. Please check for a new version at {string.Join(" or ", updateUrls)}";
+                string[] updateUrls = new[]
+                {
+                    modDatabase.GetModPageUrlFor(manifest.UniqueID),
+                    "https://smapi.io/mods",
+                }
+                    .Where(p => p != null)
+                    .ToArray()!;
+                string reason = !string.IsNullOrEmpty(ex.Message)
+                    ? ex.Message
+                    : "it's no longer compatible";
+                errorReasonPhrase =
+                    $"{reason}. Please check for a new version at {string.Join(" or ", updateUrls)}";
                 failReason = ModFailReason.Incompatible;
                 return false;
             }
@@ -2153,7 +3660,10 @@ internal class SCore : IDisposable
             catch (Exception ex)
             {
                 errorReasonPhrase = "its DLL couldn't be loaded.";
-                if (ex is BadImageFormatException && !EnvironmentUtility.Is64BitAssembly(assemblyFile!.FullName))
+                if (
+                    ex is BadImageFormatException
+                    && !EnvironmentUtility.Is64BitAssembly(assemblyFile!.FullName)
+                )
                     errorReasonPhrase = "it needs to be updated for 64-bit mode.";
 
                 errorDetails = $"Error: {ex.GetLogSummary()}";
@@ -2165,7 +3675,14 @@ internal class SCore : IDisposable
             try
             {
                 // get mod instance
-                if (!this.TryLoadModEntry(mod, modAssembly, out Mod? modEntry, out errorReasonPhrase))
+                if (
+                    !this.TryLoadModEntry(
+                        mod,
+                        modAssembly,
+                        out Mod? modEntry,
+                        out errorReasonPhrase
+                    )
+                )
                 {
                     failReason = ModFailReason.LoadFailed;
                     return false;
@@ -2175,35 +3692,83 @@ internal class SCore : IDisposable
                 IContentPack[] GetContentPacks()
                 {
                     if (!this.ModRegistry.AreAllModsLoaded)
-                        throw new InvalidOperationException("Can't access content packs before SMAPI finishes loading mods.");
+                        throw new InvalidOperationException(
+                            "Can't access content packs before SMAPI finishes loading mods."
+                        );
 
-                    return this.ModRegistry
-                        .GetAll(assemblyMods: false)
-                        .Where(p => p.IsContentPack && mod.HasId(p.Manifest.ContentPackFor!.UniqueID))
+                    return this
+                        .ModRegistry.GetAll(assemblyMods: false)
+                        .Where(p =>
+                            p.IsContentPack && mod.HasId(p.Manifest.ContentPackFor!.UniqueID)
+                        )
                         .Select(p => p.ContentPack!)
                         .ToArray();
                 }
 
                 // init mod helpers
                 IMonitor monitor = this.LogManager.GetMonitor(manifest.UniqueID, mod.DisplayName);
-                TranslationHelper translationHelper = new(mod, contentCore.GetLocale(), contentCore.Language);
+                TranslationHelper translationHelper = new(
+                    mod,
+                    contentCore.GetLocale(),
+                    contentCore.Language
+                );
                 IModHelper modHelper;
                 {
                     IModEvents events = new ModEvents(mod, this.EventManager);
                     ICommandHelper commandHelper = new CommandHelper(mod, this.CommandManager);
-                    GameContentHelper gameContentHelper = new(contentCore, mod, mod.DisplayName, monitor, this.Reflection);
-                    IModContentHelper modContentHelper = new ModContentHelper(contentCore, mod.DirectoryPath, mod, mod.DisplayName, gameContentHelper.GetUnderlyingContentManager(), this.Reflection);
+                    GameContentHelper gameContentHelper = new(
+                        contentCore,
+                        mod,
+                        mod.DisplayName,
+                        monitor,
+                        this.Reflection
+                    );
+                    IModContentHelper modContentHelper = new ModContentHelper(
+                        contentCore,
+                        mod.DirectoryPath,
+                        mod,
+                        mod.DisplayName,
+                        gameContentHelper.GetUnderlyingContentManager(),
+                        this.Reflection
+                    );
                     IContentPackHelper contentPackHelper = new ContentPackHelper(
                         mod: mod,
                         contentPacks: new Lazy<IContentPack[]>(GetContentPacks),
-                        createContentPack: (dirPath, fakeManifest) => this.CreateFakeContentPack(dirPath, fakeManifest, contentCore, mod)
+                        createContentPack: (dirPath, fakeManifest) =>
+                            this.CreateFakeContentPack(dirPath, fakeManifest, contentCore, mod)
                     );
                     IDataHelper dataHelper = new DataHelper(mod, mod.DirectoryPath, jsonHelper);
-                    IReflectionHelper reflectionHelper = new ReflectionHelper(mod, mod.DisplayName, this.Reflection);
-                    IModRegistry modRegistryHelper = new ModRegistryHelper(mod, this.ModRegistry, proxyFactory, monitor);
-                    IMultiplayerHelper multiplayerHelper = new MultiplayerHelper(mod, this.Multiplayer);
+                    IReflectionHelper reflectionHelper = new ReflectionHelper(
+                        mod,
+                        mod.DisplayName,
+                        this.Reflection
+                    );
+                    IModRegistry modRegistryHelper = new ModRegistryHelper(
+                        mod,
+                        this.ModRegistry,
+                        proxyFactory,
+                        monitor
+                    );
+                    IMultiplayerHelper multiplayerHelper = new MultiplayerHelper(
+                        mod,
+                        this.Multiplayer
+                    );
 
-                    modHelper = new ModHelper(mod, mod.DirectoryPath, () => this.GetCurrentGameInstance().Input, events, gameContentHelper, modContentHelper, contentPackHelper, commandHelper, dataHelper, modRegistryHelper, reflectionHelper, multiplayerHelper, translationHelper);
+                    modHelper = new ModHelper(
+                        mod,
+                        mod.DirectoryPath,
+                        () => this.GetCurrentGameInstance().Input,
+                        events,
+                        gameContentHelper,
+                        modContentHelper,
+                        contentPackHelper,
+                        commandHelper,
+                        dataHelper,
+                        modRegistryHelper,
+                        reflectionHelper,
+                        multiplayerHelper,
+                        translationHelper
+                    );
                 }
 
                 // init mod
@@ -2230,7 +3795,10 @@ internal class SCore : IDisposable
     /// <param name="filePath">The absolute path to the assembly file.</param>
     /// <param name="versionString">The extracted display version, if valid.</param>
     /// <returns>Returns whether the assembly version was successfully extracted.</returns>
-    private bool TryGetAssemblyVersion(string? filePath, [NotNullWhen(true)] out string? versionString)
+    private bool TryGetAssemblyVersion(
+        string? filePath,
+        [NotNullWhen(true)] out string? versionString
+    )
     {
         if (filePath is null || !File.Exists(filePath))
         {
@@ -2241,14 +3809,17 @@ internal class SCore : IDisposable
         try
         {
             FileVersionInfo version = FileVersionInfo.GetVersionInfo(filePath);
-            versionString = version.FilePrivatePart == 0
-                ? $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}"
-                : $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}.{version.FilePrivatePart}";
+            versionString =
+                version.FilePrivatePart == 0
+                    ? $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}"
+                    : $"{version.FileMajorPart}.{version.FileMinorPart}.{version.FileBuildPart}.{version.FilePrivatePart}";
             return true;
         }
         catch (Exception ex)
         {
-            this.Monitor.Log($"Error extracting assembly version from '{filePath}': {ex.GetLogSummary()}");
+            this.Monitor.Log(
+                $"Error extracting assembly version from '{filePath}': {ex.GetLogSummary()}"
+            );
             versionString = null;
             return false;
         }
@@ -2259,7 +3830,12 @@ internal class SCore : IDisposable
     /// <param name="packManifest">The fake content pack's manifest.</param>
     /// <param name="contentCore">The content manager to use for mod content.</param>
     /// <param name="parentMod">The mod for which the content pack is being created.</param>
-    private IContentPack CreateFakeContentPack(string packDirPath, IManifest packManifest, ContentCoordinator contentCore, IModMetadata parentMod)
+    private IContentPack CreateFakeContentPack(
+        string packDirPath,
+        IManifest packManifest,
+        ContentCoordinator contentCore,
+        IModMetadata parentMod
+    )
     {
         // create fake mod info
         string relativePath = Path.GetRelativePath(Constants.ModsPath, packDirPath);
@@ -2274,19 +3850,45 @@ internal class SCore : IDisposable
 
         // create mod helpers
         IMonitor packMonitor = this.LogManager.GetMonitor(packManifest.UniqueID, packManifest.Name);
-        GameContentHelper gameContentHelper = new(contentCore, fakeMod, packManifest.Name, packMonitor, this.Reflection);
-        IModContentHelper packContentHelper = new ModContentHelper(contentCore, packDirPath, fakeMod, packManifest.Name, gameContentHelper.GetUnderlyingContentManager(), this.Reflection);
-        TranslationHelper packTranslationHelper = new(fakeMod, contentCore.GetLocale(), contentCore.Language);
+        GameContentHelper gameContentHelper = new(
+            contentCore,
+            fakeMod,
+            packManifest.Name,
+            packMonitor,
+            this.Reflection
+        );
+        IModContentHelper packContentHelper = new ModContentHelper(
+            contentCore,
+            packDirPath,
+            fakeMod,
+            packManifest.Name,
+            gameContentHelper.GetUnderlyingContentManager(),
+            this.Reflection
+        );
+        TranslationHelper packTranslationHelper = new(
+            fakeMod,
+            contentCore.GetLocale(),
+            contentCore.Language
+        );
 
         // add content pack
         IFileLookup fileLookup = this.GetFileLookup(packDirPath);
-        ContentPack contentPack = new(packDirPath, packManifest, packContentHelper, packTranslationHelper, this.Toolkit.JsonHelper, fileLookup);
+        ContentPack contentPack = new(
+            packDirPath,
+            packManifest,
+            packContentHelper,
+            packTranslationHelper,
+            this.Toolkit.JsonHelper,
+            fileLookup
+        );
         this.ReloadTranslationsForTemporaryContentPack(parentMod, contentPack);
         parentMod.FakeContentPacks.Add(new WeakReference<ContentPack>(contentPack));
 
         // log change
         string pathLabel = packDirPath.Contains("..") ? packDirPath : relativePath;
-        this.Monitor.Log($"{parentMod.DisplayName} created dynamic content pack '{packManifest.Name}' (unique ID: {packManifest.UniqueID}{(packManifest.Name.Contains(pathLabel) ? "" : $", path: {pathLabel}")}).");
+        this.Monitor.Log(
+            $"{parentMod.DisplayName} created dynamic content pack '{packManifest.Name}' (unique ID: {packManifest.UniqueID}{(packManifest.Name.Contains(pathLabel) ? "" : $", path: {pathLabel}")})."
+        );
 
         return contentPack;
     }
@@ -2297,12 +3899,20 @@ internal class SCore : IDisposable
     /// <param name="mod">The loaded instance.</param>
     /// <param name="error">The error indicating why loading failed (if applicable).</param>
     /// <returns>Returns whether the mod entry class was successfully loaded.</returns>
-    private bool TryLoadModEntry(IModMetadata metadata, Assembly modAssembly, [NotNullWhen(true)] out Mod? mod, [NotNullWhen(false)] out string? error)
+    private bool TryLoadModEntry(
+        IModMetadata metadata,
+        Assembly modAssembly,
+        [NotNullWhen(true)] out Mod? mod,
+        [NotNullWhen(false)] out string? error
+    )
     {
         mod = null;
 
         // find type
-        TypeInfo[] modEntries = modAssembly.DefinedTypes.Where(type => typeof(Mod).IsAssignableFrom(type) && !type.IsAbstract).Take(2).ToArray();
+        TypeInfo[] modEntries = modAssembly
+            .DefinedTypes.Where(type => typeof(Mod).IsAssignableFrom(type) && !type.IsAbstract)
+            .Take(2)
+            .ToArray();
         if (modEntries.Length == 0)
         {
             error = $"its DLL has no '{nameof(Mod)}' subclass.";
@@ -2347,10 +3957,16 @@ internal class SCore : IDisposable
     {
         // core SMAPI translations
         {
-            var translations = this.ReadTranslationFiles(Path.Combine(Constants.InternalFilesPath, "i18n"), out IList<string> errors);
+            var translations = this.ReadTranslationFiles(
+                Path.Combine(Constants.InternalFilesPath, "i18n"),
+                out IList<string> errors
+            );
             if (errors.Any() || !translations.Any())
             {
-                this.Monitor.Log("SMAPI couldn't load some core translations. You may need to reinstall SMAPI.", LogLevel.Warn);
+                this.Monitor.Log(
+                    "SMAPI couldn't load some core translations. You may need to reinstall SMAPI.",
+                    LogLevel.Warn
+                );
                 foreach (string error in errors)
                     this.Monitor.Log($"  - {error}", LogLevel.Warn);
             }
@@ -2362,7 +3978,10 @@ internal class SCore : IDisposable
         {
             // top-level mod
             {
-                var translations = this.ReadTranslationFiles(Path.Combine(metadata.DirectoryPath, "i18n"), out IList<string> errors);
+                var translations = this.ReadTranslationFiles(
+                    Path.Combine(metadata.DirectoryPath, "i18n"),
+                    out IList<string> errors
+                );
                 if (errors.Any())
                 {
                     metadata.LogAsMod("Mod couldn't load some translation files:", LogLevel.Warn);
@@ -2382,12 +4001,21 @@ internal class SCore : IDisposable
     /// <summary>Load or reload translations for a temporary content pack created by a mod.</summary>
     /// <param name="parentMod">The parent mod which created the content pack.</param>
     /// <param name="contentPack">The content pack instance.</param>
-    private void ReloadTranslationsForTemporaryContentPack(IModMetadata parentMod, ContentPack contentPack)
+    private void ReloadTranslationsForTemporaryContentPack(
+        IModMetadata parentMod,
+        ContentPack contentPack
+    )
     {
-        var translations = this.ReadTranslationFiles(Path.Combine(contentPack.DirectoryPath, "i18n"), out IList<string> errors);
+        var translations = this.ReadTranslationFiles(
+            Path.Combine(contentPack.DirectoryPath, "i18n"),
+            out IList<string> errors
+        );
         if (errors.Any())
         {
-            parentMod.LogAsMod($"Generated content pack at '{PathUtilities.GetRelativePath(Constants.ModsPath, contentPack.DirectoryPath)}' couldn't load some translation files:", LogLevel.Warn);
+            parentMod.LogAsMod(
+                $"Generated content pack at '{PathUtilities.GetRelativePath(Constants.ModsPath, contentPack.DirectoryPath)}' couldn't load some translation files:",
+                LogLevel.Warn
+            );
             foreach (string error in errors)
                 parentMod.LogAsMod($"  - {error}", LogLevel.Warn);
         }
@@ -2398,7 +4026,10 @@ internal class SCore : IDisposable
     /// <summary>Read translations from a directory containing JSON translation files.</summary>
     /// <param name="folderPath">The folder path to search.</param>
     /// <param name="errors">The errors indicating why translation files couldn't be parsed, indexed by translation filename.</param>
-    private IDictionary<string, IDictionary<string, string>> ReadTranslationFiles(string folderPath, out IList<string> errors)
+    private IDictionary<string, IDictionary<string, string>> ReadTranslationFiles(
+        string folderPath,
+        out IList<string> errors
+    )
     {
         JsonHelper jsonHelper = this.Toolkit.JsonHelper;
 
@@ -2415,7 +4046,9 @@ internal class SCore : IDisposable
                     hasRootFiles = true;
                 else if (hasRootFiles)
                 {
-                    errors.Add($"Found translations in both top-level files (like i18n/{translations.Keys.FirstOrDefault() ?? "example"}.json) and subfolders (like i18n/{entry.locale}/{entry.file.Name}). Only the top-level files will be used. You may need to delete and reinstall this mod.");
+                    errors.Add(
+                        $"Found translations in both top-level files (like i18n/{translations.Keys.FirstOrDefault() ?? "example"}.json) and subfolders (like i18n/{entry.locale}/{entry.file.Name}). Only the top-level files will be used. You may need to delete and reinstall this mod."
+                    );
                     break;
                 }
 
@@ -2436,14 +4069,21 @@ internal class SCore : IDisposable
                 }
 
                 // add translations
-                if (!translations.TryGetValue(entry.locale, out IDictionary<string, string>? combinedData))
+                if (
+                    !translations.TryGetValue(
+                        entry.locale,
+                        out IDictionary<string, string>? combinedData
+                    )
+                )
                     translations[entry.locale] = data;
                 else
                 {
                     foreach ((string key, string value) in data)
                     {
                         if (!combinedData.TryAdd(key, value))
-                            errors.Add($"Ignored duplicate translation key '{key}' in {entry.relativePath}.");
+                            errors.Add(
+                                $"Ignored duplicate translation key '{key}' in {entry.relativePath}."
+                            );
                     }
                 }
             }
@@ -2464,7 +4104,9 @@ internal class SCore : IDisposable
                 }
             }
             if (duplicateKeys.Any())
-                errors.Add($"Found duplicate translation keys for {locale}: [{string.Join(", ", duplicateKeys)}]. Keys are case-insensitive.");
+                errors.Add(
+                    $"Found duplicate translation keys for {locale}: [{string.Join(", ", duplicateKeys)}]. Keys are case-insensitive."
+                );
         }
 
         return translations;
@@ -2472,7 +4114,12 @@ internal class SCore : IDisposable
 
     /// <summary>Get the translation files to load. This returns top-level files like <c>fr.json</c> first, followed by locale directory files like <c>fr/example.json</c>.</summary>
     /// <param name="folderPath">The folder path to search.</param>
-    private IEnumerable<(string locale, bool isRootFile, string relativePath, FileInfo file)> GetTranslationFiles(string folderPath)
+    private IEnumerable<(
+        string locale,
+        bool isRootFile,
+        string relativePath,
+        FileInfo file
+    )> GetTranslationFiles(string folderPath)
     {
         // get directory
         DirectoryInfo translationsDir = new(folderPath);
@@ -2539,7 +4186,9 @@ internal class SCore : IDisposable
     {
         // default path
         {
-            FileInfo defaultFile = new(Path.Combine(Constants.LogDir, $"{Constants.LogFilename}.{Constants.LogExtension}"));
+            FileInfo defaultFile = new(
+                Path.Combine(Constants.LogDir, $"{Constants.LogFilename}.{Constants.LogExtension}")
+            );
             if (!defaultFile.Exists)
                 return defaultFile.FullName;
         }
@@ -2547,7 +4196,12 @@ internal class SCore : IDisposable
         // get first disambiguated path
         for (int i = 2; i < int.MaxValue; i++)
         {
-            FileInfo file = new(Path.Combine(Constants.LogDir, $"{Constants.LogFilename}.player-{i}.{Constants.LogExtension}"));
+            FileInfo file = new(
+                Path.Combine(
+                    Constants.LogDir,
+                    $"{Constants.LogFilename}.player-{i}.{Constants.LogExtension}"
+                )
+            );
             if (!file.Exists)
                 return file.FullName;
         }
@@ -2566,7 +4220,12 @@ internal class SCore : IDisposable
         foreach (FileInfo logFile in logsDir.EnumerateFiles())
         {
             // skip non-SMAPI file
-            if (!logFile.Name.StartsWith(Constants.LogNamePrefix, StringComparison.OrdinalIgnoreCase))
+            if (
+                !logFile.Name.StartsWith(
+                    Constants.LogNamePrefix,
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
                 continue;
 
             // skip crash log
@@ -2604,7 +4263,6 @@ internal class SCore : IDisposable
 
         return null;
     }
-
 
     /*********
     ** Private types

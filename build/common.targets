@@ -9,7 +9,7 @@ repo. It imports the other MSBuild files as needed.
     <!--set general build properties -->
     <Version>4.5.2</Version>
     <Product>SMAPI</Product>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>preview</LangVersion>
     <AssemblySearchPaths>$(AssemblySearchPaths);{GAC}</AssemblySearchPaths>
     <DebugSymbols>true</DebugSymbols>
 
@@ -22,7 +22,9 @@ repo. It imports the other MSBuild files as needed.
 
     <!--set platform-->
     <DefineConstants Condition="$(OS) == 'Windows_NT'">$(DefineConstants);SMAPI_FOR_WINDOWS</DefineConstants>
-    <CopyToGameFolder>true</CopyToGameFolder>
+    <DefineConstants Condition="$(TargetFramework.Contains('android'))">$(DefineConstants);SMAPI_FOR_ANDROID</DefineConstants>
+    <CopyToGameFolder Condition="!$(TargetFramework.Contains('android'))">true</CopyToGameFolder>
+    <CopyToGameFolder Condition="$(TargetFramework.Contains('android'))">false</CopyToGameFolder>
 
     <!-- allow mods to be compiled as AnyCPU for compatibility with older platforms -->
     <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>

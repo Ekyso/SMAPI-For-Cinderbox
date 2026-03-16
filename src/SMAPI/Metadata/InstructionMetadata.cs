@@ -295,6 +295,11 @@ internal class InstructionMetadata
                 .MapMethod("System.Int32 StardewValley.Network.NetDirection::op_Implicit(StardewValley.Network.NetDirection)", typeof(ImplicitConversionOperatorsFacade), nameof(ImplicitConversionOperatorsFacade.NetDirection_ToInt))
                 .MapMethod("!0 StardewValley.Network.NetPausableField`3<Microsoft.Xna.Framework.Vector2,Netcode.NetVector2,Netcode.NetVector2>::op_Implicit(StardewValley.Network.NetPausableField`3<!0,!1,!2>)", typeof(NetPausableFieldFacade<Vector2, NetVector2, NetVector2>), nameof(NetPausableFieldFacade<Vector2, NetVector2, NetVector2>.op_Implicit));
 
+#if SMAPI_FOR_ANDROID
+            // rewrite Assembly.Location for Android compatibility
+            yield return new AssemblyLocationRewriter();
+#endif
+
             // heuristic rewrites
             yield return new HeuristicFieldRewriter(this.ValidateReferencesToAssemblies);
             yield return new HeuristicMethodRewriter(this.ValidateReferencesToAssemblies);

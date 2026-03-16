@@ -212,7 +212,7 @@ public class CompatibilityRepoClient : IDisposable
     private string[] GetCsv(string? rawValue)
     {
         return !string.IsNullOrWhiteSpace(rawValue)
-            ? rawValue.Split([','], StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToArray()
+            ? rawValue.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(p => p.Trim()).ToArray()
             : [];
     }
 

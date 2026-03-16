@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using StardewModdingAPI.Enums;
 using StardewModdingAPI.Framework.StateTracking.Comparers;
 using StardewModdingAPI.Framework.StateTracking.FieldWatchers;
@@ -26,6 +25,9 @@ internal class PlayerTracker : IDisposable
 
     /// <summary>The underlying watchers.</summary>
     private readonly List<IWatcher> Watchers = [];
+
+    /// <summary>Reusable set for deduplication in <see cref="GetInventory"/>.</summary>
+    private readonly HashSet<Item> InventorySeenBuffer = new(new ObjectReferenceComparer<Item>());
 
 
     /*********
@@ -109,12 +111,16 @@ internal class PlayerTracker : IDisposable
 
         ISet<Item> added = new HashSet<Item>(new ObjectReferenceComparer<Item>());
         ISet<Item> removed = new HashSet<Item>(new ObjectReferenceComparer<Item>());
-        foreach (Item item in this.PreviousInventory.Keys.Union(current.Keys))
+
+        foreach (Item item in this.PreviousInventory.Keys)
+        {
+            if (!current.ContainsKey(item))
+                removed.Add(item);
+        }
+        foreach (Item item in current.Keys)
         {
             if (!this.PreviousInventory.ContainsKey(item))
                 added.Add(item);
-            else if (!current.ContainsKey(item))
-                removed.Add(item);
         }
 
         return SnapshotItemListDiff.TryGetChanges(added: added, removed: removed, stackSizes: this.PreviousInventory, out changes);
@@ -137,9 +143,15 @@ internal class PlayerTracker : IDisposable
     /// <summary>Get the player's current inventory.</summary>
     private IDictionary<Item, int> GetInventory()
     {
-        return this.Player.Items
-            .Where(n => n != null)
-            .Distinct()
-            .ToDictionary(n => n, n => n.Stack);
+        var result = new Dictionary<Item, int>(new ObjectReferenceComparer<Item>());
+        this.InventorySeenBuffer.Clear();
+
+        foreach (Item item in this.Player.Items)
+        {
+            if (item != null && this.InventorySeenBuffer.Add(item))
+                result[item] = item.Stack;
+        }
+
+        return result;
     }
 }

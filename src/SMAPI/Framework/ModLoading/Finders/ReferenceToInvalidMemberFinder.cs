@@ -56,12 +56,12 @@ internal class ReferenceToInvalidMemberFinder : BaseInstructionHandler
 
         // method reference
         MethodReference? methodRef = RewriteHelper.AsMethodReference(instruction);
-        if (methodRef != null && !this.IsUnsupported(methodRef))
+        if (methodRef != null && !this.IsUnsupported(methodRef) && this.ShouldValidate(methodRef.DeclaringType))
         {
             MethodDefinition? methodDef = methodRef.Resolve();
 
             // wrong return type
-            if (methodDef != null && this.ShouldValidate(methodRef.DeclaringType))
+            if (methodDef != null)
             {
                 MethodDefinition[]? candidateMethods = methodRef.DeclaringType.Resolve()?.Methods.Where(found => found.Name == methodRef.Name).ToArray();
                 if (candidateMethods?.Any() is true && candidateMethods.All(method => !RewriteHelper.LooksLikeSameType(method.ReturnType, methodDef.ReturnType)))

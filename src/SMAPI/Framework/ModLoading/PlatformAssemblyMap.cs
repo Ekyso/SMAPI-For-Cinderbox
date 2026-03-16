@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
@@ -51,7 +52,35 @@ internal class PlatformAssemblyMap : IDisposable
         // cache assembly metadata
         this.Targets = targetAssemblies;
         this.TargetReferences = this.Targets.ToDictionary(assembly => assembly, assembly => AssemblyNameReference.Parse(assembly.FullName));
+
+#if SMAPI_FOR_ANDROID
+        // On Android, read modules from extracted DLL files since Assembly.Location is unavailable.
+        this.TargetModules = new Dictionary<Assembly, ModuleDefinition>();
+        foreach (Assembly assembly in this.Targets)
+        {
+            string assemblyName = assembly.GetName().Name!;
+            string dllPath = Path.Combine(Constants.GamePath, assemblyName + ".dll");
+
+            if (File.Exists(dllPath))
+            {
+                try
+                {
+                    var module = ModuleDefinition.ReadModule(dllPath, new ReaderParameters { InMemory = true });
+                    this.TargetModules[assembly] = module;
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[SMAPI] Warning: Could not read module for {assemblyName}: {ex.Message}");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[SMAPI] Warning: DLL not found for {assemblyName} at {dllPath}");
+            }
+        }
+#else
         this.TargetModules = this.Targets.ToDictionary(assembly => assembly, assembly => ModuleDefinition.ReadModule(assembly.Modules.Single().FullyQualifiedName, new ReaderParameters { InMemory = true }));
+#endif
     }
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>
