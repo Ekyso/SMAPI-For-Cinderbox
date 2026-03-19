@@ -254,6 +254,10 @@ internal sealed class SInputState : InputState
         return new CursorPosition(absolutePixels, screenPixels, tile, grabTile);
     }
 
+    private readonly Dictionary<SButton, SButtonState> _keyboardOverridesPool = new();
+    private readonly Dictionary<SButton, SButtonState> _controllerOverridesPool = new();
+    private readonly Dictionary<SButton, SButtonState> _mouseOverridesPool = new();
+
     /// <summary>Apply input overrides to the given states.</summary>
     /// <param name="pressed">The buttons to mark pressed.</param>
     /// <param name="released">The buttons to mark released.</param>
@@ -261,10 +265,6 @@ internal sealed class SInputState : InputState
     /// <param name="keyboard">The game's keyboard state for the current tick.</param>
     /// <param name="mouse">The game's mouse state for the current tick.</param>
     /// <returns>Returns whether any overrides were applied.</returns>
-    private readonly Dictionary<SButton, SButtonState> _keyboardOverridesPool = new();
-    private readonly Dictionary<SButton, SButtonState> _controllerOverridesPool = new();
-    private readonly Dictionary<SButton, SButtonState> _mouseOverridesPool = new();
-
     private bool ApplyOverrides(ISet<SButton> pressed, ISet<SButton> released, GamePadStateBuilder controller, KeyboardStateBuilder keyboard, MouseStateBuilder mouse)
     {
         if (pressed.Count == 0 && released.Count == 0)

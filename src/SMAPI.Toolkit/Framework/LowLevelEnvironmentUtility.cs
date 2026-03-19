@@ -19,9 +19,12 @@ internal static class LowLevelEnvironmentUtility
     /// <summary>Get the OS name from the system uname command.</summary>
     /// <param name="buffer">The buffer to fill with the resulting string.</param>
     [DllImport("libc")]
-    [SuppressMessage("ReSharper", "IdentifierTypo", Justification = "This is the actual external command name.")]
+    [SuppressMessage(
+        "ReSharper",
+        "IdentifierTypo",
+        Justification = "This is the actual external command name."
+    )]
     private static extern int uname(IntPtr buffer);
-
 
     /*********
     ** Public methods
@@ -66,9 +69,16 @@ internal static class LowLevelEnvironmentUtility
 
             case nameof(Platform.Windows):
                 // version 10 + 11
-                if (Environment.OSVersion.Platform == PlatformID.Win32NT && Environment.OSVersion.Version is { Major: 10, Minor: 0 } version)
+                if (
+                    Environment.OSVersion.Platform == PlatformID.Win32NT
+                    && Environment.OSVersion.Version is { Major: 10, Minor: 0 } version
+                )
                 {
-                    int mainVersion = version.Build switch { < 22000 => 10, _ => 11 };
+                    int mainVersion = version.Build switch
+                    {
+                        < 22000 => 10,
+                        _ => 11,
+                    };
                     name = $"Windows {mainVersion} ({name.Replace("Microsoft Windows NT ", "")})";
                 }
                 break;
@@ -81,9 +91,11 @@ internal static class LowLevelEnvironmentUtility
     /// <param name="path">The absolute path to the assembly file.</param>
     public static bool Is64BitAssembly(string path)
     {
-        return AssemblyName.GetAssemblyName(path).ProcessorArchitecture != ProcessorArchitecture.X86;
+#pragma warning disable SYSLIB0037
+        return AssemblyName.GetAssemblyName(path).ProcessorArchitecture
+            != ProcessorArchitecture.X86;
+#pragma warning restore SYSLIB0037
     }
-
 
     /*********
     ** Private methods
@@ -106,8 +118,8 @@ internal static class LowLevelEnvironmentUtility
                 Arguments = "ro.build.user",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
-            }
+                CreateNoWindow = true,
+            },
         };
 
         try

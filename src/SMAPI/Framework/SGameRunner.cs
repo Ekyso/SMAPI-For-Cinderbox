@@ -58,7 +58,7 @@ internal class SGameRunner : GameRunner
     ** Public methods
     *********/
     /// <summary>The singleton instance.</summary>
-    public static SGameRunner Instance => (SGameRunner)GameRunner.instance;
+    public new static SGameRunner Instance => (SGameRunner)GameRunner.instance;
 
 
     /*********

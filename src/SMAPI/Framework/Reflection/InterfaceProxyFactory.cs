@@ -22,10 +22,12 @@ internal class InterfaceProxyFactory : IInterfaceProxyFactory
     {
         AssemblyBuilder assemblyBuilder = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName($"StardewModdingAPI.Proxies, Version={this.GetType().Assembly.GetName().Version}, Culture=neutral"), AssemblyBuilderAccess.Run);
         ModuleBuilder moduleBuilder = assemblyBuilder.DefineDynamicModule("StardewModdingAPI.Proxies");
+#pragma warning disable CS0618
         this.ProxyManager = new ProxyManager<string>(moduleBuilder, new ProxyManagerConfiguration<string>(
             proxyPrepareBehavior: ProxyManagerProxyPrepareBehavior.Eager,
             proxyObjectInterfaceMarking: ProxyObjectInterfaceMarking.Disabled
         ));
+#pragma warning restore CS0618
     }
 
     /// <inheritdoc />

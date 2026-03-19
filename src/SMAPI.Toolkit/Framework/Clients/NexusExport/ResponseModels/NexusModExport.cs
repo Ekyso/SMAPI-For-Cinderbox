@@ -44,13 +44,17 @@ public class NexusModExport
     public bool Adult { get; set; }
 
     /// <summary>The raw file description, containing BBCode with HTML <c>&lt;&lt;br /&gt;</c> tags.</summary>
-    public string Description { get; set; }
+    public string Description { get; set; } = "";
 
     /// <summary>The files uploaded for the mod.</summary>
     public Dictionary<uint, NexusFileExport> Files { get; set; } = new();
 
     /// <summary>The extra fields returned by the export API, if any.</summary>
     [JsonExtensionData]
-    [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Used to track any new data provided by the API.")]
+    [SuppressMessage(
+        "ReSharper",
+        "UnusedMember.Global",
+        Justification = "Used to track any new data provided by the API."
+    )]
     public Dictionary<string, object>? OtherFields;
 }

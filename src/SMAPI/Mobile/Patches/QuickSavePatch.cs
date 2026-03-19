@@ -25,11 +25,11 @@ public static class QuickSavePatch
     private const BindingFlags AnyStatic =
         BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public;
 
-    private static MethodInfo _trySave;
-    private static MethodInfo _tryLoad;
+    private static MethodInfo _trySave = null!;
+    private static MethodInfo _tryLoad = null!;
 
     private static bool _quicksaveExists;
-    private static string _quicksaveDateString;
+    private static string _quicksaveDateString = null!;
     private static DateTime _lastSnapshotFileTime;
 
     public static bool IsAvailable { get; private set; }
@@ -92,7 +92,7 @@ public static class QuickSavePatch
             Game1.Date?.DayOfMonth,
             Game1.Date?.Year,
             Game1.timeOfDay
-        );
+        )!;
         Log.Verbose(Tag, $"Save completed: cached date={_quicksaveDateString}");
     }
 
@@ -112,7 +112,7 @@ public static class QuickSavePatch
             if (string.IsNullOrEmpty(path) || !File.Exists(path))
             {
                 _quicksaveExists = false;
-                _quicksaveDateString = null;
+                _quicksaveDateString = null!;
                 return;
             }
 
@@ -122,7 +122,7 @@ public static class QuickSavePatch
             if (fileTime != _lastSnapshotFileTime)
             {
                 _lastSnapshotFileTime = fileTime;
-                _quicksaveDateString = ParseQuicksaveFile(path);
+                _quicksaveDateString = ParseQuicksaveFile(path)!;
             }
         }
         catch (Exception ex)
@@ -132,9 +132,9 @@ public static class QuickSavePatch
     }
 
     /// <summary>Streams XML for season/day/year + CustomData for TimeOfDay.</summary>
-    private static string ParseQuicksaveFile(string path)
+    private static string? ParseQuicksaveFile(string path)
     {
-        string season = null;
+        string? season = null;
         int? day = null;
         int? year = null;
         int? timeOfDay = null;
@@ -202,8 +202,8 @@ public static class QuickSavePatch
                 continue;
 
             
-            string key = null;
-            string value = null;
+            string? key = null;
+            string? value = null;
             int itemDepth = sub.Depth;
 
             while (sub.Read() && sub.Depth > itemDepth)
@@ -240,7 +240,7 @@ public static class QuickSavePatch
         return null;
     }
 
-    private static string FormatGameDate(string season, int? day, int? year, int? timeOfDay)
+    private static string? FormatGameDate(string? season, int? day, int? year, int? timeOfDay)
     {
         if (season == null || day == null || year == null)
             return null;
@@ -272,7 +272,7 @@ public static class QuickSavePatch
         {
             // build args to match the current QuickSave version's signature
             var parameters = method.GetParameters();
-            object[] args = null;
+            object[]? args = null;
             if (parameters.Length > 0)
             {
                 args = new object[parameters.Length];
@@ -283,11 +283,11 @@ public static class QuickSavePatch
                     else if (parameters[i].ParameterType == typeof(string))
                         args[i] = "Quicksave"; // default save file name
                     else if (parameters[i].HasDefaultValue)
-                        args[i] = parameters[i].DefaultValue;
+                        args[i] = parameters[i].DefaultValue!;
                     else
                         args[i] = parameters[i].ParameterType.IsValueType
-                            ? Activator.CreateInstance(parameters[i].ParameterType)
-                            : null;
+                            ? Activator.CreateInstance(parameters[i].ParameterType)!
+                            : null!;
                 }
             }
 
@@ -342,8 +342,8 @@ public static class QuickSavePatch
                 return;
             }
 
-            _trySave = mainType.GetMethod("TrySave", AnyStatic);
-            _tryLoad = mainType.GetMethod("TryLoad", AnyStatic);
+            _trySave = mainType.GetMethod("TrySave", AnyStatic)!;
+            _tryLoad = mainType.GetMethod("TryLoad", AnyStatic)!;
 
             if (_trySave != null && _tryLoad != null)
             {

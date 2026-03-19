@@ -37,16 +37,16 @@ internal static class UnofficialModUpdateMenuPatch
     private static bool _isScrollbarDragging;
 
     // Cached reflection
-    private static Type _updateMenuType;
-    private static FieldInfo _statusesField;
-    private static FieldInfo _componentsField;
-    private static FieldInfo _smapiComponentField;
-    private static FieldInfo _smapiTextField;
-    private static FieldInfo _originalStatusesField;
-    private static FieldInfo _displayIndexField;
-    private static FieldInfo _numDisplayableModsField;
-    private static MethodInfo _scrollMethod;
-    private static MethodInfo _updateComponentsMethod;
+    private static Type _updateMenuType = null!;
+    private static FieldInfo _statusesField = null!;
+    private static FieldInfo _componentsField = null!;
+    private static FieldInfo _smapiComponentField = null!;
+    private static FieldInfo _smapiTextField = null!;
+    private static FieldInfo _originalStatusesField = null!;
+    private static FieldInfo _displayIndexField = null!;
+    private static FieldInfo _numDisplayableModsField = null!;
+    private static MethodInfo _scrollMethod = null!;
+    private static MethodInfo _updateComponentsMethod = null!;
 
     public static void Apply(Harmony harmony)
     {
@@ -56,7 +56,7 @@ internal static class UnofficialModUpdateMenuPatch
             {
                 if (assembly.GetName().Name == "ModUpdateMenu")
                 {
-                    _updateMenuType = assembly.GetType("ModUpdateMenu.Menus.UpdateMenu");
+                    _updateMenuType = assembly.GetType("ModUpdateMenu.Menus.UpdateMenu")!;
                     break;
                 }
             }
@@ -68,16 +68,16 @@ internal static class UnofficialModUpdateMenuPatch
             }
 
             var flags = BindingFlags.NonPublic | BindingFlags.Instance;
-            _statusesField = _updateMenuType.GetField("statuses", flags);
-            _componentsField = _updateMenuType.GetField("components", flags);
-            _smapiComponentField = _updateMenuType.GetField("SMAPIComponent", flags);
-            _smapiTextField = _updateMenuType.GetField("_SMAPIText", flags);
-            _originalStatusesField = _updateMenuType.GetField("originalStatuses", flags);
-            _displayIndexField = _updateMenuType.GetField("displayIndex", flags);
-            _numDisplayableModsField = _updateMenuType.GetField("numDisplayableMods", flags);
+            _statusesField = _updateMenuType.GetField("statuses", flags)!;
+            _componentsField = _updateMenuType.GetField("components", flags)!;
+            _smapiComponentField = _updateMenuType.GetField("SMAPIComponent", flags)!;
+            _smapiTextField = _updateMenuType.GetField("_SMAPIText", flags)!;
+            _originalStatusesField = _updateMenuType.GetField("originalStatuses", flags)!;
+            _displayIndexField = _updateMenuType.GetField("displayIndex", flags)!;
+            _numDisplayableModsField = _updateMenuType.GetField("numDisplayableMods", flags)!;
             _scrollMethod = _updateMenuType.GetMethod("receiveScrollWheelAction",
-                BindingFlags.Public | BindingFlags.Instance, null, new[] { typeof(int) }, null);
-            _updateComponentsMethod = _updateMenuType.GetMethod("UpdateComponents", flags);
+                BindingFlags.Public | BindingFlags.Instance, null, new[] { typeof(int) }, null)!;
+            _updateComponentsMethod = _updateMenuType.GetMethod("UpdateComponents", flags)!;
 
             var patchType = typeof(UnofficialModUpdateMenuPatch);
 
@@ -424,10 +424,10 @@ internal static class UnofficialModUpdateMenuPatch
             activity.RunOnUiThread(() =>
             {
                 new AlertDialog.Builder(activity)
-                    .SetTitle("Open Link")
-                    .SetMessage(url)
-                    .SetPositiveButton("Open", (s, e) => OpenUrlOnAndroid(url))
-                    .SetNegativeButton("Cancel", (s, e) => { })
+                    .SetTitle("Open Link")!
+                    .SetMessage(url)!
+                    .SetPositiveButton("Open", (s, e) => OpenUrlOnAndroid(url))!
+                    .SetNegativeButton("Cancel", (s, e) => { })!
                     .Show();
             });
         }

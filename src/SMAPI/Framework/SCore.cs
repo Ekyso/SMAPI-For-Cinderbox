@@ -122,9 +122,6 @@ internal class SCore : IDisposable
     private readonly EventManager EventManager;
 
 #if SMAPI_FOR_ANDROID
-    /// <summary>Event signaled when Android surface is created.</summary>
-    private static ManualResetEventSlim? SurfaceCreatedEvent;
-
     /// <summary>Event signaled when GL context is ready and game thread starts.</summary>
     private static ManualResetEventSlim? GLReadyEvent;
 
@@ -436,7 +433,7 @@ internal class SCore : IDisposable
 
                 if (SCore.WaitForSurfaceHandler != null)
                 {
-                    SCore.WaitForSurfaceHandler(surfaceView);
+                    SCore.WaitForSurfaceHandler(surfaceView!);
                 }
                 else
                 {

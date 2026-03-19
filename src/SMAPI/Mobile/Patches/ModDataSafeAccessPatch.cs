@@ -41,7 +41,7 @@ internal static class ModDataSafeAccessPatch
             {
                 var declaringType = getItem.DeclaringType;
                 LogInfo($"get_Item declared on {declaringType?.Name}, resolving from declaring type");
-                getItem = declaringType.GetMethod("get_Item", new[] { typeof(string) });
+                getItem = declaringType!.GetMethod("get_Item", new[] { typeof(string) });
                 if (getItem == null)
                 {
                     LogError("Could not resolve get_Item from declaring type");
@@ -71,7 +71,7 @@ internal static class ModDataSafeAccessPatch
     {
         if (__instance is ModDataDictionary modData && !modData.ContainsKey(key))
         {
-            __result = null;
+            __result = null!;
             return false;
         }
         return true;

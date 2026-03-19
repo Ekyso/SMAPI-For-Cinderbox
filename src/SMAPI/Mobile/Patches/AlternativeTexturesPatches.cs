@@ -17,14 +17,14 @@ internal static class AlternativeTexturesPatches
 {
     private const string Tag = "AltTexturesPatches";
 
-    private static FieldInfo _catalogueSearchBox;
-    private static FieldInfo _paintBucketSearchBox;
+    private static FieldInfo _catalogueSearchBox = null!;
+    private static FieldInfo _paintBucketSearchBox = null!;
 
     public static void Apply(Harmony harmony)
     {
         try
         {
-            Assembly assembly = null;
+            Assembly? assembly = null;
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 if (asm.GetName().Name == "AlternativeTextures")
@@ -63,7 +63,7 @@ internal static class AlternativeTexturesPatches
             _catalogueSearchBox = menuType.GetField(
                 "_searchBox",
                 BindingFlags.NonPublic | BindingFlags.Instance
-            );
+            )!;
             if (_catalogueSearchBox == null)
             {
                 Log.Error(Tag, "CatalogueMenu._searchBox field not found");
@@ -111,7 +111,7 @@ internal static class AlternativeTexturesPatches
             _paintBucketSearchBox = menuType.GetField(
                 "_searchBox",
                 BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic
-            );
+            )!;
             if (_paintBucketSearchBox == null)
             {
                 Log.Error(Tag, "PaintBucketMenu._searchBox field not found");

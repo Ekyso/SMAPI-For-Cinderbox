@@ -11,7 +11,7 @@ public class SoundEffectFacade : SoundEffect, IRewriteFacade
     /*********
     ** Public methods
     *********/
-    public static SoundEffect FromStream(Stream stream)
+    public new static SoundEffect FromStream(Stream stream)
     {
         return SoundEffect.FromStream(stream);
     }

@@ -20,19 +20,19 @@ internal static class FashionSensePatches
 {
     private const string Tag = "FashionSensePatches";
 
-    private static FieldInfo _searchBoxField;
+    private static FieldInfo _searchBoxField = null!;
 
-    private static MethodInfo _evaluateNameMethod;
-    private static FieldInfo _isNewNameValidField;
-    private static FieldInfo _nameTextBoxField;
-    private static FieldInfo _doneNamingButtonField;
-    private static FieldInfo _callbackMenuField;
+    private static MethodInfo _evaluateNameMethod = null!;
+    private static FieldInfo _isNewNameValidField = null!;
+    private static FieldInfo _nameTextBoxField = null!;
+    private static FieldInfo _doneNamingButtonField = null!;
+    private static FieldInfo _callbackMenuField = null!;
 
     public static void Apply(Harmony harmony)
     {
         try
         {
-            Assembly fashionSenseAssembly = null;
+            Assembly? fashionSenseAssembly = null;
             foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 if (assembly.GetName().Name == "FashionSense")
@@ -73,7 +73,7 @@ internal static class FashionSensePatches
             _searchBoxField = searchMenuType.GetField(
                 "_searchBox",
                 BindingFlags.NonPublic | BindingFlags.Instance
-            );
+            )!;
             if (_searchBoxField == null)
             {
                 Log.Error(Tag, "SearchMenu._searchBox field not found");
@@ -162,23 +162,23 @@ internal static class FashionSensePatches
             _evaluateNameMethod = nameMenuType.GetMethod(
                 "EvaluateName",
                 BindingFlags.Public | BindingFlags.Instance
-            );
+            )!;
             _isNewNameValidField = nameMenuType.GetField(
                 "_isNewNameValid",
                 BindingFlags.NonPublic | BindingFlags.Instance
-            );
+            )!;
             _nameTextBoxField = nameMenuType.GetField(
                 "_textBox",
                 BindingFlags.NonPublic | BindingFlags.Instance
-            );
+            )!;
             _doneNamingButtonField = nameMenuType.GetField(
                 "_doneNamingButton",
                 BindingFlags.NonPublic | BindingFlags.Instance
-            );
+            )!;
             _callbackMenuField = nameMenuType.GetField(
                 "_callbackMenu",
                 BindingFlags.NonPublic | BindingFlags.Instance
-            );
+            )!;
 
             if (_evaluateNameMethod == null || _nameTextBoxField == null ||
                 _doneNamingButtonField == null || _callbackMenuField == null)

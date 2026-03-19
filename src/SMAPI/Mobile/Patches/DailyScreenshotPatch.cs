@@ -20,14 +20,14 @@ namespace StardewModdingAPI.Mobile.Patches;
 internal static class DailyScreenshotPatch
 {
     private const string Tag = "DailyScreenshotPatch";
-    private static DirectoryInfo _cachedDir;
-    private static string _cachedPath;
+    private static DirectoryInfo _cachedDir = null!;
+    private static string _cachedPath = null!;
 
     public static void Apply(Harmony harmony)
     {
         try
         {
-            Assembly assembly = null;
+            Assembly? assembly = null;
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             {
                 if (asm.GetName().Name == "DailyScreenshot")
@@ -110,7 +110,7 @@ internal static class DailyScreenshotPatch
             if (gameMenu.pages[GameMenu.optionsTab] is not OptionsPage optionsPage)
                 return false;
 
-            string modDir = (__instance as IMod)?.Helper?.DirectoryPath;
+            string? modDir = (__instance as IMod)?.Helper?.DirectoryPath;
 
             optionsPage.options.Add(new OptionsElement("DailyScreenshot Mod:"));
             optionsPage.options.Add(new OptionsButton("Show config.json", () =>

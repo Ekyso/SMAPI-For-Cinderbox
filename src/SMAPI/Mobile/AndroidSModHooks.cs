@@ -30,7 +30,6 @@ internal static class AndroidSModHooks
 
         double runTaskOnMainThreadTotalTime = 0;
         int runTaskOnMainThreadCount = 0;
-        bool isInGame = false;
         while (queueTaskNeedToStartOnMainThread.TryDequeue(out var task))
         {
             bool shouldShowLogTask = task.name is not null;

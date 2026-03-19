@@ -93,7 +93,7 @@ internal static class AndroidGameLoopManager
 
         if (queueOnGameUpdatingToAdd.Count > 0)
         {
-            while (queueOnGameUpdatingToAdd.TryDequeue(out OnGameUpdatingDelegate item))
+            while (queueOnGameUpdatingToAdd.TryDequeue(out OnGameUpdatingDelegate? item))
             {
                 listOnGameUpdating.Add(item);
             }
@@ -101,7 +101,7 @@ internal static class AndroidGameLoopManager
 
         if (queueOnGameUpdatingToRemove.Count > 0)
         {
-            while (queueOnGameUpdatingToRemove.TryDequeue(out OnGameUpdatingDelegate item))
+            while (queueOnGameUpdatingToRemove.TryDequeue(out OnGameUpdatingDelegate? item))
             {
                 listOnGameUpdating.Remove(item);
             }
@@ -151,10 +151,10 @@ internal static class AndroidGameLoopManager
         TimerLogMemory.Restart();
 
         var mainActivity = SMAPIActivityTool.MainActivity;
-        ActivityManager activityManager =
-            mainActivity.GetSystemService(Service.ActivityService) as ActivityManager;
+        ActivityManager? activityManager =
+            mainActivity!.GetSystemService(Service.ActivityService) as ActivityManager;
         var memoryInfo = new ActivityManager.MemoryInfo();
-        activityManager.GetMemoryInfo(memoryInfo);
+        activityManager!.GetMemoryInfo(memoryInfo);
 
         StringBuilder log = new();
         log.AppendLine(" Log Mem Info (Android):");
