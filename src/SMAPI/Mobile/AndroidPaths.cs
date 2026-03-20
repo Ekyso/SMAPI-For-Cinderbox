@@ -42,6 +42,12 @@ internal static class AndroidPaths
     /// <summary>Enable object pooling for mod event args to reduce GC pressure.</summary>
     public static bool UseEventArgsPooling { get; private set; } = true;
 
+    /// <summary>Enable profiler for mod event handlers.</summary>
+    public static bool EnableEventProfiling { get; private set; } = false;
+
+    /// <summary>Profiler threshold in ms, warnings are logged for handlers taking longer.</summary>
+    public static int EventProfilingThreshold { get; private set; } = 4;
+
     /// <summary>Enable performance metrics logging.</summary>
     public static bool PerformanceLogging { get; private set; } = false;
 
@@ -89,6 +95,8 @@ internal static class AndroidPaths
         bool useAsyncModEvents,
         int modEventThreads,
         bool useEventArgsPooling,
+        bool enableEventProfiling,
+        int eventProfilingThreshold,
         bool performanceLogging,
         bool useOptimizedSpriteUpdates,
         bool useOptimizedAnimalUpdates,
@@ -99,6 +107,8 @@ internal static class AndroidPaths
         UseAsyncModEvents = useAsyncModEvents;
         ModEventThreads = modEventThreads;
         UseEventArgsPooling = useEventArgsPooling;
+        EnableEventProfiling = enableEventProfiling;
+        EventProfilingThreshold = eventProfilingThreshold;
         PerformanceLogging = performanceLogging;
         UseOptimizedSpriteUpdates = useOptimizedSpriteUpdates;
         UseOptimizedAnimalUpdates = useOptimizedAnimalUpdates;

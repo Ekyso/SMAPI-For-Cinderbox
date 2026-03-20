@@ -33,6 +33,8 @@ public static class SmapiAndroidLauncher
     /// <param name="useAsyncModEvents">Enable concurrent mod event pipeline.</param>
     /// <param name="modEventThreads">Number of threads for mod event pipeline (0 = auto).</param>
     /// <param name="useEventArgsPooling">Enable mod event args pooling.</param>
+    /// <param name="enableEventProfiling">Enable profiler for mod event handlers.</param>
+    /// <param name="eventProfilingThreshold">Profiler threshold in ms (default 4).</param>
     /// <param name="performanceLogging">Enable performance logging.</param>
     /// <param name="useOptimizedSpriteUpdates">Optimize sprite removal algorithm.</param>
     /// <param name="useOptimizedAnimalUpdates">Reuse cached buffer for animal updates.</param>
@@ -51,6 +53,8 @@ public static class SmapiAndroidLauncher
         bool useAsyncModEvents = true,
         int modEventThreads = 0,
         bool useEventArgsPooling = true,
+        bool enableEventProfiling = false,
+        int eventProfilingThreshold = 4,
         bool performanceLogging = false,
         bool useOptimizedSpriteUpdates = true,
         bool useOptimizedAnimalUpdates = false,
@@ -81,6 +85,8 @@ public static class SmapiAndroidLauncher
                 useAsyncModEvents,
                 modEventThreads,
                 useEventArgsPooling,
+                enableEventProfiling,
+                eventProfilingThreshold,
                 performanceLogging,
                 useOptimizedSpriteUpdates,
                 useOptimizedAnimalUpdates,

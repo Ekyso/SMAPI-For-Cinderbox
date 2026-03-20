@@ -1,9 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using StardewModdingAPI.Events;
 using StardewModdingAPI.Internal;
+#if SMAPI_FOR_ANDROID
+using StardewModdingAPI.Mobile;
+#endif
 
 namespace StardewModdingAPI.Framework.Events;
 
@@ -109,7 +113,26 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
 
             try
             {
+#if SMAPI_FOR_ANDROID
+                if (AndroidPaths.EnableEventProfiling)
+                {
+                    Stopwatch sw = Stopwatch.StartNew();
+                    handler.Handler(null, args);
+                    sw.Stop();
+
+                    if (sw.ElapsedMilliseconds > AndroidPaths.EventProfilingThreshold)
+                    {
+                        handler.SourceMod.LogAsMod(
+                            $"This mod's event handler '{handler.Handler.Method.Name}' for the {this.EventName} event took {sw.ElapsedMilliseconds}ms, which exceeds the {AndroidPaths.EventProfilingThreshold}ms warning threshold. This may cause performance issues or frame stutters.",
+                            LogLevel.Warn
+                        );
+                    }
+                }
+                else
+                    handler.Handler(null, args);
+#else
                 handler.Handler(null, args);
+#endif
             }
             catch (Exception ex)
             {
@@ -137,7 +160,26 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
 
             try
             {
+#if SMAPI_FOR_ANDROID
+                if (AndroidPaths.EnableEventProfiling)
+                {
+                    Stopwatch sw = Stopwatch.StartNew();
+                    invoke(handler.SourceMod, args => handler.Handler(null, args));
+                    sw.Stop();
+
+                    if (sw.ElapsedMilliseconds > AndroidPaths.EventProfilingThreshold)
+                    {
+                        handler.SourceMod.LogAsMod(
+                            $"This mod's event handler '{handler.Handler.Method.Name}' for the {this.EventName} event took {sw.ElapsedMilliseconds}ms, which exceeds the {AndroidPaths.EventProfilingThreshold}ms warning threshold. This may cause performance issues or frame stutters.",
+                            LogLevel.Warn
+                        );
+                    }
+                }
+                else
+                    invoke(handler.SourceMod, args => handler.Handler(null, args));
+#else
                 invoke(handler.SourceMod, args => handler.Handler(null, args));
+#endif
             }
             catch (Exception ex)
             {
