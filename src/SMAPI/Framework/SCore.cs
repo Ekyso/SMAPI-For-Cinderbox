@@ -3698,6 +3698,12 @@ internal class SCore : IDisposable
                 failReason = ModFailReason.Incompatible;
                 return false;
             }
+            catch (FileLoadException ex) when (ex.Message.Contains("0x800711C7"))
+            {
+                errorReasonPhrase = "it was blocked by Windows Smart App Control (usually not a problem with the mod itself)";
+                failReason = ModFailReason.LoadFailed;
+                return false;
+            }
             catch (SAssemblyLoadFailedException ex)
             {
                 errorReasonPhrase = $"its DLL couldn't be loaded: {ex.Message}";
