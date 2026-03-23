@@ -929,7 +929,8 @@ internal class SCore : IDisposable
                         }
 
                         // raise input button events
-                        if (inputState.ButtonStates.Count > 0)
+                        IReadOnlyDictionary<SButton, SButtonState> buttonStates = inputState.GetActiveButtonStates();
+                        if (buttonStates.Count > 0)
                         {
                             if (events.ButtonsChanged.HasListeners)
                                 events.ButtonsChanged.Raise(new ButtonsChangedEventArgs(cursor, inputState));
@@ -940,7 +941,7 @@ internal class SCore : IDisposable
 
                             if (logInput || raisePressed || raiseReleased)
                             {
-                                foreach ((SButton button, SButtonState status) in inputState.ButtonStates)
+                                foreach ((SButton button, SButtonState status) in buttonStates)
                                 {
                                     switch (status)
                                     {

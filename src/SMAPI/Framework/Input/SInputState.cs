@@ -41,6 +41,10 @@ internal sealed class SInputState : InputState
     /// <summary>The pooled cache set for <see cref="FillPressedButtons"/> in <see cref="TrueUpdate"/>.</summary>
     private readonly HashSet<SButton> PooledPressedButtons = [];
 
+    /// <summary>The buttons which were active (pressed, held, or newly released) as of the last update.</summary>
+    /// <remarks>A released button is considered inactive if it's been released for two consecutive ticks, at which point it's no longer in this dictionary.</remarks>
+    private readonly Dictionary<SButton, SButtonState> ButtonStates = [];
+
 
     /*********
     ** Accessors
@@ -53,10 +57,6 @@ internal sealed class SInputState : InputState
 
     /// <summary>The mouse state as of the last update, with overrides applied.</summary>
     public MouseState MouseState { get; private set; }
-
-    /// <summary>The buttons which were active (pressed, held, or newly released) as of the last update.</summary>
-    /// <remarks>A released button is considered inactive if it's been released for two consecutive ticks, at which point it's no longer in this dictionary.</remarks>
-    public Dictionary<SButton, SButtonState> ButtonStates { get; } = [];
 
     /// <summary>The cursor position on the screen adjusted for the zoom level.</summary>
     public ICursorPosition CursorPosition => this.CursorPositionImpl;
@@ -149,6 +149,13 @@ internal sealed class SInputState : InputState
     public override MouseState GetMouseState()
     {
         return this.MouseState;
+    }
+
+    /// <summary>Get the buttons which were active (pressed, held, or newly released) as of the last update.</summary>
+    /// <remarks>A released button is considered inactive if it's been released for two consecutive ticks, at which point it's no longer in this dictionary.</remarks>
+    public IReadOnlyDictionary<SButton, SButtonState> GetActiveButtonStates()
+    {
+        return this.ButtonStates;
     }
 
     /// <summary>Override the state for a button.</summary>

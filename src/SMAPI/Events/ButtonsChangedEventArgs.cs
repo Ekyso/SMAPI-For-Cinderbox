@@ -51,11 +51,12 @@ public class ButtonsChangedEventArgs : EventArgs
     /// <param name="inputState">The game's current input state.</param>
     private Dictionary<SButtonState, SButton[]> GetButtonsByState(SInputState inputState)
     {
-        Dictionary<SButtonState, SButton[]> lookup = inputState.ButtonStates
+        Dictionary<SButtonState, SButton[]> lookup = inputState
+            .GetActiveButtonStates()
             .GroupBy(p => p.Value)
             .ToDictionary(p => p.Key, p => p.Select(p => p.Key).ToArray());
 
-        foreach (var state in new[] { SButtonState.Pressed, SButtonState.Held, SButtonState.Released })
+        foreach (SButtonState state in new[] { SButtonState.Pressed, SButtonState.Held, SButtonState.Released })
         {
             if (!lookup.ContainsKey(state))
                 lookup[state] = [];
