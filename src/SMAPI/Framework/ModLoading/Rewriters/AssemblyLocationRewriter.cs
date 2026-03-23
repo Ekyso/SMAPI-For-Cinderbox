@@ -136,14 +136,14 @@ public static class AssemblyLocationHelper
                 return gamePath;
         }
 
-        // check mods path
+        // check mods path (skip dot-prefixed directories — those are disabled mods)
         if (!string.IsNullOrEmpty(ModsPath) && System.IO.Directory.Exists(ModsPath))
         {
             try
             {
-                var files = System.IO.Directory.GetFiles(ModsPath, dllName, System.IO.SearchOption.AllDirectories);
-                if (files.Length > 0)
-                    return files[0];
+                var match = FindDllRecursive(new System.IO.DirectoryInfo(ModsPath), dllName);
+                if (match != null)
+                    return match;
             }
             catch
             {
@@ -152,6 +152,32 @@ public static class AssemblyLocationHelper
 
         // fallback
         return string.Empty;
+    }
+
+    /// <summary>Recursively search for a DLL file, skipping dot-prefixed (disabled) mod folders.</summary>
+    private static string? FindDllRecursive(System.IO.DirectoryInfo dir, string dllName)
+    {
+        try
+        {
+            var file = new System.IO.FileInfo(System.IO.Path.Combine(dir.FullName, dllName));
+            if (file.Exists)
+                return file.FullName;
+
+            foreach (var sub in dir.EnumerateDirectories())
+            {
+                if (sub.Name.StartsWith("."))
+                    continue;
+
+                var result = FindDllRecursive(sub, dllName);
+                if (result != null)
+                    return result;
+            }
+        }
+        catch
+        {
+        }
+
+        return null;
     }
 }
 #endif
