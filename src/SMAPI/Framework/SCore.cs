@@ -657,7 +657,6 @@ internal class SCore : IDisposable
                 SCore.GLReadyEvent = new ManualResetEventSlim(false);
                 var glWaitStart = DateTime.UtcNow;
 
-
                 EventHandler glHandler = (s, e) => SCore.GLReadyEvent?.Set();
                 Microsoft.Xna.Framework.MonoGameAndroidGameView.OnResumeGameThread += glHandler;
 
@@ -915,7 +914,10 @@ internal class SCore : IDisposable
         }
 
 #if SMAPI_FOR_ANDROID
-        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod init")}", LogLevel.Info);
+        this.Monitor.Log(
+            $"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod init")}",
+            LogLevel.Info
+        );
 #endif
 
         // init TMX support
@@ -1094,11 +1096,17 @@ internal class SCore : IDisposable
             // load mods
             mods = resolver.ProcessDependencies(mods, modDatabase).ToArray();
 #if SMAPI_FOR_ANDROID
-            this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("before LoadMods")}", LogLevel.Info);
+            this.Monitor.Log(
+                $"Memory: {Mobile.MemoryDiagnostics.Snapshot("before LoadMods")}",
+                LogLevel.Info
+            );
 #endif
             this.LoadMods(mods, this.Toolkit.JsonHelper, this.ContentCore, modDatabase);
 #if SMAPI_FOR_ANDROID
-            this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("after LoadMods")}", LogLevel.Info);
+            this.Monitor.Log(
+                $"Memory: {Mobile.MemoryDiagnostics.Snapshot("after LoadMods")}",
+                LogLevel.Info
+            );
 #endif
 
             // check for software likely to cause issues
@@ -1142,7 +1150,10 @@ internal class SCore : IDisposable
     private void OnInstanceContentLoaded()
     {
 #if SMAPI_FOR_ANDROID
-        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("initial content loaded")}", LogLevel.Info);
+        this.Monitor.Log(
+            $"Memory: {Mobile.MemoryDiagnostics.Snapshot("initial content loaded")}",
+            LogLevel.Info
+        );
 #endif
         // override map display device
         if (Constants.GameVersion.IsOlderThan("1.6.15"))
@@ -1592,10 +1603,9 @@ internal class SCore : IDisposable
                         // raise cursor moved event
                         if (state.Cursor.IsChanged && events.CursorMoved.HasListeners)
                         {
-                            events.CursorMoved.Raise(new CursorMovedEventArgs(
-                                state.Cursor.Old!,
-                                state.Cursor.New!
-                            ));
+                            events.CursorMoved.Raise(
+                                new CursorMovedEventArgs(state.Cursor.Old!, state.Cursor.New!)
+                            );
                         }
 
                         // raise mouse wheel scrolled
@@ -1692,9 +1702,7 @@ internal class SCore : IDisposable
 
                     // raise menu events
                     if (events.MenuChanged.HasListeners)
-                        events.MenuChanged.Raise(
-                            new MenuChangedEventArgs(was, now)
-                        );
+                        events.MenuChanged.Raise(new MenuChangedEventArgs(was, now));
                 }
 
                 /*********
@@ -1952,34 +1960,59 @@ internal class SCore : IDisposable
                     // Diagnostic: dump Harmony patches on SpriteBatch.Draw methods
                     try
                     {
-                        var spriteBatchDrawMethods = typeof(SpriteBatch).GetMethods(BindingFlags.Public | BindingFlags.Instance)
-                            .Where(m => m.Name == "Draw" && m.GetParameters().Any(p => p.ParameterType == typeof(Texture2D)))
+                        var spriteBatchDrawMethods = typeof(SpriteBatch)
+                            .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                            .Where(m =>
+                                m.Name == "Draw"
+                                && m.GetParameters().Any(p => p.ParameterType == typeof(Texture2D))
+                            )
                             .ToList();
-                        this.Monitor.Log($"[HARMONY-DIAG] Found {spriteBatchDrawMethods.Count} SpriteBatch.Draw(Texture2D...) overloads", StardewModdingAPI.LogLevel.Trace);
+                        this.Monitor.Log(
+                            $"[HARMONY] Found {spriteBatchDrawMethods.Count} SpriteBatch.Draw(Texture2D...) overloads",
+                            StardewModdingAPI.LogLevel.Trace
+                        );
                         foreach (var method in spriteBatchDrawMethods)
                         {
-                            string sig = string.Join(", ", method.GetParameters().Select(p => p.ParameterType.Name));
+                            string sig = string.Join(
+                                ", ",
+                                method.GetParameters().Select(p => p.ParameterType.Name)
+                            );
                             var patchInfo = HarmonyLib.Harmony.GetPatchInfo(method);
                             if (patchInfo != null)
                             {
                                 var prefixes = patchInfo.Prefixes?.ToList() ?? new();
                                 var postfixes = patchInfo.Postfixes?.ToList() ?? new();
                                 var transpilers = patchInfo.Transpilers?.ToList() ?? new();
-                                this.Monitor.Log($"[HARMONY-DIAG] Draw({sig}): {prefixes.Count} prefixes, {postfixes.Count} postfixes, {transpilers.Count} transpilers", StardewModdingAPI.LogLevel.Trace);
+                                this.Monitor.Log(
+                                    $"[HARMONY] Draw({sig}): {prefixes.Count} prefixes, {postfixes.Count} postfixes, {transpilers.Count} transpilers",
+                                    StardewModdingAPI.LogLevel.Trace
+                                );
                                 foreach (var prefix in prefixes)
-                                    this.Monitor.Log($"[HARMONY-DIAG]   prefix: {prefix.owner} -> {prefix.PatchMethod.DeclaringType?.FullName}.{prefix.PatchMethod.Name}", StardewModdingAPI.LogLevel.Trace);
+                                    this.Monitor.Log(
+                                        $"[HARMONY]   prefix: {prefix.owner} -> {prefix.PatchMethod.DeclaringType?.FullName}.{prefix.PatchMethod.Name}",
+                                        StardewModdingAPI.LogLevel.Trace
+                                    );
                                 foreach (var transpiler in transpilers)
-                                    this.Monitor.Log($"[HARMONY-DIAG]   transpiler: {transpiler.owner} -> {transpiler.PatchMethod.DeclaringType?.FullName}.{transpiler.PatchMethod.Name}", StardewModdingAPI.LogLevel.Trace);
+                                    this.Monitor.Log(
+                                        $"[HARMONY]   transpiler: {transpiler.owner} -> {transpiler.PatchMethod.DeclaringType?.FullName}.{transpiler.PatchMethod.Name}",
+                                        StardewModdingAPI.LogLevel.Trace
+                                    );
                             }
                             else
                             {
-                                this.Monitor.Log($"[HARMONY-DIAG] Draw({sig}): NO PATCHES", StardewModdingAPI.LogLevel.Warn);
+                                this.Monitor.Log(
+                                    $"[HARMONY] Draw({sig}): NO PATCHES",
+                                    StardewModdingAPI.LogLevel.Debug
+                                );
                             }
                         }
                     }
                     catch (Exception ex)
                     {
-                        this.Monitor.Log($"[HARMONY-DIAG] Error checking patches: {ex.Message}", StardewModdingAPI.LogLevel.Error);
+                        this.Monitor.Log(
+                            $"[HARMONY] Error checking patches: {ex.Message}",
+                            StardewModdingAPI.LogLevel.Error
+                        );
                     }
 #endif
                 }
@@ -2137,7 +2170,6 @@ internal class SCore : IDisposable
                         events.OneSecondUpdateTicked.RaiseEmpty();
                     }
                 }
-
             }
 
             /*********
@@ -2284,7 +2316,6 @@ internal class SCore : IDisposable
             }
         );
     }
-
 #endif
 
     /// <summary>Handle the game changing locale.</summary>
@@ -2358,7 +2389,6 @@ internal class SCore : IDisposable
                     Game1.chatBox = new SChatBox(this.LogManager.MonitorForGame)
                 );
                 break;
-
         }
 
         // raise events
@@ -2706,7 +2736,9 @@ internal class SCore : IDisposable
         GC.WaitForPendingFinalizers();
         GC.Collect(2, GCCollectionMode.Forced);
         long after = GC.GetTotalMemory(false);
-        this.Monitor.Log($"Title cleanup: GC recovered {(before - after) / 1048576}MB (before={before / 1048576}MB, after={after / 1048576}MB)");
+        this.Monitor.Log(
+            $"Title cleanup: GC recovered {(before - after) / 1048576}MB (before={before / 1048576}MB, after={after / 1048576}MB)"
+        );
 #endif
     }
 
@@ -3349,11 +3381,17 @@ internal class SCore : IDisposable
 
                 // log memory every 10 mods to track growth
                 if ((assemblyModCount + contentPackCount) % 10 == 0)
-                    this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after loading {assemblyModCount} mods + {contentPackCount} packs")}", LogLevel.Info);
+                    this.Monitor.Log(
+                        $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after loading {assemblyModCount} mods + {contentPackCount} packs")}",
+                        LogLevel.Info
+                    );
 #endif
             }
 #if SMAPI_FOR_ANDROID
-            this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"all mods loaded: {assemblyModCount} mods + {contentPackCount} packs")}", LogLevel.Info);
+            this.Monitor.Log(
+                $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"all mods loaded: {assemblyModCount} mods + {contentPackCount} packs")}",
+                LogLevel.Info
+            );
 #endif
         }
 
@@ -3381,7 +3419,10 @@ internal class SCore : IDisposable
         // initialize loaded non-content-pack mods
         this.Monitor.Log("Launching mods...", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
-        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod Entry() calls")}", LogLevel.Debug);
+        this.Monitor.Log(
+            $"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod Entry() calls")}",
+            LogLevel.Debug
+        );
         int entryCount = 0;
 #endif
         foreach (IModMetadata metadata in loadedMods)
@@ -3449,12 +3490,18 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_ANDROID
             entryCount++;
             if (entryCount % 10 == 0)
-                this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after {entryCount}/{loadedMods.Length} mod Entry() calls")}", LogLevel.Debug);
+                this.Monitor.Log(
+                    $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after {entryCount}/{loadedMods.Length} mod Entry() calls")}",
+                    LogLevel.Debug
+                );
 #endif
         }
 
 #if SMAPI_FOR_ANDROID
-        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after all {loadedMods.Length} mod Entry() calls")}", LogLevel.Debug);
+        this.Monitor.Log(
+            $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after all {loadedMods.Length} mod Entry() calls")}",
+            LogLevel.Debug
+        );
 #endif
 
         // unlock mod integrations
@@ -3478,7 +3525,10 @@ internal class SCore : IDisposable
 #endif
 
 #if SMAPI_FOR_ANDROID
-        this.Monitor.Log($"Memory: {Mobile.MemoryDiagnostics.Snapshot("mods loaded and ready")}", LogLevel.Info);
+        this.Monitor.Log(
+            $"Memory: {Mobile.MemoryDiagnostics.Snapshot("mods loaded and ready")}",
+            LogLevel.Info
+        );
 #endif
         this.Monitor.Log("Mods loaded and ready!", LogLevel.Debug);
     }
