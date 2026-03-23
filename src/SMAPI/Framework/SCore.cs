@@ -1332,7 +1332,7 @@ internal class SCore : IDisposable
             /*********
             ** Execute commands
             *********/
-            if (this.ScreenCommandQueue.Value.Any())
+            if (this.ScreenCommandQueue.Value.Count > 0)
             {
                 var commandQueue = this.ScreenCommandQueue.Value;
                 foreach ((Command? command, string? name, string[]? args) in commandQueue)

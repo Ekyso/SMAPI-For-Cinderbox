@@ -41,7 +41,7 @@ internal class WorldLocationsTracker : IWatcher
     public string Name => nameof(WorldLocationsTracker);
 
     /// <summary>Whether locations were added or removed since the last reset.</summary>
-    public bool IsLocationListChanged => this.Added.Any() || this.Removed.Any();
+    public bool IsLocationListChanged => this.Added.Count > 0 || this.Removed.Count > 0;
 
     /// <inheritdoc />
     public bool IsChanged => this.IsLocationListChanged || this.Locations.Any(p => p.IsChanged);

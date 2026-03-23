@@ -47,7 +47,7 @@ internal class FieldFinder : BaseInstructionHandler
     /// <inheritdoc />
     public override bool Handle(ModuleDefinition module, ILProcessor cil, Instruction instruction)
     {
-        if (this.FieldNames.Any())
+        if (this.FieldNames.Count > 0)
         {
             FieldReference? fieldRef = RewriteHelper.AsFieldReference(instruction);
             if (fieldRef != null && fieldRef.DeclaringType.FullName == this.FullTypeName && this.FieldNames.Contains(fieldRef.Name))

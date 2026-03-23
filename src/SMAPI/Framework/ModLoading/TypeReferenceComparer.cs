@@ -112,7 +112,7 @@ internal class TypeReferenceComparer : IEqualityComparer<TypeReference?>
 
         Queue<char> queue = new(typeName);
         string symbol = "";
-        while (queue.Any())
+        while (queue.Count > 0)
         {
             char ch = queue.Dequeue();
             switch (ch)

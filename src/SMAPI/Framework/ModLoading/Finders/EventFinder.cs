@@ -53,7 +53,7 @@ internal class EventFinder : BaseInstructionHandler
     /// <inheritdoc />
     public override bool Handle(ModuleDefinition module, ILProcessor cil, Instruction instruction)
     {
-        if (this.MethodNames.Any())
+        if (this.MethodNames.Count > 0)
         {
             MethodReference? methodRef = RewriteHelper.AsMethodReference(instruction);
             if (methodRef != null && methodRef.DeclaringType.FullName == this.FullTypeName && this.MethodNames.Contains(methodRef.Name))

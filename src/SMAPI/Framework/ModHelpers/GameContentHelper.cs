@@ -107,7 +107,7 @@ internal class GameContentHelper : BaseHelper, IGameContentHelper
     public bool InvalidateCache(IAssetName assetName)
     {
         this.Monitor.Log($"Requested cache invalidation for '{assetName}'.");
-        return this.ContentCore.InvalidateCache(asset => asset.Name.IsEquivalentTo(assetName)).Any();
+        return this.ContentCore.InvalidateCache(asset => asset.Name.IsEquivalentTo(assetName)).Count > 0;
     }
 
     /// <inheritdoc />
@@ -115,14 +115,14 @@ internal class GameContentHelper : BaseHelper, IGameContentHelper
         where T : notnull
     {
         this.Monitor.Log($"Requested cache invalidation for all assets of type {typeof(T)}. This is an expensive operation and should be avoided if possible.");
-        return this.ContentCore.InvalidateCache((_, _, type) => typeof(T).IsAssignableFrom(type)).Any();
+        return this.ContentCore.InvalidateCache((_, _, type) => typeof(T).IsAssignableFrom(type)).Count > 0;
     }
 
     /// <inheritdoc />
     public bool InvalidateCache(Func<IAssetInfo, bool> predicate)
     {
         this.Monitor.Log("Requested cache invalidation for all assets matching a predicate.");
-        return this.ContentCore.InvalidateCache(predicate).Any();
+        return this.ContentCore.InvalidateCache(predicate).Count > 0;
     }
 
     /// <inheritdoc />
