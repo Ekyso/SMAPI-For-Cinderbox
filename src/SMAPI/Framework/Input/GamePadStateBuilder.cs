@@ -145,54 +145,52 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
     }
 
     /// <inheritdoc />
-    public IEnumerable<SButton> GetPressedButtons()
+    public void FillPressedButtons(HashSet<SButton> set)
     {
         // buttons
         foreach (Buttons button in this.GetPressedGamePadButtons())
-            yield return button.ToSButton();
+            set.Add(button.ToSButton());
 
         // triggers
         if (this.LeftTrigger > 0.2f)
-            yield return SButton.LeftTrigger;
+            set.Add(SButton.LeftTrigger);
         if (this.RightTrigger > 0.2f)
-            yield return SButton.RightTrigger;
+            set.Add(SButton.RightTrigger);
 
         // left thumbstick direction
         if (this.LeftStickPos.Y > GamePadStateBuilder.LeftThumbstickDeadZone)
-            yield return SButton.LeftThumbstickUp;
+            set.Add(SButton.LeftThumbstickUp);
         if (this.LeftStickPos.Y < -GamePadStateBuilder.LeftThumbstickDeadZone)
-            yield return SButton.LeftThumbstickDown;
+            set.Add(SButton.LeftThumbstickDown);
         if (this.LeftStickPos.X > GamePadStateBuilder.LeftThumbstickDeadZone)
-            yield return SButton.LeftThumbstickRight;
+            set.Add(SButton.LeftThumbstickRight);
         if (this.LeftStickPos.X < -GamePadStateBuilder.LeftThumbstickDeadZone)
-            yield return SButton.LeftThumbstickLeft;
+            set.Add(SButton.LeftThumbstickLeft);
 
         // right thumbstick direction
         if (this.RightStickPos.Length() > GamePadStateBuilder.RightThumbstickDeadZone)
         {
             if (this.RightStickPos.Y > 0)
-                yield return SButton.RightThumbstickUp;
+                set.Add(SButton.RightThumbstickUp);
             if (this.RightStickPos.Y < 0)
-                yield return SButton.RightThumbstickDown;
+                set.Add(SButton.RightThumbstickDown);
             if (this.RightStickPos.X > 0)
-                yield return SButton.RightThumbstickRight;
+                set.Add(SButton.RightThumbstickRight);
             if (this.RightStickPos.X < 0)
-                yield return SButton.RightThumbstickLeft;
+                set.Add(SButton.RightThumbstickLeft);
         }
     }
 
     /// <inheritdoc />
     public GamePadState GetState()
     {
-        this.State ??= new GamePadState(
+        return this.State ??= new GamePadState(
             leftThumbStick: this.LeftStickPos,
             rightThumbStick: this.RightStickPos,
             leftTrigger: this.LeftTrigger,
             rightTrigger: this.RightTrigger,
             buttons: this.GetPressedGamePadButtons().ToArray()
         );
-
-        return this.State.Value;
     }
 
 

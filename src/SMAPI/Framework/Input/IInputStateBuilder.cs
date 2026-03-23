@@ -20,8 +20,9 @@ internal interface IInputStateBuilder<out THandler, TState>
     /// <param name="overrides">The button state overrides.</param>
     THandler OverrideButtons(IDictionary<SButton, SButtonState> overrides);
 
-    /// <summary>Get the currently pressed buttons.</summary>
-    IEnumerable<SButton> GetPressedButtons();
+    /// <summary>Fill a set with the currently pressed buttons.</summary>
+    /// <param name="set">The set to populate with the pressed buttons.</param>
+    void FillPressedButtons(HashSet<SButton> set);
 
     /// <summary>Get the equivalent state.</summary>
     TState GetState();

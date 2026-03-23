@@ -66,19 +66,19 @@ internal class MouseStateBuilder : IInputStateBuilder<MouseStateBuilder, MouseSt
     }
 
     /// <inheritdoc />
-    public IEnumerable<SButton> GetPressedButtons()
+    public void FillPressedButtons(HashSet<SButton> set)
     {
         foreach (var pair in this.ButtonStates)
         {
             if (pair.Value == ButtonState.Pressed)
-                yield return pair.Key;
+                set.Add(pair.Key);
         }
     }
 
     /// <inheritdoc />
     public MouseState GetState()
     {
-        this.State ??= new MouseState(
+        return this.State ??= new MouseState(
             x: this.X,
             y: this.Y,
             scrollWheel: this.ScrollWheelValue,
@@ -88,7 +88,5 @@ internal class MouseStateBuilder : IInputStateBuilder<MouseStateBuilder, MouseSt
             xButton1: this.ButtonStates[SButton.MouseX1],
             xButton2: this.ButtonStates[SButton.MouseX2]
         );
-
-        return this.State.Value;
     }
 }

@@ -50,17 +50,15 @@ internal class KeyboardStateBuilder : IInputStateBuilder<KeyboardStateBuilder, K
     }
 
     /// <inheritdoc />
-    public IEnumerable<SButton> GetPressedButtons()
+    public void FillPressedButtons(HashSet<SButton> set)
     {
         foreach (Keys key in this.PressedButtons)
-            yield return key.ToSButton();
+            set.Add(key.ToSButton());
     }
 
     /// <inheritdoc />
     public KeyboardState GetState()
     {
-        return
-            this.State
-            ?? (this.State = new KeyboardState(this.PressedButtons.ToArray())).Value;
+        return this.State ??= new KeyboardState(this.PressedButtons.ToArray());
     }
 }

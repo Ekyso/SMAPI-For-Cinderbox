@@ -41,6 +41,9 @@ internal sealed class SInputState : InputState
     /// <summary>The builder which reads the mouse state and applies overrides.</summary>
     private readonly MouseStateBuilder MouseStateBuilder = new();
 
+    /// <summary>The pooled cache set for <see cref="FillPressedButtons"/> in <see cref="TrueUpdate"/>.</summary>
+    private readonly HashSet<SButton> PooledPressedButtons = [];
+
 
     /*********
     ** Accessors
@@ -85,13 +88,18 @@ internal sealed class SInputState : InputState
             KeyboardStateBuilder keyboard = this.KeyboardStateBuilder;
             MouseStateBuilder mouse = this.MouseStateBuilder;
 
+            // get pooled button set
+            HashSet<SButton> pressedButtons = this.PooledPressedButtons;
+
             // get real values
             controller.Reset(base.GetGamePadState());
             keyboard.Reset(base.GetKeyboardState());
             mouse.Reset(base.GetMouseState());
             Vector2 cursorAbsolutePos = new((mouse.X * zoomMultiplier) + Game1.viewport.X, (mouse.Y * zoomMultiplier) + Game1.viewport.Y);
             Vector2? playerTilePos = Context.IsPlayerFree ? Game1.player.Tile : null;
-            HashSet<SButton> reallyDown = new(this.GetPressedButtons(keyboard, mouse, controller));
+
+            pressedButtons.Clear();
+            this.FillPressedButtons(pressedButtons, keyboard, mouse, controller);
 
             // apply overrides
             bool hasOverrides = false;
@@ -103,8 +111,8 @@ internal sealed class SInputState : InputState
             if (this.CustomPressedKeys.Count > 0 || this.CustomReleasedKeys.Count > 0)
             {
                 // reset overrides that no longer apply
-                this.CustomPressedKeys.ExceptWith(reallyDown);
-                this.CustomReleasedKeys.IntersectWith(reallyDown);
+                this.CustomPressedKeys.ExceptWith(pressedButtons);
+                this.CustomReleasedKeys.IntersectWith(pressedButtons);
 
                 // apply overrides
                 if (this.ApplyOverrides(this.CustomPressedKeys, this.CustomReleasedKeys, controller, keyboard, mouse))
@@ -115,9 +123,11 @@ internal sealed class SInputState : InputState
             }
 
             // get button states
-            var pressedButtons = hasOverrides
-                ? new(this.GetPressedButtons(keyboard, mouse, controller))
-                : reallyDown;
+            if (hasOverrides)
+            {
+                pressedButtons.Clear();
+                this.FillPressedButtons(pressedButtons, keyboard, mouse, controller);
+            }
             var activeButtons = this.DeriveStates(this.ButtonStates, pressedButtons);
 
             // update
@@ -344,15 +354,15 @@ internal sealed class SInputState : InputState
     }
 
     /// <summary>Get the buttons pressed in the given stats.</summary>
+    /// <param name="set">The set to populate with pressed buttons.</param>
     /// <param name="keyboard">The keyboard state.</param>
     /// <param name="mouse">The mouse state.</param>
     /// <param name="controller">The controller state.</param>
     /// <remarks>Thumbstick direction logic derived from <see cref="ButtonCollection"/>.</remarks>
-    private IEnumerable<SButton> GetPressedButtons(KeyboardStateBuilder keyboard, MouseStateBuilder mouse, GamePadStateBuilder controller)
+    private void FillPressedButtons(HashSet<SButton> set, KeyboardStateBuilder keyboard, MouseStateBuilder mouse, GamePadStateBuilder controller)
     {
-        return keyboard
-            .GetPressedButtons()
-            .Concat(mouse.GetPressedButtons())
-            .Concat(controller.GetPressedButtons());
+        keyboard.FillPressedButtons(set);
+        mouse.FillPressedButtons(set);
+        controller.FillPressedButtons(set);
     }
 }
