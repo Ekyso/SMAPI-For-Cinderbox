@@ -3,6 +3,7 @@
 # Release notes
 ## Upcoming release
 * For players:
+  * Improved performance.
   * Improved error message when a mod is blocked by Windows Smart App Control.
 
 ## 4.5.2

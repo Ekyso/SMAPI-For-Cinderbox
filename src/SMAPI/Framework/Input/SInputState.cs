@@ -95,8 +95,8 @@ internal sealed class SInputState : InputState
             if (this.CustomPressedKeys.Count > 0 || this.CustomReleasedKeys.Count > 0)
             {
                 // reset overrides that no longer apply
-                this.CustomPressedKeys.RemoveWhere(key => reallyDown.Contains(key));
-                this.CustomReleasedKeys.RemoveWhere(key => !reallyDown.Contains(key));
+                this.CustomPressedKeys.ExceptWith(reallyDown);
+                this.CustomReleasedKeys.IntersectWith(reallyDown);
 
                 // apply overrides
                 if (this.ApplyOverrides(this.CustomPressedKeys, this.CustomReleasedKeys, controller, keyboard, mouse))
