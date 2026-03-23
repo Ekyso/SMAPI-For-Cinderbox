@@ -15,7 +15,12 @@ internal sealed class SInputState : InputState
     ** Accessors
     *********/
     /// <summary>The cursor position on the screen adjusted for the zoom level.</summary>
-    private CursorPosition CursorPositionImpl = new(Vector2.Zero, Vector2.Zero, Vector2.Zero, Vector2.Zero);
+    private CursorPosition CursorPositionImpl = new(
+        Vector2.Zero,
+        Vector2.Zero,
+        Vector2.Zero,
+        Vector2.Zero
+    );
 
     /// <summary>The player's last known tile position.</summary>
     private Vector2? LastPlayerTile;
@@ -44,7 +49,6 @@ internal sealed class SInputState : InputState
     /// <summary>The pooled cache set for <see cref="FillPressedButtons"/> in <see cref="TrueUpdate"/>.</summary>
     private readonly HashSet<SButton> PooledPressedButtons = [];
 
-
     /*********
     ** Accessors
     *********/
@@ -57,12 +61,12 @@ internal sealed class SInputState : InputState
     /// <summary>The mouse state as of the last update, with overrides applied.</summary>
     public MouseState MouseState { get; private set; }
 
-    /// <summary>The buttons which were pressed, held, or released as of the last update.</summary>
-    public IDictionary<SButton, SButtonState> ButtonStates { get; private set; } = new Dictionary<SButton, SButtonState>();
+    /// <summary>The buttons which were active (pressed, held, or newly released) as of the last update.</summary>
+    /// <remarks>A released button is considered inactive if it's been released for two consecutive ticks, at which point it's no longer in this dictionary.</remarks>
+    public Dictionary<SButton, SButtonState> ButtonStates { get; } = [];
 
     /// <summary>The cursor position on the screen adjusted for the zoom level.</summary>
     public ICursorPosition CursorPosition => this.CursorPositionImpl;
-
 
     /*********
     ** Public methods
@@ -95,11 +99,14 @@ internal sealed class SInputState : InputState
             controller.Reset(base.GetGamePadState());
             keyboard.Reset(base.GetKeyboardState());
             mouse.Reset(base.GetMouseState());
-            Vector2 cursorAbsolutePos = new((mouse.X * zoomMultiplier) + Game1.viewport.X, (mouse.Y * zoomMultiplier) + Game1.viewport.Y);
+            Vector2 cursorAbsolutePos = new(
+                (mouse.X * zoomMultiplier) + Game1.viewport.X,
+                (mouse.Y * zoomMultiplier) + Game1.viewport.Y
+            );
             Vector2? playerTilePos = Context.IsPlayerFree ? Game1.player.Tile : null;
 
             pressedButtons.Clear();
-            this.FillPressedButtons(pressedButtons, keyboard, mouse, controller);
+            SInputState.FillPressedButtons(pressedButtons, keyboard, mouse, controller);
 
             // apply overrides
             bool hasOverrides = false;
@@ -115,32 +122,40 @@ internal sealed class SInputState : InputState
                 this.CustomReleasedKeys.IntersectWith(pressedButtons);
 
                 // apply overrides
-                if (this.ApplyOverrides(this.CustomPressedKeys, this.CustomReleasedKeys, controller, keyboard, mouse))
-                    hasOverrides = true;
-
-                // remove pressed keys
+                if (
+                    this.ApplyOverrides(
+                        this.CustomPressedKeys,
+                        this.CustomReleasedKeys,
+                        controller,
+                        keyboard,
+                        mouse
+                    )
+                )
+                {
+                    pressedButtons.Clear();
+                    SInputState.FillPressedButtons(pressedButtons, keyboard, mouse, controller);
+                }
                 this.CustomPressedKeys.Clear();
             }
-
-            // get button states
-            if (hasOverrides)
-            {
-                pressedButtons.Clear();
-                this.FillPressedButtons(pressedButtons, keyboard, mouse, controller);
-            }
-            var activeButtons = this.DeriveStates(this.ButtonStates, pressedButtons);
 
             // update
             this.HasNewOverrides = false;
             this.ControllerState = controller.GetState();
             this.KeyboardState = keyboard.GetState();
             this.MouseState = mouse.GetState();
-            this.ButtonStates = activeButtons;
-            if (cursorAbsolutePos != this.CursorPositionImpl.AbsolutePixels || playerTilePos != this.LastPlayerTile)
+            if (
+                cursorAbsolutePos != this.CursorPositionImpl.AbsolutePixels
+                || playerTilePos != this.LastPlayerTile
+            )
             {
                 this.LastPlayerTile = playerTilePos;
-                this.CursorPositionImpl = this.GetCursorPosition(this.MouseState, cursorAbsolutePos, zoomMultiplier);
+                this.CursorPositionImpl = this.GetCursorPosition(
+                    this.MouseState,
+                    cursorAbsolutePos,
+                    zoomMultiplier
+                );
             }
+            SInputState.UpdateActiveStates(this.ButtonStates, pressedButtons);
         }
         catch (InvalidOperationException)
         {
@@ -216,7 +231,15 @@ internal sealed class SInputState : InputState
             keyboard.Reset(this.KeyboardState);
             mouse.Reset(this.MouseState);
 
-            if (this.ApplyOverrides(pressed: this.CustomPressedKeys, released: this.CustomReleasedKeys, controller, keyboard, mouse))
+            if (
+                this.ApplyOverrides(
+                    pressed: this.CustomPressedKeys,
+                    released: this.CustomReleasedKeys,
+                    controller,
+                    keyboard,
+                    mouse
+                )
+            )
             {
                 this.ControllerState = controller.GetState();
                 this.KeyboardState = keyboard.GetState();
@@ -229,7 +252,7 @@ internal sealed class SInputState : InputState
     /// <param name="button">The button to check.</param>
     public bool IsDown(SButton button)
     {
-        return this.GetState(this.ButtonStates, button).IsDown();
+        return SInputState.GetState(this.ButtonStates, button).IsDown();
     }
 
     /// <summary>Get whether any of the given buttons were pressed or held.</summary>
@@ -243,9 +266,8 @@ internal sealed class SInputState : InputState
     /// <param name="button">The button to check.</param>
     public SButtonState GetState(SButton button)
     {
-        return this.GetState(this.ButtonStates, button);
+        return SInputState.GetState(this.ButtonStates, button);
     }
-
 
     /*********
     ** Private methods
@@ -254,13 +276,24 @@ internal sealed class SInputState : InputState
     /// <param name="mouseState">The current mouse state.</param>
     /// <param name="absolutePixels">The absolute pixel position relative to the map, adjusted for pixel zoom.</param>
     /// <param name="zoomMultiplier">The multiplier applied to pixel coordinates to adjust them for pixel zoom.</param>
-    private CursorPosition GetCursorPosition(MouseState mouseState, Vector2 absolutePixels, float zoomMultiplier)
+    private CursorPosition GetCursorPosition(
+        MouseState mouseState,
+        Vector2 absolutePixels,
+        float zoomMultiplier
+    )
     {
         Vector2 screenPixels = new(mouseState.X * zoomMultiplier, mouseState.Y * zoomMultiplier);
-        Vector2 tile = new((int)((Game1.viewport.X + screenPixels.X) / Game1.tileSize), (int)((Game1.viewport.Y + screenPixels.Y) / Game1.tileSize));
-        Vector2 grabTile = (Game1.mouseCursorTransparency > 0 && Utility.tileWithinRadiusOfPlayer((int)tile.X, (int)tile.Y, 1, Game1.player)) // derived from Game1.pressActionButton
-            ? tile
-            : Game1.player.GetGrabTile();
+        Vector2 tile = new(
+            (int)((Game1.viewport.X + screenPixels.X) / Game1.tileSize),
+            (int)((Game1.viewport.Y + screenPixels.Y) / Game1.tileSize)
+        );
+        Vector2 grabTile =
+            (
+                Game1.mouseCursorTransparency > 0
+                && Utility.tileWithinRadiusOfPlayer((int)tile.X, (int)tile.Y, 1, Game1.player)
+            ) // derived from Game1.pressActionButton
+                ? tile
+                : Game1.player.GetGrabTile();
         return new CursorPosition(absolutePixels, screenPixels, tile, grabTile);
     }
 
@@ -275,7 +308,13 @@ internal sealed class SInputState : InputState
     /// <param name="keyboard">The game's keyboard state for the current tick.</param>
     /// <param name="mouse">The game's mouse state for the current tick.</param>
     /// <returns>Returns whether any overrides were applied.</returns>
-    private bool ApplyOverrides(ISet<SButton> pressed, ISet<SButton> released, GamePadStateBuilder controller, KeyboardStateBuilder keyboard, MouseStateBuilder mouse)
+    private bool ApplyOverrides(
+        ISet<SButton> pressed,
+        ISet<SButton> released,
+        GamePadStateBuilder controller,
+        KeyboardStateBuilder keyboard,
+        MouseStateBuilder mouse
+    )
     {
         if (pressed.Count == 0 && released.Count == 0)
             return false;
@@ -286,12 +325,19 @@ internal sealed class SInputState : InputState
         _mouseOverridesPool.Clear();
         foreach (var button in pressed.Concat(released))
         {
-            var newState = this.DeriveState(
+            SButtonState newState = SInputState.DeriveState(
                 oldState: this.GetState(button),
                 isDown: pressed.Contains(button)
             );
 
-            if (button is SButton.MouseLeft or SButton.MouseMiddle or SButton.MouseRight or SButton.MouseX1 or SButton.MouseX2)
+            if (
+                button
+                is SButton.MouseLeft
+                    or SButton.MouseMiddle
+                    or SButton.MouseRight
+                    or SButton.MouseX1
+                    or SButton.MouseX2
+            )
                 _mouseOverridesPool[button] = newState;
             else if (button.TryGetKeyboard(out Keys _))
                 _keyboardOverridesPool[button] = newState;
@@ -310,43 +356,53 @@ internal sealed class SInputState : InputState
         return true;
     }
 
-    /// <summary>Get the state of all pressed or released buttons relative to their previous state.</summary>
-    /// <param name="previousStates">The previous button states.</param>
+    /// <summary>Update active button states based on the currently pressed buttons.</summary>
+    /// <param name="buttonStates">The button states from the previous update tick.</param>
     /// <param name="pressedButtons">The currently pressed buttons.</param>
-    private IDictionary<SButton, SButtonState> DeriveStates(IDictionary<SButton, SButtonState> previousStates, HashSet<SButton> pressedButtons)
+    private static void UpdateActiveStates(
+        Dictionary<SButton, SButtonState> buttonStates,
+        HashSet<SButton> pressedButtons
+    )
     {
-        IDictionary<SButton, SButtonState> activeButtons = new Dictionary<SButton, SButtonState>();
-
-        // handle pressed keys
-        foreach (SButton button in pressedButtons)
-            activeButtons[button] = this.DeriveState(this.GetState(previousStates, button), isDown: true);
-
-        // handle released keys
-        foreach (KeyValuePair<SButton, SButtonState> prev in previousStates)
+        // update previously active keys
+        foreach ((SButton button, SButtonState oldState) in buttonStates)
         {
-            if (prev.Value.IsDown())
-                activeButtons.TryAdd(prev.Key, SButtonState.Released);
+            SButtonState newState = SInputState.DeriveState(
+                oldState,
+                isDown: pressedButtons.Contains(button)
+            );
+
+            if (oldState == SButtonState.Released && newState == SButtonState.Released)
+                buttonStates.Remove(button);
+            else if (oldState != newState)
+                buttonStates[button] = newState;
         }
 
-        return activeButtons;
+        // add newly pressed keys
+        foreach (SButton button in pressedButtons)
+            buttonStates.TryAdd(button, SButtonState.Pressed);
     }
 
     /// <summary>Get the state of a button relative to its previous state.</summary>
     /// <param name="oldState">The previous button state.</param>
     /// <param name="isDown">Whether the button is currently down.</param>
-    private SButtonState DeriveState(SButtonState oldState, bool isDown)
+    private static SButtonState DeriveState(SButtonState oldState, bool isDown)
     {
-        if (isDown && oldState.IsDown())
-            return SButtonState.Held;
         if (isDown)
-            return SButtonState.Pressed;
+        {
+            return oldState.IsDown() ? SButtonState.Held : SButtonState.Pressed;
+        }
+
         return SButtonState.Released;
     }
 
     /// <summary>Get the state of a button.</summary>
     /// <param name="activeButtons">The current button states to check.</param>
     /// <param name="button">The button to check.</param>
-    private SButtonState GetState(IDictionary<SButton, SButtonState> activeButtons, SButton button)
+    private static SButtonState GetState(
+        IDictionary<SButton, SButtonState> activeButtons,
+        SButton button
+    )
     {
         return activeButtons.TryGetValue(button, out SButtonState state)
             ? state
@@ -359,7 +415,12 @@ internal sealed class SInputState : InputState
     /// <param name="mouse">The mouse state.</param>
     /// <param name="controller">The controller state.</param>
     /// <remarks>Thumbstick direction logic derived from <see cref="ButtonCollection"/>.</remarks>
-    private void FillPressedButtons(HashSet<SButton> set, KeyboardStateBuilder keyboard, MouseStateBuilder mouse, GamePadStateBuilder controller)
+    private static void FillPressedButtons(
+        HashSet<SButton> set,
+        KeyboardStateBuilder keyboard,
+        MouseStateBuilder mouse,
+        GamePadStateBuilder controller
+    )
     {
         keyboard.FillPressedButtons(set);
         mouse.FillPressedButtons(set);
