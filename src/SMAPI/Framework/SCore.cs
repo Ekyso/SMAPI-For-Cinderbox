@@ -1627,7 +1627,9 @@ internal class SCore : IDisposable
                         }
 
                         // raise input button events
-                        if (inputState.ButtonStates.Count > 0)
+                        IReadOnlyDictionary<SButton, SButtonState> buttonStates =
+                            inputState.GetActiveButtonStates();
+                        if (buttonStates.Count > 0)
                         {
                             if (events.ButtonsChanged.HasListeners)
                                 events.ButtonsChanged.Raise(
@@ -3700,7 +3702,8 @@ internal class SCore : IDisposable
             }
             catch (FileLoadException ex) when (ex.Message.Contains("0x800711C7"))
             {
-                errorReasonPhrase = "it was blocked by Windows Smart App Control (usually not a problem with the mod itself)";
+                errorReasonPhrase =
+                    "it was blocked by Windows Smart App Control (usually not a problem with the mod itself)";
                 failReason = ModFailReason.LoadFailed;
                 return false;
             }
