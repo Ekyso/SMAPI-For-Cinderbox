@@ -94,7 +94,7 @@ internal class DeprecationManager
     /// <summary>Print any queued messages.</summary>
     public void PrintQueued()
     {
-        if (!this.QueuedWarnings.Any())
+        if (this.QueuedWarnings.Count == 0)
             return;
 
         foreach (DeprecationWarning warning in this.QueuedWarnings.OrderBy(p => p.ModName).ThenBy(p => p.NounPhrase))
@@ -149,7 +149,7 @@ internal class DeprecationManager
     /// <param name="unlessStackIncludes">A list of stack trace substrings which should suppress deprecation warnings if they appear in the stack trace.</param>
     private bool ShouldSuppress(ImmutableStackTrace stack, string[]? unlessStackIncludes)
     {
-        if (unlessStackIncludes?.Any() == true)
+        if (unlessStackIncludes is { Length: > 0 })
         {
             string stackTrace = stack.ToString();
             foreach (string method in unlessStackIncludes)

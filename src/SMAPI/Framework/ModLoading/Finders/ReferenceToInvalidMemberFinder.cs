@@ -64,7 +64,7 @@ internal class ReferenceToInvalidMemberFinder : BaseInstructionHandler
             if (methodDef != null && this.ShouldValidate(methodRef.DeclaringType))
             {
                 MethodDefinition[]? candidateMethods = methodRef.DeclaringType.Resolve()?.Methods.Where(found => found.Name == methodRef.Name).ToArray();
-                if (candidateMethods?.Any() is true && candidateMethods.All(method => !RewriteHelper.LooksLikeSameType(method.ReturnType, methodDef.ReturnType)))
+                if (candidateMethods is { Length: > 0 } && candidateMethods.All(method => !RewriteHelper.LooksLikeSameType(method.ReturnType, methodDef.ReturnType)))
                     this.MarkFlag(InstructionHandleResult.NotCompatible, $"reference to {this.GetMemberDisplayName(methodDef)} (no such method returns {this.GetFriendlyTypeName(methodDef.ReturnType)})");
             }
 

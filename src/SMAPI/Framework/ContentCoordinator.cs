@@ -366,7 +366,7 @@ internal class ContentCoordinator : IDisposable
     /// <param name="predicate">Matches the asset keys to invalidate.</param>
     /// <param name="dispose">Whether to dispose invalidated assets. This should only be <c>true</c> when they're being invalidated as part of a dispose, to avoid crashing the game.</param>
     /// <returns>Returns the invalidated asset keys.</returns>
-    public IEnumerable<IAssetName> InvalidateCache(Func<IAssetInfo, bool> predicate, bool dispose = false)
+    public ICollection<IAssetName> InvalidateCache(Func<IAssetInfo, bool> predicate, bool dispose = false)
     {
         string locale = this.GetLocale();
         return this.InvalidateCache((_, rawName, type) =>
@@ -381,7 +381,7 @@ internal class ContentCoordinator : IDisposable
     /// <param name="predicate">Matches the asset keys to invalidate.</param>
     /// <param name="dispose">Whether to dispose invalidated assets. This should only be <c>true</c> when they're being invalidated as part of a dispose, to avoid crashing the game.</param>
     /// <returns>Returns the invalidated asset names.</returns>
-    public IEnumerable<IAssetName> InvalidateCache(Func<IContentManager, string, Type, bool> predicate, bool dispose = false)
+    public ICollection<IAssetName> InvalidateCache(Func<IContentManager, string, Type, bool> predicate, bool dispose = false)
     {
         // invalidate cache & track removed assets
         IDictionary<IAssetName, Type> invalidatedAssets = new Dictionary<IAssetName, Type>();
@@ -438,7 +438,7 @@ internal class ContentCoordinator : IDisposable
         });
 
         // handle invalidation
-        if (invalidatedAssets.Any())
+        if (invalidatedAssets.Count > 0)
         {
             // clear cached editor checks
             foreach (IAssetName name in invalidatedAssets.Keys)

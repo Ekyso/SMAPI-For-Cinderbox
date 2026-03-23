@@ -50,7 +50,7 @@ internal class SnapshotItemListDiff
     public static bool TryGetChanges(ISet<Item> added, ISet<Item> removed, IDictionary<Item, int> stackSizes, [NotNullWhen(true)] out SnapshotItemListDiff? changes)
     {
         KeyValuePair<Item, int>[] sizesChanged = stackSizes.Where(p => p.Key.Stack != p.Value).ToArray();
-        if (sizesChanged.Any() || added.Any() || removed.Any())
+        if (sizesChanged.Length > 0 || added.Count > 0 || removed.Count > 0)
         {
             changes = new SnapshotItemListDiff(
                 added: added.ToArray(),

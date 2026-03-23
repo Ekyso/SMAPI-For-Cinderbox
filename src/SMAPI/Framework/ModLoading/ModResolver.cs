@@ -192,7 +192,7 @@ internal class ModResolver
     /// <param name="modIdsToLoadLate">The mod IDs SMAPI should load after any other mods.</param>
     public IModMetadata[] ApplyLoadOrderOverrides(IModMetadata[] mods, HashSet<string> modIdsToLoadEarly, HashSet<string> modIdsToLoadLate)
     {
-        if (!modIdsToLoadEarly.Any() && !modIdsToLoadLate.Any())
+        if (modIdsToLoadEarly.Count == 0 && modIdsToLoadLate.Count == 0)
             return mods;
 
         string[] earlyArray = modIdsToLoadEarly.ToArray();
@@ -283,7 +283,7 @@ internal class ModResolver
         ModDependency[] dependencies = this.GetDependenciesFrom(mod.Manifest, mods).ToArray();
 
         // mark sorted if no dependencies
-        if (!dependencies.Any())
+        if (dependencies.Length == 0)
         {
             sortedMods.Push(mod);
             return states[mod] = ModDependencyStatus.Sorted;
@@ -306,7 +306,7 @@ internal class ModResolver
                     ? $"{displayName}: {modUrl}"
                     : displayName
             ).ToArray();
-            if (failedModNames.Any())
+            if (failedModNames.Length > 0)
             {
                 sortedMods.Push(mod);
                 mod.SetStatus(ModMetadataStatus.Failed, ModFailReason.MissingDependencies, $"it requires mods which aren't installed ({string.Join(", ", failedModNames)}).");
@@ -325,7 +325,7 @@ internal class ModResolver
                     select $"{entry.Mod!.DisplayName} (needs {entry.MinVersion} or later)"
                 )
                 .ToArray();
-            if (failedLabels.Any())
+            if (failedLabels.Length > 0)
             {
                 sortedMods.Push(mod);
                 mod.SetStatus(ModMetadataStatus.Failed, ModFailReason.MissingDependencies, $"it needs newer versions of some mods: {string.Join(", ", failedLabels)}.");
@@ -430,7 +430,7 @@ internal class ModResolver
             $"marked {statusLabel} in SMAPI's internal compatibility list for "
             + (data.StatusUpperVersion != null ? $"versions up to {data.StatusUpperVersion}" : "all versions")
             + ": "
-            + (reasons.Any() ? string.Join(": ", reasons) : "no reason given")
+            + (reasons.Length > 0 ? string.Join(": ", reasons) : "no reason given")
             + ".";
     }
 

@@ -89,7 +89,7 @@ public class Keybind
         }
 
         // build result
-        if (rawErrors.Any())
+        if (rawErrors.Count > 0)
         {
             parsed = null;
             errors = rawErrors.ToArray();

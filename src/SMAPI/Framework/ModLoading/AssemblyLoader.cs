@@ -123,7 +123,7 @@ internal class AssemblyLoader : IDisposable
         }
 
         // validate load
-        if (!assemblies.Any() || assemblies[0].Status == AssemblyLoadStatus.Failed)
+        if (assemblies.Length == 0 || assemblies[0].Status == AssemblyLoadStatus.Failed)
         {
             throw new SAssemblyLoadFailedException(!assemblyFile.Exists
                 ? $"Could not load '{assemblyFile.FullName}' because it doesn't exist."
@@ -475,7 +475,7 @@ internal class AssemblyLoader : IDisposable
 
         // format messages
         string phrase;
-        if (!handler.Phrases.Any())
+        if (handler.Phrases.Count == 0)
             phrase = handler.DefaultPhrase;
         else if (this.LogTechnicalDetailsForBrokenMods && result == InstructionHandleResult.NotCompatible)
             phrase = "\n - " + string.Join(";\n - ", handler.Phrases.OrderBy(p => p, StringComparer.OrdinalIgnoreCase));

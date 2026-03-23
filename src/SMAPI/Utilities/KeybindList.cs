@@ -28,7 +28,7 @@ public class KeybindList
     public KeybindList(params Keybind[] keybinds)
     {
         this.Keybinds = keybinds.Where(p => p.IsBound).ToArray();
-        this.IsBound = this.Keybinds.Any();
+        this.IsBound = this.Keybinds.Length > 0;
     }
 
     /// <summary>Construct an instance.</summary>
@@ -75,7 +75,7 @@ public class KeybindList
         }
 
         // build result
-        if (rawErrors.Any())
+        if (rawErrors.Count > 0)
         {
             parsed = null;
             errors = rawErrors.Distinct().ToArray();

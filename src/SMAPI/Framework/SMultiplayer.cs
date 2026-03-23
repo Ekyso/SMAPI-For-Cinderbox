@@ -393,7 +393,7 @@ internal class SMultiplayer : Multiplayer
         }
 
         // validate recipients
-        if (!sendToSelf && !sendToPeers.Any())
+        if (!sendToSelf && sendToPeers.Count == 0)
         {
             this.Monitor.VerboseLog($"Ignored '{messageType}' broadcast from mod {fromModId}: none of the specified player IDs can receive this message.");
             return;
@@ -420,7 +420,7 @@ internal class SMultiplayer : Multiplayer
         }
 
         // send message to peers
-        if (sendToPeers.Any())
+        if (sendToPeers.Count > 0)
         {
             if (Context.IsMainPlayer)
             {
