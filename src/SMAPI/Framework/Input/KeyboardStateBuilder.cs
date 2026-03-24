@@ -30,23 +30,17 @@ internal class KeyboardStateBuilder : IInputStateBuilder<KeyboardStateBuilder, K
             this.PressedButtons.Add(button);
     }
 
-    /// <inheritdoc />
-    public KeyboardStateBuilder OverrideButtons(IDictionary<SButton, SButtonState> overrides)
+    /// <summary>Override the state for a key.</summary>
+    /// <param name="key">The key to override.</param>
+    /// <param name="state">The new state to set.</param>
+    public void OverrideButton(Keys key, SButtonState state)
     {
-        foreach (var pair in overrides)
-        {
-            if (pair.Key.TryGetKeyboard(out Keys key))
-            {
-                this.State = null;
+        bool changed = state.IsDown()
+            ? this.PressedButtons.Add(key)
+            : this.PressedButtons.Remove(key);
 
-                if (pair.Value.IsDown())
-                    this.PressedButtons.Add(key);
-                else
-                    this.PressedButtons.Remove(key);
-            }
-        }
-
-        return this;
+        if (changed)
+            this.State = null;
     }
 
     /// <inheritdoc />

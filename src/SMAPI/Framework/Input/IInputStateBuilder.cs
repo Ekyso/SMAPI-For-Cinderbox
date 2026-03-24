@@ -16,10 +16,6 @@ internal interface IInputStateBuilder<out THandler, TState>
     /// <param name="state">The initial state before any overrides are applied.</param>
     void Reset(TState state);
 
-    /// <summary>Override the states for a set of buttons.</summary>
-    /// <param name="overrides">The button state overrides.</param>
-    THandler OverrideButtons(IDictionary<SButton, SButtonState> overrides);
-
     /// <summary>Fill a set with the currently pressed buttons.</summary>
     /// <param name="set">The set to populate with the pressed buttons.</param>
     void FillPressedButtons(HashSet<SButton> set);

@@ -50,19 +50,20 @@ internal class MouseStateBuilder : IInputStateBuilder<MouseStateBuilder, MouseSt
         this.ScrollWheelValue = state.ScrollWheelValue;
     }
 
-    /// <inheritdoc />
-    public MouseStateBuilder OverrideButtons(IDictionary<SButton, SButtonState> overrides)
+    /// <summary>Override the state for a button.</summary>
+    /// <param name="button">The button to override.</param>
+    /// <param name="state">The new state to set.</param>
+    public void OverrideButton(SButton button, SButtonState state)
     {
-        foreach (var pair in overrides)
-        {
-            if (this.ButtonStates.ContainsKey(pair.Key))
-            {
-                this.State = null;
-                this.ButtonStates[pair.Key] = pair.Value.IsDown() ? ButtonState.Pressed : ButtonState.Released;
-            }
-        }
+        ButtonState newState = state.IsDown()
+            ? ButtonState.Pressed
+            : ButtonState.Released;
 
-        return this;
+        if (this.ButtonStates.TryGetValue(button, out ButtonState oldState) && oldState != newState)
+        {
+            this.State = null;
+            this.ButtonStates[button] = newState;
+        }
     }
 
     /// <inheritdoc />
