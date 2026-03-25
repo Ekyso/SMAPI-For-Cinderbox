@@ -19,10 +19,11 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
     private const float RightThumbstickDeadZone = 0.9f;
 
     /// <summary>The underlying controller state.</summary>
+    /// <remarks>This value is null if it needs to be regenerated for overrides. Most code should call <see cref="GetState"/> instead.</remarks>
     private GamePadState? State;
 
-    /// <summary>The current button states.</summary>
-    private readonly Dictionary<Buttons, ButtonState> ButtonStates = [];
+    /// <summary>The pressed buttons.</summary>
+    private readonly HashSet<Buttons> PressedButtons = [];
 
     /// <summary>The left trigger value.</summary>
     private float LeftTrigger;
@@ -33,7 +34,7 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
     /// <summary>The left thumbstick position.</summary>
     private Vector2 LeftStickPos;
 
-    /// <summary>The left thumbstick position.</summary>
+    /// <summary>The right thumbstick position.</summary>
     private Vector2 RightStickPos;
 
 
@@ -45,6 +46,8 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
     {
         this.State = state;
 
+        // reset tracked values
+        this.PressedButtons.Clear();
         if (state.IsConnected)
         {
             GamePadDPad pad = state.DPad;
@@ -52,23 +55,22 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
             GamePadTriggers triggers = state.Triggers;
             GamePadThumbSticks sticks = state.ThumbSticks;
 
-            var states = this.ButtonStates;
-            states.Clear();
-            states[Buttons.DPadUp] = pad.Up;
-            states[Buttons.DPadDown] = pad.Down;
-            states[Buttons.DPadLeft] = pad.Left;
-            states[Buttons.DPadRight] = pad.Right;
-            states[Buttons.A] = buttons.A;
-            states[Buttons.B] = buttons.B;
-            states[Buttons.X] = buttons.X;
-            states[Buttons.Y] = buttons.Y;
-            states[Buttons.LeftStick] = buttons.LeftStick;
-            states[Buttons.RightStick] = buttons.RightStick;
-            states[Buttons.LeftShoulder] = buttons.LeftShoulder;
-            states[Buttons.RightShoulder] = buttons.RightShoulder;
-            states[Buttons.Back] = buttons.Back;
-            states[Buttons.Start] = buttons.Start;
-            states[Buttons.BigButton] = buttons.BigButton;
+            HashSet<Buttons> pressed = this.PressedButtons;
+            AddIfPressed(pressed, Buttons.DPadUp, pad.Up);
+            AddIfPressed(pressed, Buttons.DPadDown, pad.Down);
+            AddIfPressed(pressed, Buttons.DPadLeft, pad.Left);
+            AddIfPressed(pressed, Buttons.DPadRight, pad.Right);
+            AddIfPressed(pressed, Buttons.A, buttons.A);
+            AddIfPressed(pressed, Buttons.B, buttons.B);
+            AddIfPressed(pressed, Buttons.X, buttons.X);
+            AddIfPressed(pressed, Buttons.Y, buttons.Y);
+            AddIfPressed(pressed, Buttons.LeftStick, buttons.LeftStick);
+            AddIfPressed(pressed, Buttons.RightStick, buttons.RightStick);
+            AddIfPressed(pressed, Buttons.LeftShoulder, buttons.LeftShoulder);
+            AddIfPressed(pressed, Buttons.RightShoulder, buttons.RightShoulder);
+            AddIfPressed(pressed, Buttons.Back, buttons.Back);
+            AddIfPressed(pressed, Buttons.Start, buttons.Start);
+            AddIfPressed(pressed, Buttons.BigButton, buttons.BigButton);
 
             this.LeftTrigger = triggers.Left;
             this.RightTrigger = triggers.Right;
@@ -77,12 +79,17 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
         }
         else
         {
-            this.ButtonStates.Clear();
-
             this.LeftTrigger = 0;
             this.RightTrigger = 0;
             this.LeftStickPos = Vector2.Zero;
             this.RightStickPos = Vector2.Zero;
+        }
+
+        return;
+        static void AddIfPressed(HashSet<Buttons> pressed, Buttons button, ButtonState state)
+        {
+            if (state == ButtonState.Pressed)
+                pressed.Add(button);
         }
     }
 
@@ -92,7 +99,7 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
     public void OverrideButton(Buttons button, SButtonState state)
     {
         bool isDown = state.IsDown();
-        bool changed = false;
+        bool changed;
 
         switch (button)
         {
@@ -134,22 +141,16 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
 
             // buttons
             default:
-                {
-                    ButtonState newState = isDown ? ButtonState.Pressed : ButtonState.Released;
-
-                    if (!this.ButtonStates.TryGetValue(button, out ButtonState oldState) || newState != oldState)
-                    {
-                        this.ButtonStates[button] = newState;
-                        changed = true;
-                    }
-                }
+                changed = isDown
+                    ? this.PressedButtons.Add(button)
+                    : this.PressedButtons.Remove(button);
                 break;
         }
 
         if (changed)
             this.State = null;
-        return;
 
+        return;
         [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator", Justification = "Floating points not an issue for the specific values we're checking.")]
         static bool Set(ref float field, int newValue)
         {
@@ -167,7 +168,7 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
     public void FillPressedButtons(HashSet<SButton> set)
     {
         // buttons
-        foreach (Buttons button in this.GetPressedGamePadButtons())
+        foreach (Buttons button in this.PressedButtons)
             set.Add(button.ToSButton());
 
         // triggers
@@ -208,21 +209,9 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
             rightThumbStick: this.RightStickPos,
             leftTrigger: this.LeftTrigger,
             rightTrigger: this.RightTrigger,
-            buttons: this.GetPressedGamePadButtons().ToArray()
+            buttons: this.PressedButtons.Count > 0
+                ? this.PressedButtons.ToArray()
+                : []
         );
-    }
-
-
-    /*********
-    ** Private methods
-    *********/
-    /// <summary>Get the pressed gamepad buttons.</summary>
-    private IEnumerable<Buttons> GetPressedGamePadButtons()
-    {
-        foreach ((Buttons button, ButtonState state) in this.ButtonStates)
-        {
-            if (state == ButtonState.Pressed)
-                yield return button;
-        }
     }
 }

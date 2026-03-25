@@ -11,6 +11,7 @@ internal class KeyboardStateBuilder : IInputStateBuilder<KeyboardStateBuilder, K
     ** Fields
     *********/
     /// <summary>The underlying keyboard state.</summary>
+    /// <remarks>This value is null if it needs to be regenerated for overrides. Most code should call <see cref="GetState"/> instead.</remarks>
     private KeyboardState? State;
 
     /// <summary>The pressed buttons.</summary>
@@ -25,6 +26,7 @@ internal class KeyboardStateBuilder : IInputStateBuilder<KeyboardStateBuilder, K
     {
         this.State = state;
 
+        // reset tracked values
         this.PressedButtons.Clear();
         foreach (Keys button in state.GetPressedKeys())
             this.PressedButtons.Add(button);
