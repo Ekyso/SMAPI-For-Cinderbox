@@ -12,9 +12,10 @@ jobs:
     build_and_release:
         runs-on: ubuntu-latest
         permissions:
-            contents: write # for creating releases
-            id-token: write # for creating attestations
-            attestations: write
+            contents: write          # for creating releases
+            id-token: write          # for `actions/attest` ("to mint the OIDC token necessary to request a Sigstore signing certificate")
+            attestations: write      # for `actions/attest` ("to persist the attestation")
+            artifact-metadata: write # for `actions/attest` ("to create the artifact storage record")
         steps:
             -   name: Checkout code
                 uses: actions/checkout@v6
@@ -96,7 +97,7 @@ jobs:
                     if-no-files-found: 'error'
 
             -   name: Generate artifact attestations
-                uses: actions/attest-build-provenance@v2
+                uses: actions/attest@v4
                 if: github.ref_type == 'tag'
                 with:
                     subject-path: bin/SMAPI-${{env.VERSION}}-installer.zip
