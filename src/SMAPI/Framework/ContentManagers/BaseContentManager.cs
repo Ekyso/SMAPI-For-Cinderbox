@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI.Framework.Content;
 using StardewModdingAPI.Framework.Exceptions;
+using StardewModdingAPI.Framework.Extensions;
 using StardewModdingAPI.Framework.Reflection;
 using StardewValley;
 

@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Schema;
 using StardewModdingAPI.Web.Framework;
+using StardewModdingAPI.Web.Framework.Extensions;
 using StardewModdingAPI.Web.Framework.Storage;
 using StardewModdingAPI.Web.ViewModels.JsonValidator;
 

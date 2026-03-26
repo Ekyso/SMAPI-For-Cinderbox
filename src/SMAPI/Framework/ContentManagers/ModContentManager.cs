@@ -14,6 +14,7 @@ using Microsoft.Xna.Framework.Graphics;
 using SkiaSharp;
 using StardewModdingAPI.Framework.Content;
 using StardewModdingAPI.Framework.Exceptions;
+using StardewModdingAPI.Framework.Extensions;
 using StardewModdingAPI.Framework.Reflection;
 using StardewModdingAPI.Toolkit.Serialization;
 using StardewModdingAPI.Toolkit.Utilities;

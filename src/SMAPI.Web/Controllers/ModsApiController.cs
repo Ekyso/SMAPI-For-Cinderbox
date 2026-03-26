@@ -23,6 +23,7 @@ using StardewModdingAPI.Web.Framework.Clients.ModDrop;
 using StardewModdingAPI.Web.Framework.Clients.Nexus;
 using StardewModdingAPI.Web.Framework.Clients.UpdateManifest;
 using StardewModdingAPI.Web.Framework.ConfigModels;
+using StardewModdingAPI.Web.Framework.Extensions;
 using StardewModdingAPI.Web.Framework.Metrics;
 
 namespace StardewModdingAPI.Web.Controllers;

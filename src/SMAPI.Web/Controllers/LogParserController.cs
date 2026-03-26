@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using StardewModdingAPI.Toolkit.Utilities;
 using StardewModdingAPI.Web.Framework;
+using StardewModdingAPI.Web.Framework.Extensions;
 using StardewModdingAPI.Web.Framework.LogParsing;
 using StardewModdingAPI.Web.Framework.LogParsing.Models;
 using StardewModdingAPI.Web.Framework.Storage;

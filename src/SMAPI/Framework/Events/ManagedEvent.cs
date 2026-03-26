@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using StardewModdingAPI.Events;
+using StardewModdingAPI.Framework.Extensions;
 using StardewModdingAPI.Internal;
 #if SMAPI_FOR_ANDROID
 using StardewModdingAPI.Mobile;

@@ -23,6 +23,7 @@ using StardewModdingAPI.Framework.ContentManagers;
 using StardewModdingAPI.Framework.Deprecations;
 using StardewModdingAPI.Framework.Events;
 using StardewModdingAPI.Framework.Exceptions;
+using StardewModdingAPI.Framework.Extensions;
 using StardewModdingAPI.Framework.Input;
 using StardewModdingAPI.Framework.Logging;
 using StardewModdingAPI.Framework.Models;
