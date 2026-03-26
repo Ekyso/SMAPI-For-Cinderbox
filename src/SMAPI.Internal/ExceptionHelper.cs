@@ -10,36 +10,39 @@ internal static class ExceptionHelper
     /*********
     ** Public methods
     *********/
-    /// <summary>Get a string representation of an exception suitable for writing to the error log.</summary>
     /// <param name="exception">The error to summarize.</param>
-    public static string GetLogSummary(this Exception? exception)
+    extension(Exception? exception)
     {
-        try
+        /// <summary>Get a string representation of an exception suitable for writing to the error log.</summary>
+        public string GetLogSummary()
         {
-            string message;
-            switch (exception)
+            try
             {
-                case TypeLoadException ex:
-                    message = $"Failed loading type '{ex.TypeName}': {exception}";
-                    break;
+                string message;
+                switch (exception)
+                {
+                    case TypeLoadException ex:
+                        message = $"Failed loading type '{ex.TypeName}': {exception}";
+                        break;
 
-                case ReflectionTypeLoadException ex:
-                    string summary = ex.ToString();
-                    foreach (Exception? childEx in ex.LoaderExceptions)
-                        summary += $"\n\n{childEx?.GetLogSummary()}";
-                    message = summary;
-                    break;
+                    case ReflectionTypeLoadException ex:
+                        string summary = ex.ToString();
+                        foreach (Exception? childEx in ex.LoaderExceptions)
+                            summary += $"\n\n{childEx?.GetLogSummary()}";
+                        message = summary;
+                        break;
 
-                default:
-                    message = exception?.ToString() ?? $"<null exception>\n{Environment.StackTrace}";
-                    break;
+                    default:
+                        message = exception?.ToString() ?? $"<null exception>\n{Environment.StackTrace}";
+                        break;
+                }
+
+                return ExceptionHelper.SimplifyExtensionMessage(message);
             }
-
-            return ExceptionHelper.SimplifyExtensionMessage(message);
-        }
-        catch (Exception ex)
-        {
-            throw new InvalidOperationException($"Failed handling {exception?.GetType().FullName} (original message: {exception?.Message})", ex);
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed handling {exception?.GetType().FullName} (original message: {exception?.Message})", ex);
+            }
         }
     }
 

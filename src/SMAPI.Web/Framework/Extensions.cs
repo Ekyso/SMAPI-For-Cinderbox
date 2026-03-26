@@ -19,54 +19,59 @@ public static class Extensions
     /****
     ** View helpers
     ****/
-    /// <summary>Get a URL for an action method. Unlike <see cref="IUrlHelper.Action"/>, only the specified <paramref name="values"/> are added to the URL without merging values from the current HTTP request.</summary>
     /// <param name="helper">The URL helper to extend.</param>
-    /// <param name="action">The name of the action method.</param>
-    /// <param name="controller">The name of the controller.</param>
-    /// <param name="values">An object that contains route values.</param>
-    /// <param name="absoluteUrl">Get an absolute URL instead of a server-relative path/</param>
-    /// <returns>The generated URL.</returns>
-    public static string? PlainAction(this IUrlHelper helper, [AspMvcAction] string action, [AspMvcController] string controller, object? values = null, bool absoluteUrl = false)
+    extension(IUrlHelper helper)
     {
-        // get route values
-        RouteValueDictionary valuesDict = new(values);
-        foreach (var value in helper.ActionContext.RouteData.Values)
-            valuesDict.TryAdd(value.Key, null); // explicitly remove it from the URL
-
-        // get relative URL
-        string? url = helper.Action(action, controller, valuesDict);
-        if (url == null && action.EndsWith("Async"))
-            url = helper.Action(action[..^"Async".Length], controller, valuesDict);
-
-        // get absolute URL
-        if (absoluteUrl)
+        /// <summary>Get a URL for an action method. Unlike <see cref="IUrlHelper.Action"/>, only the specified <paramref name="values"/> are added to the URL without merging values from the current HTTP request.</summary>
+        /// <param name="action">The name of the action method.</param>
+        /// <param name="controller">The name of the controller.</param>
+        /// <param name="values">An object that contains route values.</param>
+        /// <param name="absoluteUrl">Get an absolute URL instead of a server-relative path/</param>
+        /// <returns>The generated URL.</returns>
+        public string? PlainAction([AspMvcAction] string action, [AspMvcController] string controller, object? values = null, bool absoluteUrl = false)
         {
-            HttpRequest request = helper.ActionContext.HttpContext.Request;
-            Uri baseUri = new($"{request.Scheme}://{request.Host}");
-            url = new Uri(baseUri, url).ToString();
+            // get route values
+            RouteValueDictionary valuesDict = new(values);
+            foreach (var value in helper.ActionContext.RouteData.Values)
+                valuesDict.TryAdd(value.Key, null); // explicitly remove it from the URL
+
+            // get relative URL
+            string? url = helper.Action(action, controller, valuesDict);
+            if (url == null && action.EndsWith("Async"))
+                url = helper.Action(action[..^"Async".Length], controller, valuesDict);
+
+            // get absolute URL
+            if (absoluteUrl)
+            {
+                HttpRequest request = helper.ActionContext.HttpContext.Request;
+                Uri baseUri = new($"{request.Scheme}://{request.Host}");
+                url = new Uri(baseUri, url).ToString();
+            }
+
+            return url;
         }
 
-        return url;
+        /// <summary>Convert a virtual (relative, starting with ~/) path to an application absolute path, and append a query argument to force browsers to re-download the asset if needed.</summary>
+        /// <param name="url">The virtual path of the content.</param>
+        public string ContentWithCacheBust(string url)
+        {
+            char delimiter = url.Contains('?') ? '&' : '?';
+
+            return helper.Content($"{url}{delimiter}v={Program.CacheBustValue}");
+        }
     }
 
-    /// <summary>Convert a virtual (relative, starting with ~/) path to an application absolute path, and append a query argument to force browsers to re-download the asset if needed.</summary>
-    /// <param name="helper">The URL helper to extend.</param>
-    /// <param name="url">The virtual path of the content.</param>
-    public static string ContentWithCacheBust(this IUrlHelper helper, string url)
-    {
-        char delimiter = url.Contains('?') ? '&' : '?';
-
-        return helper.Content($"{url}{delimiter}v={Program.CacheBustValue}");
-    }
-
-    /// <summary>Get a serialized JSON representation of the value.</summary>
     /// <param name="page">The page to extend.</param>
-    /// <param name="value">The value to serialize.</param>
-    /// <returns>The serialized JSON.</returns>
-    /// <remarks>This bypasses unnecessary validation (e.g. not allowing null values) in <see cref="IJsonHelper.Serialize"/>.</remarks>
-    public static IHtmlContent ForJson(this RazorPageBase page, object? value)
+    extension(RazorPageBase page)
     {
-        string json = JsonConvert.SerializeObject(value);
-        return new HtmlString(json);
+        /// <summary>Get a serialized JSON representation of the value.</summary>
+        /// <param name="value">The value to serialize.</param>
+        /// <returns>The serialized JSON.</returns>
+        /// <remarks>This bypasses unnecessary validation (e.g. not allowing null values) in <see cref="IJsonHelper.Serialize"/>.</remarks>
+        public IHtmlContent ForJson(object? value)
+        {
+            string json = JsonConvert.SerializeObject(value);
+            return new HtmlString(json);
+        }
     }
 }

@@ -602,100 +602,108 @@ public static class SButtonExtensions
     /*********
     ** Public methods
     *********/
-    /// <summary>Get the <see cref="SButton"/> equivalent for the given button.</summary>
     /// <param name="key">The keyboard button to convert.</param>
-    public static SButton ToSButton(this Keys key)
+    extension(Keys key)
     {
-        return (SButton)key;
+        /// <summary>Get the <see cref="SButton"/> equivalent for the given button.</summary>
+        public SButton ToSButton()
+        {
+            return (SButton)key;
+        }
     }
 
-    /// <summary>Get the <see cref="SButton"/> equivalent for the given button.</summary>
     /// <param name="key">The controller button to convert.</param>
-    public static SButton ToSButton(this Buttons key)
+    extension(Buttons key)
     {
-        return (SButton)(SButtonExtensions.ControllerOffset + key);
+        /// <summary>Get the <see cref="SButton"/> equivalent for the given button.</summary>
+        public SButton ToSButton()
+        {
+            return (SButton)(SButtonExtensions.ControllerOffset + key);
+        }
     }
 
-    /// <summary>Get the <see cref="SButton"/> equivalent for the given button.</summary>
     /// <param name="input">The Stardew Valley button to convert.</param>
-    public static SButton ToSButton(this InputButton input)
+    extension(InputButton input)
     {
-        // derived from InputButton constructors
-        if (input.mouseLeft)
-            return SButton.MouseLeft;
-        if (input.mouseRight)
-            return SButton.MouseRight;
-        return input.key.ToSButton();
+        /// <summary>Get the <see cref="SButton"/> equivalent for the given button.</summary>
+        public SButton ToSButton()
+        {
+            // derived from InputButton constructors
+            if (input.mouseLeft)
+                return SButton.MouseLeft;
+            if (input.mouseRight)
+                return SButton.MouseRight;
+            return input.key.ToSButton();
+        }
     }
 
-    /// <summary>Get the <see cref="Keys"/> equivalent for the given button.</summary>
-    /// <param name="input">The button to convert.</param>
-    /// <param name="key">The keyboard equivalent.</param>
-    /// <returns>Returns whether the value was converted successfully.</returns>
-    public static bool TryGetKeyboard(this SButton input, out Keys key)
+    /// <param name="input">The button to extend.</param>
+    extension(SButton input)
     {
-        if (Enum.IsDefined(typeof(Keys), (int)input))
+        /// <summary>Get the <see cref="Keys"/> equivalent for the given button.</summary>
+        /// <param name="key">The keyboard equivalent.</param>
+        /// <returns>Returns whether the value was converted successfully.</returns>
+        public bool TryGetKeyboard(out Keys key)
         {
-            key = (Keys)input;
-            return true;
+            if (Enum.IsDefined(typeof(Keys), (int)input))
+            {
+                key = (Keys)input;
+                return true;
+            }
+
+            key = Keys.None;
+            return false;
         }
 
-        key = Keys.None;
-        return false;
-    }
-
-    /// <summary>Get the <see cref="Buttons"/> equivalent for the given button.</summary>
-    /// <param name="input">The button to convert.</param>
-    /// <param name="button">The controller equivalent.</param>
-    /// <returns>Returns whether the value was converted successfully.</returns>
-    public static bool TryGetController(this SButton input, out Buttons button)
-    {
-        if (Enum.IsDefined(typeof(Buttons), (int)input - SButtonExtensions.ControllerOffset))
+        /// <summary>Get the <see cref="Buttons"/> equivalent for the given button.</summary>
+        /// <param name="button">The controller equivalent.</param>
+        /// <returns>Returns whether the value was converted successfully.</returns>
+        public bool TryGetController(out Buttons button)
         {
-            button = (Buttons)(input - SButtonExtensions.ControllerOffset);
-            return true;
+            if (Enum.IsDefined(typeof(Buttons), (int)input - SButtonExtensions.ControllerOffset))
+            {
+                button = (Buttons)(input - SButtonExtensions.ControllerOffset);
+                return true;
+            }
+
+            button = 0;
+            return false;
         }
 
-        button = 0;
-        return false;
-    }
-
-    /// <summary>Get the <see cref="InputButton"/> equivalent for the given button.</summary>
-    /// <param name="input">The button to convert.</param>
-    /// <param name="button">The Stardew Valley input button equivalent.</param>
-    /// <returns>Returns whether the value was converted successfully.</returns>
-    public static bool TryGetStardewInput(this SButton input, out InputButton button)
-    {
-        // keyboard
-        if (input.TryGetKeyboard(out Keys key))
+        /// <summary>Get the <see cref="InputButton"/> equivalent for the given button.</summary>
+        /// <param name="button">The Stardew Valley input button equivalent.</param>
+        /// <returns>Returns whether the value was converted successfully.</returns>
+        public bool TryGetStardewInput(out InputButton button)
         {
-            button = new InputButton(key);
-            return true;
+            // keyboard
+            if (input.TryGetKeyboard(out Keys key))
+            {
+                button = new InputButton(key);
+                return true;
+            }
+
+            // mouse
+            if (input is SButton.MouseLeft or SButton.MouseRight)
+            {
+                button = new InputButton(mouseLeft: input == SButton.MouseLeft);
+                return true;
+            }
+
+            // not valid
+            button = default;
+            return false;
         }
 
-        // mouse
-        if (input is SButton.MouseLeft or SButton.MouseRight)
+        /// <summary>Get whether the given button is equivalent to <see cref="Options.useToolButton"/>.</summary>
+        public bool IsUseToolButton()
         {
-            button = new InputButton(mouseLeft: input == SButton.MouseLeft);
-            return true;
+            return input == SButton.ControllerX || Game1.options.useToolButton.Any(p => p.ToSButton() == input);
         }
 
-        // not valid
-        button = default;
-        return false;
-    }
-
-    /// <summary>Get whether the given button is equivalent to <see cref="Options.useToolButton"/>.</summary>
-    /// <param name="input">The button.</param>
-    public static bool IsUseToolButton(this SButton input)
-    {
-        return input == SButton.ControllerX || Game1.options.useToolButton.Any(p => p.ToSButton() == input);
-    }
-
-    /// <summary>Get whether the given button is equivalent to <see cref="Options.actionButton"/>.</summary>
-    /// <param name="input">The button.</param>
-    public static bool IsActionButton(this SButton input)
-    {
-        return input == SButton.ControllerA || Game1.options.actionButton.Any(p => p.ToSButton() == input);
+        /// <summary>Get whether the given button is equivalent to <see cref="Options.actionButton"/>.</summary>
+        public bool IsActionButton()
+        {
+            return input == SButton.ControllerA || Game1.options.actionButton.Any(p => p.ToSButton() == input);
+        }
     }
 }

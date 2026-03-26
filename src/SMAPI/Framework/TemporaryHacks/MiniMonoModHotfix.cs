@@ -20,7 +20,7 @@ namespace MonoMod.Utils;
 
 [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "Temporary hotfix submitted by the MonoMod author.")]
 [SuppressMessage("ReSharper", "PossibleNullReferenceException", Justification = "Temporary hotfix submitted by the MonoMod author.")]
-static class MiniMonoModHotfix
+internal static class MiniMonoModHotfix
 {
     // .NET Framework can break member ordering if using Module.Resolve* on certain members.
 
@@ -100,46 +100,52 @@ static class MiniMonoModHotfix
         }
     }
 
-    public static Type? GetRealDeclaringType(this MemberInfo member)
+    extension(MemberInfo member)
     {
-        return member.DeclaringType ?? member.Module.GetModuleType();
+        public Type? GetRealDeclaringType()
+        {
+            return member.DeclaringType ?? member.Module.GetModuleType();
+        }
     }
 
-    public static void FixReflectionCache(this Type? type)
+    extension(Type? type)
     {
-        if (t_RuntimeType == null || p_RuntimeType_Cache == null || m_RuntimeTypeCache_GetFieldList == null || m_RuntimeTypeCache_GetPropertyList == null)
-            return;
-
-        for (; type != null; type = type.DeclaringType)
+        public void FixReflectionCache()
         {
-            // All types SHOULD inherit RuntimeType, including those built at runtime.
-            // One might never know what awaits us in the depths of reflection hell though.
-            if (!t_RuntimeType.IsInstanceOfType(type))
-                continue;
+            if (t_RuntimeType == null || p_RuntimeType_Cache == null || m_RuntimeTypeCache_GetFieldList == null || m_RuntimeTypeCache_GetPropertyList == null)
+                return;
 
-            CacheFixEntry entry = _CacheFixed.GetValue(type, rt =>
+            for (; type != null; type = type.DeclaringType)
             {
-                // All RuntimeTypes MUST have a cache, the getter is non-virtual, it creates on demand and asserts non-null.
-                object cache = MiniMonoModHotfix.p_RuntimeType_Cache.GetValue(rt, MiniMonoModHotfix._NoArgs)!;
-                Array properties = MiniMonoModHotfix._GetArray(cache, MiniMonoModHotfix.m_RuntimeTypeCache_GetPropertyList);
-                Array fields = MiniMonoModHotfix._GetArray(cache, MiniMonoModHotfix.m_RuntimeTypeCache_GetFieldList);
+                // All types SHOULD inherit RuntimeType, including those built at runtime.
+                // One might never know what awaits us in the depths of reflection hell though.
+                if (!t_RuntimeType.IsInstanceOfType(type))
+                    continue;
 
-                _FixReflectionCacheOrder<PropertyInfo>(properties);
-                _FixReflectionCacheOrder<FieldInfo>(fields);
-
-                return new CacheFixEntry(cache, properties, fields, needsVerify: false);
-            });
-
-            if (entry.NeedsVerify && !_Verify(entry, type))
-            {
-                lock (entry)
+                CacheFixEntry entry = _CacheFixed.GetValue(type, rt =>
                 {
-                    _FixReflectionCacheOrder<PropertyInfo>(entry.Properties);
-                    _FixReflectionCacheOrder<FieldInfo>(entry.Fields);
-                }
-            }
+                    // All RuntimeTypes MUST have a cache, the getter is non-virtual, it creates on demand and asserts non-null.
+                    object cache = MiniMonoModHotfix.p_RuntimeType_Cache.GetValue(rt, MiniMonoModHotfix._NoArgs)!;
+                    Array properties = MiniMonoModHotfix._GetArray(cache, MiniMonoModHotfix.m_RuntimeTypeCache_GetPropertyList);
+                    Array fields = MiniMonoModHotfix._GetArray(cache, MiniMonoModHotfix.m_RuntimeTypeCache_GetFieldList);
 
-            entry.NeedsVerify = true;
+                    _FixReflectionCacheOrder<PropertyInfo>(properties);
+                    _FixReflectionCacheOrder<FieldInfo>(fields);
+
+                    return new CacheFixEntry(cache, properties, fields, needsVerify: false);
+                });
+
+                if (entry.NeedsVerify && !_Verify(entry, type))
+                {
+                    lock (entry)
+                    {
+                        _FixReflectionCacheOrder<PropertyInfo>(entry.Properties);
+                        _FixReflectionCacheOrder<FieldInfo>(entry.Fields);
+                    }
+                }
+
+                entry.NeedsVerify = true;
+            }
         }
     }
 
