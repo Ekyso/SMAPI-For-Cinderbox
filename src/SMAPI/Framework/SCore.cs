@@ -67,6 +67,14 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_ANDROID
     /// <summary>External handler to wait for surface creation (provided by Launcher to avoid JIT/ACW issues).</summary>
     public static Action<Android.Views.SurfaceView>? WaitForSurfaceHandler;
+
+    /// <summary>External callback to report loading progress (message, progress, errors, warnings) to the launcher overlay.</summary>
+    public static Action<string, float, int, int>? LoadingProgressHandler;
+
+    /// <summary>Counts of errors and warnings during mod loading, reported to the launcher.</summary>
+    internal static int LoadingErrors;
+    internal static int LoadingWarnings;
+    internal static volatile bool IsCountingLoadErrors = true;
 #endif
 
     /*********
@@ -400,6 +408,8 @@ internal class SCore : IDisposable
                     try
                     {
                         activity.SetContentView(gameView);
+                        // Re-add loading overlay on top of the game surface
+                        SCore.LoadingProgressHandler?.Invoke("Setting up display...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
                         this.Monitor.Log("SetContentView completed successfully", LogLevel.Debug);
                     }
                     catch (Exception ex)
@@ -426,6 +436,7 @@ internal class SCore : IDisposable
                 }
 
                 // wait for Android surface
+                SCore.LoadingProgressHandler?.Invoke("Waiting for surface...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
                 this.Monitor.Log("Waiting for Android surface to be created...", LogLevel.Debug);
 
                 var gameViewType = gameView.GetType();
@@ -637,6 +648,7 @@ internal class SCore : IDisposable
                 }
 
                 // wait for GL context
+                SCore.LoadingProgressHandler?.Invoke("Waiting for GL context...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
                 this.Monitor.Log("Waiting for GL context...", LogLevel.Debug);
                 var glContextField = gameViewType.GetField(
                     "glContextAvailable",
@@ -747,6 +759,7 @@ internal class SCore : IDisposable
                 });
 
                 // wait for game initialization
+                SCore.LoadingProgressHandler?.Invoke("Initializing game...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
                 this.Monitor.Log("Waiting for game to initialize...", LogLevel.Debug);
                 SCore.GameInitializedEvent = new ManualResetEventSlim(false);
                 var gameWaitStart = DateTime.UtcNow;
@@ -992,6 +1005,12 @@ internal class SCore : IDisposable
 
         // load mods
         {
+#if SMAPI_FOR_ANDROID
+            SCore.LoadingErrors = 0;
+            SCore.LoadingWarnings = 0;
+            SCore.IsCountingLoadErrors = true;
+            SCore.LoadingProgressHandler?.Invoke("Loading mod metadata...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+#endif
             this.Monitor.Log("Loading mod metadata...", LogLevel.Debug);
             ModResolver resolver = new();
 
@@ -1952,6 +1971,7 @@ internal class SCore : IDisposable
                     Context.IsGameLaunched = true;
 #if SMAPI_FOR_ANDROID
                     SCore.GameInitializedEvent?.Set();
+                    SCore.IsCountingLoadErrors = false;
                     this.InitializePerformanceFeatures();
 #endif
 
@@ -2489,6 +2509,17 @@ internal class SCore : IDisposable
     {
         this.RaiseRenderEvent(this.EventManager.Rendered, Game1.spriteBatch, renderTarget);
 
+#if SMAPI_FOR_ANDROID
+        // Hide the loading overlay once the title menu is actually rendering
+        var handler = SCore.LoadingProgressHandler;
+        if (handler != null && Context.IsGameLaunched
+            && Game1.activeClickableMenu is StardewValley.Menus.TitleMenu)
+        {
+            SCore.LoadingProgressHandler = null;
+            handler.Invoke("Ready!", 1.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+        }
+#endif
+
         // Mark render complete for frame timing metrics
         AndroidGameLoopManager.MarkRenderComplete();
     }
@@ -2576,6 +2607,16 @@ internal class SCore : IDisposable
     /// <param name="assetName">The asset name that was loaded.</param>
     private void OnAssetLoaded(IContentManager contentManager, IAssetName assetName)
     {
+#if SMAPI_FOR_ANDROID
+        // Show asset names on the loading overlay during post-load init
+        if (SCore.LoadingProgressHandler != null)
+        {
+            SCore.LoadingProgressHandler.Invoke(
+                $"Loading {assetName.BaseName}...", 0.48f,
+                SCore.LoadingErrors, SCore.LoadingWarnings);
+        }
+#endif
+
         if (this.EventManager.AssetReady.HasListeners)
             this.EventManager.AssetReady.Raise(
                 new AssetReadyEventArgs(assetName, assetName.GetBaseAssetName())
@@ -3329,6 +3370,9 @@ internal class SCore : IDisposable
     )
     {
         this.Monitor.Log("Loading mods...", LogLevel.Debug);
+#if SMAPI_FOR_ANDROID
+        SCore.LoadingProgressHandler?.Invoke("Loading mods...", 0.16f, SCore.LoadingErrors, SCore.LoadingWarnings);
+#endif
 
         // load mods
         IList<IModMetadata> skippedMods = new List<IModMetadata>();
@@ -3348,9 +3392,15 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_ANDROID
             int assemblyModCount = 0;
             int contentPackCount = 0;
+            int modIndex = 0;
 #endif
             foreach (IModMetadata mod in mods)
             {
+#if SMAPI_FOR_ANDROID
+                float progress = 0.16f + 0.12f * ((float)modIndex / mods.Length);
+                SCore.LoadingProgressHandler?.Invoke($"Loading {mod.DisplayName}...", progress, SCore.LoadingErrors, SCore.LoadingWarnings);
+                modIndex++;
+#endif
                 if (
                     !this.TryLoadMod(
                         mod,
@@ -3382,7 +3432,8 @@ internal class SCore : IDisposable
                     assemblyModCount++;
 
                 // log memory every 10 mods to track growth
-                if ((assemblyModCount + contentPackCount) % 10 == 0)
+                int totalLoaded = assemblyModCount + contentPackCount;
+                if (totalLoaded % 10 == 0)
                     this.Monitor.Log(
                         $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after loading {assemblyModCount} mods + {contentPackCount} packs")}",
                         LogLevel.Info
@@ -3421,6 +3472,7 @@ internal class SCore : IDisposable
         // initialize loaded non-content-pack mods
         this.Monitor.Log("Launching mods...", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
+        SCore.LoadingProgressHandler?.Invoke("Launching mods...", 0.28f, SCore.LoadingErrors, SCore.LoadingWarnings);
         this.Monitor.Log(
             $"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod Entry() calls")}",
             LogLevel.Debug
@@ -3429,6 +3481,10 @@ internal class SCore : IDisposable
 #endif
         foreach (IModMetadata metadata in loadedMods)
         {
+#if SMAPI_FOR_ANDROID
+            float entryProgress = 0.28f + 0.17f * ((float)entryCount / loadedMods.Length);
+            SCore.LoadingProgressHandler?.Invoke($"Launching {metadata.DisplayName}...", entryProgress, SCore.LoadingErrors, SCore.LoadingWarnings);
+#endif
             IMod mod =
                 metadata.Mod
                 ?? throw new InvalidOperationException(
@@ -3533,6 +3589,9 @@ internal class SCore : IDisposable
         );
 #endif
         this.Monitor.Log("Mods loaded and ready!", LogLevel.Debug);
+#if SMAPI_FOR_ANDROID
+        SCore.LoadingProgressHandler?.Invoke("Starting game...", 0.45f, SCore.LoadingErrors, SCore.LoadingWarnings);
+#endif
     }
 
     /// <summary>Load a given mod.</summary>

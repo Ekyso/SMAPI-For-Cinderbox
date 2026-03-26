@@ -174,6 +174,15 @@ internal class Monitor : IMonitor
         bool writeToConsole = this.WriteToConsole && (this.ShowTraceInConsole || level != ConsoleLogLevel.Trace || Monitor.ForceVerboseLoggingForAll || Monitor.ForceVerboseLogging.Contains(this.ModId));
 
 #if SMAPI_FOR_ANDROID
+        // Track errors/warnings for the loading overlay (only during mod loading)
+        if (SCore.IsCountingLoadErrors)
+        {
+            if (level == ConsoleLogLevel.Error)
+                System.Threading.Interlocked.Increment(ref SCore.LoadingErrors);
+            else if (level == ConsoleLogLevel.Warn)
+                System.Threading.Interlocked.Increment(ref SCore.LoadingWarnings);
+        }
+
         AsyncQueue.Instance.Enqueue(consoleMessage, fullMessage, level, writeToConsole);
 #else
         // write to console

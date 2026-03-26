@@ -23,7 +23,8 @@ public class ModScanner
     [
         new(@"^__folder_managed_by_vortex$", RegexOptions.Compiled | RegexOptions.IgnoreCase), // Vortex mod manager
         new(@"(?:^\._|^\.DS_Store$|^__MACOSX$|^mcs$)", RegexOptions.Compiled | RegexOptions.IgnoreCase), // macOS
-        new(@"^(?:desktop\.ini|Thumbs\.db)$", RegexOptions.Compiled | RegexOptions.IgnoreCase)
+        new(@"^(?:desktop\.ini|Thumbs\.db)$", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+        new(@"^meta\.ini$", RegexOptions.Compiled | RegexOptions.IgnoreCase) // Stardrop mod manager
     ];
 
     /// <summary>A list of file extensions to ignore when searching for mod files.</summary>
