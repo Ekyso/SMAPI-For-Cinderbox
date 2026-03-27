@@ -377,8 +377,11 @@ internal class InteractiveInstaller
             {
                 // copy SMAPI files to game dir
                 this.PrintDebug("Adding SMAPI files...");
-                foreach (FileSystemInfo sourceEntry in paths.BundleDir.EnumerateFileSystemInfos().Where(this.ShouldCopy))
+                foreach (FileSystemInfo sourceEntry in paths.BundleDir.EnumerateFileSystemInfos())
                 {
+                    if (!this.ShouldCopy(sourceEntry))
+                        continue;
+
                     this.InteractivelyDelete(Path.Combine(paths.GameDir.FullName, sourceEntry.Name), allowUserInput);
                     this.RecursiveCopy(sourceEntry, paths.GameDir);
                 }

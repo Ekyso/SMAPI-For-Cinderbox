@@ -15,7 +15,7 @@ internal class ChestTracker : IDisposable
     ** Fields
     *********/
     /// <summary>The item stack sizes as of the last update.</summary>
-    private readonly IDictionary<Item, int> StackSizes;
+    private readonly Dictionary<Item, int> StackSizes = [];
 
     /// <summary>Items added since the last update.</summary>
     private readonly HashSet<Item> Added = new(new ObjectReferenceComparer<Item>());
@@ -46,11 +46,10 @@ internal class ChestTracker : IDisposable
             chest.Items
         );
 
-        this.StackSizes = new Dictionary<Item, int>(new ObjectReferenceComparer<Item>());
-        foreach (Item item in this.Chest.Items)
+        foreach (Item? item in this.Chest.Items)
         {
-            if (item != null)
-                this.StackSizes.TryAdd(item, item.Stack);
+            if (item is not null)
+                this.StackSizes[item] = item.Stack;
         }
     }
 

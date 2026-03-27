@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using StardewModdingAPI.Toolkit.Framework.UpdateData;
 
 namespace StardewModdingAPI.Web.Framework.Caching.Mods;
@@ -13,7 +12,7 @@ internal class ModCacheMemoryRepository : BaseCacheRepository, IModCacheReposito
     ** Fields
     *********/
     /// <summary>The cached mod data indexed by <c>{site key}:{ID}</c>.</summary>
-    private readonly IDictionary<string, Cached<IModPage>> Mods = new Dictionary<string, Cached<IModPage>>(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Cached<IModPage>> Mods = new(StringComparer.OrdinalIgnoreCase);
 
 
     /*********
@@ -57,13 +56,11 @@ internal class ModCacheMemoryRepository : BaseCacheRepository, IModCacheReposito
     {
         DateTimeOffset minDate = DateTimeOffset.UtcNow.Subtract(age);
 
-        string[] staleKeys = this.Mods
-            .Where(p => p.Value.LastRequested < minDate)
-            .Select(p => p.Key)
-            .ToArray();
-
-        foreach (string key in staleKeys)
-            this.Mods.Remove(key);
+        foreach ((string key, var modPage) in this.Mods)
+        {
+            if (modPage.LastRequested < minDate)
+                this.Mods.Remove(key);
+        }
     }
 
 

@@ -192,8 +192,11 @@ internal class SMultiplayer : Multiplayer
                     newPeer.SendMessage(new OutgoingMessage((byte)MessageType.ModContext, Game1.player.UniqueMultiplayerID, this.GetContextSyncMessageFields()));
 
                     // reply with other players' context
-                    foreach (MultiplayerPeer otherPeer in this.Peers.Values.Where(p => p.PlayerID != newPeer.PlayerID))
+                    foreach (MultiplayerPeer otherPeer in this.Peers.Values)
                     {
+                        if (otherPeer.PlayerID == newPeer.PlayerID)
+                            continue;
+
                         this.Monitor.VerboseLog($"   Replying with context for player {otherPeer.PlayerID}...");
                         newPeer.SendMessage(new OutgoingMessage((byte)MessageType.ModContext, otherPeer.PlayerID, this.GetContextSyncMessageFields(otherPeer)));
                     }
@@ -202,8 +205,11 @@ internal class SMultiplayer : Multiplayer
                     if (this.Peers.Count > 1)
                     {
                         object[] fields = this.GetContextSyncMessageFields(newPeer);
-                        foreach (MultiplayerPeer otherPeer in this.Peers.Values.Where(p => p.PlayerID != newPeer.PlayerID))
+                        foreach (MultiplayerPeer otherPeer in this.Peers.Values)
                         {
+                            if (otherPeer.PlayerID == newPeer.PlayerID)
+                                continue;
+
                             this.Monitor.VerboseLog($"   Forwarding context to player {otherPeer.PlayerID}...");
                             otherPeer.SendMessage(new OutgoingMessage((byte)MessageType.ModContext, newPeer.PlayerID, fields));
                         }

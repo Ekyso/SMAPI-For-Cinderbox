@@ -330,8 +330,11 @@ public class ModScanner
     {
         bool hasXnbFile = false;
 
-        foreach (FileInfo file in files.Where(this.IsRelevant))
+        foreach (FileInfo file in files)
         {
+            if (!this.IsRelevant(file))
+                continue;
+
             if (this.StrictXnbModExtensions.Contains(file.Extension))
             {
                 hasXnbFile = true;

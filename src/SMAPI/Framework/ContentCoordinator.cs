@@ -634,12 +634,11 @@ internal class ContentCoordinator : IDisposable
         return this.ContentManagerLock.InReadLock(() =>
         {
             List<object> values = [];
-            foreach (
-                IContentManager content in this.ContentManagers.Where(p =>
-                    !p.IsNamespaced && p.IsLoaded(assetName)
-                )
-            )
+            foreach (IContentManager content in this.ContentManagers)
             {
+                if (content.IsNamespaced || !content.IsLoaded(assetName))
+                    continue;
+
                 object value = content.LoadExact<object>(assetName, useCache: true);
                 values.Add(value);
             }

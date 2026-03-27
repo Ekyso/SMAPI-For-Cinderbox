@@ -1079,12 +1079,15 @@ internal class SCore : IDisposable
             {
                 bool anyIgnored = false;
 
-                foreach (IModMetadata mod in mods.Where(p => p.IsIgnored))
+                foreach (IModMetadata mod in mods)
                 {
-                    anyIgnored = true;
-                    this.Monitor.Log(
-                        $"  Skipped {mod.GetRelativePathWithRoot()} (folder name starts with a dot)."
-                    );
+                    if (mod.IsIgnored)
+                    {
+                        anyIgnored = true;
+                        this.Monitor.Log(
+                            $"  Skipped {mod.GetRelativePathWithRoot()} (folder name starts with a dot)."
+                        );
+                    }
                 }
 
                 if (anyIgnored)
@@ -3496,9 +3499,18 @@ internal class SCore : IDisposable
 #endif
         }
 
-        IModMetadata[] loaded = this.ModRegistry.GetAll().ToArray();
-        IModMetadata[] loadedContentPacks = loaded.Where(p => p.IsContentPack).ToArray();
-        IModMetadata[] loadedMods = loaded.Where(p => !p.IsContentPack).ToArray();
+        List<IModMetadata> loaded = [];
+        List<IModMetadata> loadedContentPacks = [];
+        List<IModMetadata> loadedMods = [];
+        foreach (IModMetadata mod in this.ModRegistry.GetAll())
+        {
+            loaded.Add(mod);
+
+            if (mod.IsContentPack)
+                loadedContentPacks.Add(mod);
+            else
+                loadedMods.Add(mod);
+        }
 
         // unlock content packs
         this.ModRegistry.AreAllModsLoaded = true;
@@ -3733,10 +3745,10 @@ internal class SCore : IDisposable
 
         // validate dependencies
         // Although dependencies are validated before mods are loaded, a dependency may have failed to load.
-        foreach (IManifestDependency dependency in manifest!.Dependencies.Where(p => p.IsRequired))
+        foreach (IManifestDependency dependency in manifest!.Dependencies)
         {
             // not missing
-            if (this.ModRegistry.Get(dependency.UniqueID) != null)
+            if (!dependency.IsRequired || this.ModRegistry.Get(dependency.UniqueID) != null)
                 continue;
 
             // ignored in compatibility list (e.g. fully replaced by the game code)
@@ -4087,18 +4099,23 @@ internal class SCore : IDisposable
         mod = null;
 
         // find type
-        TypeInfo[] modEntries = modAssembly
-            .DefinedTypes.Where(type => typeof(Mod).IsAssignableFrom(type) && !type.IsAbstract)
-            .Take(2)
-            .ToArray();
-        if (modEntries.Length == 0)
+        TypeInfo? modType = null;
+        foreach (TypeInfo type in modAssembly.DefinedTypes)
+        {
+            if (!typeof(Mod).IsAssignableFrom(type) || type.IsAbstract)
+                continue;
+
+            if (modType is not null)
+            {
+                error = $"its DLL contains multiple '{nameof(Mod)}' subclasses.";
+                return false;
+            }
+
+            modType = type;
+        }
+        if (modType is null)
         {
             error = $"its DLL has no '{nameof(Mod)}' subclass.";
-            return false;
-        }
-        if (modEntries.Length > 1)
-        {
-            error = $"its DLL contains multiple '{nameof(Mod)}' subclasses.";
             return false;
         }
 
@@ -4106,7 +4123,7 @@ internal class SCore : IDisposable
         Context.HeuristicModsRunningCode.Push(metadata);
         try
         {
-            mod = (Mod?)modAssembly.CreateInstance(modEntries[0].ToString());
+            mod = (Mod?)modAssembly.CreateInstance(modType.ToString());
         }
         finally
         {

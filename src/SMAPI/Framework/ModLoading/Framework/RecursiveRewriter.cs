@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Mono.Cecil;
@@ -69,16 +68,19 @@ internal class RecursiveRewriter
     /// <returns>Returns whether the module was modified.</returns>
     public bool RewriteModule()
     {
-        IEnumerable<TypeDefinition> types = this.Module.GetTypes().Where(type => type.BaseType != null); // skip special types like <Module>
-
         bool changed = false;
 
         try
         {
             changed |= this.RewriteModuleImpl(this.Module);
 
-            foreach (TypeDefinition type in types)
+            foreach (TypeDefinition type in this.Module.GetTypes())
+            {
+                if (type.BaseType is null)
+                    continue; // skip special types like <Module>
+
                 changed |= this.RewriteTypeDefinition(type);
+            }
         }
         catch (Exception ex)
         {
@@ -293,8 +295,7 @@ internal class RecursiveRewriter
                 MethodDefinition? constructor = (newAttrType ?? attribute.AttributeType)
                     .Resolve()
                     ?.Methods
-                    .Where(method => method.IsConstructor)
-                    .FirstOrDefault(ctor => RewriteHelper.HasMatchingSignature(ctor, attribute.Constructor));
+                    .FirstOrDefault(method => method.IsConstructor && RewriteHelper.HasMatchingSignature(method, attribute.Constructor));
                 if (constructor == null)
                     throw new InvalidOperationException($"Can't rewrite attribute type '{attribute.AttributeType.FullName}' to '{newAttrType?.FullName}', no equivalent constructor found.");
 

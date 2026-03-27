@@ -225,10 +225,13 @@ internal class ModResolver
         var states = mods.ToDictionary(mod => mod, _ => ModDependencyStatus.Queued);
 
         // handle failed mods
-        foreach (IModMetadata mod in mods.Where(m => m.Status == ModMetadataStatus.Failed))
+        foreach (IModMetadata mod in mods)
         {
-            states[mod] = ModDependencyStatus.Failed;
-            sortedMods.Push(mod);
+            if (mod.Status is ModMetadataStatus.Failed)
+            {
+                states[mod] = ModDependencyStatus.Failed;
+                sortedMods.Push(mod);
+            }
         }
 
         // sort mods

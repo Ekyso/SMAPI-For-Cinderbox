@@ -47,8 +47,11 @@ internal class HeuristicMethodRewriter : BaseInstructionHandler
 
         // get method definition
         MethodDefinition? method = null;
-        foreach (MethodDefinition match in type.Methods.Where(p => p.Name == methodRef.Name))
+        foreach (MethodDefinition match in type.Methods)
         {
+            if (match.Name != methodRef.Name)
+                continue;
+
             // reference matches initial parameters of definition
             if (methodRef.Parameters.Count >= match.Parameters.Count || !this.InitialParametersMatch(methodRef, match))
                 continue;

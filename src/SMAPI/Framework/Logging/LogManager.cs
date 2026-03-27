@@ -334,7 +334,7 @@ internal class LogManager : IDisposable
     /// <param name="logParanoidWarnings">Whether to log issues for mods which directly use potentially sensitive .NET APIs like file or shell access.</param>
     /// <param name="logTechnicalDetailsForBrokenMods">Whether to include more technical details about broken mods in the TRACE logs. This is mainly useful for creating compatibility rewriters.</param>
     /// <param name="hasHarmonyFix">Whether Harmony was fixed to work with Stardew Valley.</param>
-    public void LogModInfo(IModMetadata[] loaded, IModMetadata[] loadedContentPacks, IModMetadata[] loadedMods, IReadOnlyList<IModMetadata> skippedMods, bool logParanoidWarnings, bool logTechnicalDetailsForBrokenMods, bool hasHarmonyFix)
+    public void LogModInfo(IReadOnlyList<IModMetadata> loaded, IReadOnlyList<IModMetadata> loadedContentPacks, IReadOnlyList<IModMetadata> loadedMods, IReadOnlyList<IModMetadata> skippedMods, bool logParanoidWarnings, bool logTechnicalDetailsForBrokenMods, bool hasHarmonyFix)
     {
         // report malicious mod
         foreach (IModMetadata mod in skippedMods)
@@ -353,7 +353,7 @@ internal class LogManager : IDisposable
         }
 
         // log loaded mods
-        this.Monitor.Log($"Loaded {loadedMods.Length} mods" + (loadedMods.Length > 0 ? ":" : "."), LogLevel.Info);
+        this.Monitor.Log($"Loaded {loadedMods.Count} mods" + (loadedMods.Count > 0 ? ":" : "."), LogLevel.Info);
         foreach (IModMetadata metadata in loadedMods.OrderBy(p => p.DisplayName))
         {
             IManifest manifest = metadata.Manifest;
@@ -372,7 +372,7 @@ internal class LogManager : IDisposable
         {
             string? GetModDisplayName(string id) => loadedMods.FirstOrDefault(p => p.HasId(id))?.DisplayName;
 
-            this.Monitor.Log($"Loaded {loadedContentPacks.Length} content packs:", LogLevel.Info);
+            this.Monitor.Log($"Loaded {loadedContentPacks.Count} content packs:", LogLevel.Info);
             foreach (IModMetadata metadata in loadedContentPacks.OrderBy(p => p.DisplayName))
             {
                 IManifest manifest = metadata.Manifest;
