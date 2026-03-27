@@ -26,13 +26,11 @@ internal class ChestTracker : IDisposable
     /// <summary>The underlying inventory watcher.</summary>
     private readonly ICollectionWatcher<Item> InventoryWatcher;
 
-
     /*********
     ** Accessors
     *********/
     /// <summary>The chest being tracked.</summary>
     public Chest Chest { get; }
-
 
     /*********
     ** Public methods
@@ -43,7 +41,10 @@ internal class ChestTracker : IDisposable
     public ChestTracker(string name, Chest chest)
     {
         this.Chest = chest;
-        this.InventoryWatcher = WatcherFactory.ForInventory($"{name}.{nameof(chest.Items)}", chest.Items);
+        this.InventoryWatcher = WatcherFactory.ForInventory(
+            $"{name}.{nameof(chest.Items)}",
+            chest.Items
+        );
 
         this.StackSizes = new Dictionary<Item, int>(new ObjectReferenceComparer<Item>());
         foreach (Item item in this.Chest.Items)
@@ -91,7 +92,12 @@ internal class ChestTracker : IDisposable
     /// <returns>Returns whether anything changed.</returns>
     public bool TryGetInventoryChanges([NotNullWhen(true)] out SnapshotItemListDiff? changes)
     {
-        return SnapshotItemListDiff.TryGetChanges(added: this.Added, removed: this.Removed, stackSizes: this.StackSizes, out changes);
+        return SnapshotItemListDiff.TryGetChanges(
+            added: this.Added,
+            removed: this.Removed,
+            stackSizes: this.StackSizes,
+            out changes
+        );
     }
 
     /// <summary>Release watchers and resources.</summary>
