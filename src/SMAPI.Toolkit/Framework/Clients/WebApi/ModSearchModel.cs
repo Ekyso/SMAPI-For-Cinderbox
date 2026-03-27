@@ -28,7 +28,7 @@ public class ModSearchModel
     public ISemanticVersion GameVersion { get; set; }
 
     /// <summary>The OS on which the player plays.</summary>
-    public Platform Platform { get; set; }
+    public Platform? Platform { get; set; }
 
 
     /*********

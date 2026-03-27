@@ -83,7 +83,7 @@ internal class ModsApiController : Controller
     public async Task<IEnumerable<ModEntryModel>> PostAsync([FromBody] ModSearchModel? model, [FromRoute] string version)
     {
         ApiMetricsModel metrics = MetricsManager.GetMetricsForNow();
-        metrics.TrackRequest(model?.ApiVersion, model?.GameVersion);
+        metrics.TrackRequest(model?.ApiVersion, model?.GameVersion, model?.Platform);
 
         if (model?.Mods == null)
             return Array.Empty<ModEntryModel>();

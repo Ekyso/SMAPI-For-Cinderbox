@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StardewModdingAPI.Toolkit.Framework.UpdateData;
+using StardewModdingAPI.Toolkit.Utilities;
 
 namespace StardewModdingAPI.Web.Framework.Metrics;
 
@@ -14,13 +15,16 @@ internal class ApiMetricsModel
     public int ApiRequests { get; private set; }
 
     /// <summary>The metrics by mod site.</summary>
-    public Dictionary<ModSiteKey, MetricsModel> Sites { get; } = new();
+    public Dictionary<ModSiteKey, MetricsModel> Sites { get; } = [];
 
     /// <summary>The number of update-check requests by SMAPI version.</summary>
     public Dictionary<string, long> ByApiVersion { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>The number of update-check requests by game version.</summary>
     public Dictionary<string, long> ByGameVersion { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The number of update-check requests by OS platform.</summary>
+    public Dictionary<string, long> ByPlatform { get; } = [];
 
 
     /*********
@@ -29,15 +33,18 @@ internal class ApiMetricsModel
     /// <summary>Track an update-check request received by the API.</summary>
     /// <param name="apiVersion">The SMAPI version installed by the player.</param>
     /// <param name="gameVersion">The game version installed by the player.</param>
-    public void TrackRequest(ISemanticVersion? apiVersion, ISemanticVersion? gameVersion)
+    /// <param name="platform">The OS platform used by the player.</param>
+    public void TrackRequest(ISemanticVersion? apiVersion, ISemanticVersion? gameVersion, Platform? platform)
     {
         this.ApiRequests++;
 
         string apiVersionStr = apiVersion?.ToString() ?? "<none specified>";
         string gameVersionStr = gameVersion?.ToString() ?? "<none specified>";
+        string platformStr = platform?.ToString() ?? "<none specified>";
 
         this.ByApiVersion[apiVersionStr] = this.ByApiVersion.GetValueOrDefault(apiVersionStr) + 1;
         this.ByGameVersion[gameVersionStr] = this.ByGameVersion.GetValueOrDefault(gameVersionStr) + 1;
+        this.ByPlatform[platformStr] = this.ByPlatform.GetValueOrDefault(platformStr) + 1;
     }
 
     /// <summary>Track the update-check result for a specific update key.</summary>

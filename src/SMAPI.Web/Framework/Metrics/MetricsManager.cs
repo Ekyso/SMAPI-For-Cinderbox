@@ -49,6 +49,7 @@ internal static class MetricsManager
         var byDate = new Dictionary<string, ApiMetricsModel>();
         var byApiVersion = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         var byGameVersion = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        var byPlatform = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
         foreach ((string hourlyKey, ApiMetricsModel hourly) in MetricsManager.Metrics)
         {
             // totals
@@ -76,6 +77,10 @@ internal static class MetricsManager
             foreach ((string gameVersion, long count) in hourly.ByGameVersion)
                 byGameVersion[gameVersion] = byGameVersion.GetValueOrDefault(gameVersion) + count;
 
+            // by platform
+            foreach ((string platform, long count) in hourly.ByPlatform)
+                byPlatform[platform] = byPlatform.GetValueOrDefault(platform) + count;
+
             daily.AggregateFrom(hourly);
         }
 
@@ -90,6 +95,7 @@ internal static class MetricsManager
             TotalErrorCacheMisses: totals.ErrorCacheMisses,
             ByApiVersion: byApiVersion,
             ByGameVersion: byGameVersion,
+            ByPlatform: byPlatform,
             BySite: bySite,
             ByDate: byDate
         );

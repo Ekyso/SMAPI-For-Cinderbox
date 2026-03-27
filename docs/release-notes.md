@@ -6,6 +6,9 @@
   * Improved performance.
   * Improved error message when a mod is blocked by Windows Smart App Control.
 
+* For mod authors:
+  * Added OS metrics to the [metrics API](technical/web.md#modsmetrics).
+
 ## 4.5.2
 Released 14 March 2026 for Stardew Valley 1.6.14 or later.
 
