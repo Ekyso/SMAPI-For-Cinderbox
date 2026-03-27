@@ -49,7 +49,7 @@ internal class ListItemsCommand : ConsoleCommand
         // handle
         SearchableItem[] matches =
             (
-                from item in this.GetItems(args.ToArray())
+                from item in this.GetItems(args)
                 orderby item.Type, item.Name
                 select item
             )
@@ -67,7 +67,7 @@ internal class ListItemsCommand : ConsoleCommand
     *********/
     /// <summary>Get all items which can be searched and added to the player's inventory through the console.</summary>
     /// <param name="searchWords">The search string to find.</param>
-    private IEnumerable<SearchableItem> GetItems(string[] searchWords)
+    private IEnumerable<SearchableItem> GetItems(IReadOnlyList<string> searchWords)
     {
         // normalize search term
         searchWords = searchWords.Where(word => !string.IsNullOrWhiteSpace(word)).ToArray();

@@ -86,7 +86,7 @@ internal class ClearCommand : ConsoleCommand
             case "debris":
                 {
                     int removed = 0;
-                    foreach (var pair in location.terrainFeatures.Pairs.ToArray())
+                    foreach (var pair in location.terrainFeatures.Pairs)
                     {
                         TerrainFeature feature = pair.Value;
                         if (feature is HoeDirt dirt && dirt.crop?.dead.Value is true)
@@ -188,18 +188,7 @@ internal class ClearCommand : ConsoleCommand
     /// <returns>Returns the number of removed entities.</returns>
     private int RemoveTerrainFeatures(GameLocation location, Func<TerrainFeature, bool> shouldRemove)
     {
-        int removed = 0;
-
-        foreach ((Vector2 tile, TerrainFeature? feature) in location.terrainFeatures.Pairs.ToArray())
-        {
-            if (shouldRemove(feature))
-            {
-                location.terrainFeatures.Remove(tile);
-                removed++;
-            }
-        }
-
-        return removed;
+        return location.terrainFeatures.RemoveWhere(pair => shouldRemove(pair.Value));
     }
 
     /// <summary>Remove large terrain features from a location matching a lambda.</summary>
@@ -208,18 +197,7 @@ internal class ClearCommand : ConsoleCommand
     /// <returns>Returns the number of removed entities.</returns>
     private int RemoveLargeTerrainFeatures(GameLocation location, Func<LargeTerrainFeature, bool> shouldRemove)
     {
-        int removed = 0;
-
-        foreach (LargeTerrainFeature feature in location.largeTerrainFeatures.ToArray())
-        {
-            if (shouldRemove(feature))
-            {
-                location.largeTerrainFeatures.Remove(feature);
-                removed++;
-            }
-        }
-
-        return removed;
+        return location.largeTerrainFeatures.RemoveWhere(shouldRemove);
     }
 
     /// <summary>Remove resource clumps from a location matching a lambda.</summary>
@@ -228,15 +206,7 @@ internal class ClearCommand : ConsoleCommand
     /// <returns>Returns the number of removed entities.</returns>
     private int RemoveResourceClumps(GameLocation location, Func<ResourceClump, bool> shouldRemove)
     {
-        int removed = 0;
-
-        foreach (ResourceClump clump in location.resourceClumps.Where(shouldRemove).ToArray())
-        {
-            location.resourceClumps.Remove(clump);
-            removed++;
-        }
-
-        return removed;
+        return location.resourceClumps.RemoveWhere(shouldRemove);
     }
 
     /// <summary>Remove furniture from a location matching a lambda.</summary>
@@ -245,17 +215,6 @@ internal class ClearCommand : ConsoleCommand
     /// <returns>Returns the number of removed entities.</returns>
     private int RemoveFurniture(GameLocation location, Func<Furniture, bool> shouldRemove)
     {
-        int removed = 0;
-
-        foreach (Furniture furniture in location.furniture.ToArray())
-        {
-            if (shouldRemove(furniture))
-            {
-                location.furniture.Remove(furniture);
-                removed++;
-            }
-        }
-
-        return removed;
+        return location.furniture.RemoveWhere(shouldRemove);
     }
 }

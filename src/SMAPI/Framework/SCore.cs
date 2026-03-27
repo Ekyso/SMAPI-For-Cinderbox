@@ -1042,16 +1042,13 @@ internal class SCore : IDisposable
 
             // log loose files
             {
-                string[] looseFiles = new DirectoryInfo(this.ModsPath)
-                    .GetFiles()
-                    .Select(p => p.Name)
-                    .ToArray();
-                if (looseFiles.Any())
+                FileInfo[] looseFiles = new DirectoryInfo(this.ModsPath).GetFiles();
+                if (looseFiles.Length > 0)
                 {
                     if (
-                        looseFiles.Any(name =>
-                            name.Equals("manifest.json", StringComparison.OrdinalIgnoreCase)
-                            || name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                        looseFiles.Any(file =>
+                            file.Name.Equals("manifest.json", StringComparison.OrdinalIgnoreCase)
+                            || file.Name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
                         )
                     )
                     {
@@ -1062,7 +1059,7 @@ internal class SCore : IDisposable
                     }
 
                     this.Monitor.Log(
-                        $"  Ignored loose files: {string.Join(", ", looseFiles.OrderBy(p => p, StringComparer.OrdinalIgnoreCase))}"
+                        $"  Ignored loose files: {string.Join(", ", looseFiles.Select(p => p.Name).OrderBy(p => p, StringComparer.OrdinalIgnoreCase))}"
                     );
                 }
             }
@@ -1079,11 +1076,20 @@ internal class SCore : IDisposable
                 .ToArray();
 
             // filter out ignored mods
-            foreach (IModMetadata mod in mods.Where(p => p.IsIgnored))
-                this.Monitor.Log(
-                    $"  Skipped {mod.GetRelativePathWithRoot()} (folder name starts with a dot)."
-                );
-            mods = mods.Where(p => !p.IsIgnored).ToArray();
+            {
+                bool anyIgnored = false;
+
+                foreach (IModMetadata mod in mods.Where(p => p.IsIgnored))
+                {
+                    anyIgnored = true;
+                    this.Monitor.Log(
+                        $"  Skipped {mod.GetRelativePathWithRoot()} (folder name starts with a dot)."
+                    );
+                }
+
+                if (anyIgnored)
+                    mods = mods.Where(p => !p.IsIgnored).ToArray();
+            }
 
             // validate manifests
             resolver.ValidateManifests(
@@ -1765,8 +1771,8 @@ internal class SCore : IDisposable
                         && (events.LocationListChanged.HasListeners || verbose)
                     )
                     {
-                        var added = state.Locations.LocationList.Added.ToArray();
-                        var removed = state.Locations.LocationList.Removed.ToArray();
+                        var added = state.Locations.LocationList.Added;
+                        var removed = state.Locations.LocationList.Removed;
 
                         if (verbose)
                         {
@@ -2657,7 +2663,7 @@ internal class SCore : IDisposable
 
     /// <summary>A callback invoked after assets have been invalidated from the content cache.</summary>
     /// <param name="assetNames">The invalidated asset names.</param>
-    private void OnAssetsInvalidated(IList<IAssetName> assetNames)
+    private void OnAssetsInvalidated(ICollection<IAssetName> assetNames)
     {
         if (this.EventManager.AssetsInvalidated.HasListeners)
             this.EventManager.AssetsInvalidated.Raise(
@@ -3096,7 +3102,7 @@ internal class SCore : IDisposable
                                 new ModSearchEntryModel(
                                     mod.Manifest.UniqueID,
                                     mod.Manifest.Version,
-                                    updateKeys.ToArray(),
+                                    updateKeys,
                                     isBroken: mod.Status == ModMetadataStatus.Failed
                                 )
                             );
@@ -3412,7 +3418,7 @@ internal class SCore : IDisposable
 #endif
 
         // load mods
-        IList<IModMetadata> skippedMods = new List<IModMetadata>();
+        List<IModMetadata> skippedMods = [];
         using (
             AssemblyLoader modAssemblyLoader = new(
                 Constants.Platform,
@@ -3502,7 +3508,7 @@ internal class SCore : IDisposable
             loaded,
             loadedContentPacks,
             loadedMods,
-            skippedMods.ToArray(),
+            skippedMods,
             this.Settings.ParanoidWarnings,
             this.Settings.LogTechnicalDetailsForBrokenMods,
             this.Settings.FixHarmony
@@ -4262,12 +4268,12 @@ internal class SCore : IDisposable
         }
 
         // validate translations
-        foreach (string locale in translations.Keys.ToArray())
+        foreach (string locale in translations.Keys)
         {
             // handle duplicates
             HashSet<string> keys = new(StringComparer.OrdinalIgnoreCase);
             HashSet<string> duplicateKeys = new(StringComparer.OrdinalIgnoreCase);
-            foreach (string key in translations[locale].Keys.ToArray())
+            foreach (string key in translations[locale].Keys)
             {
                 if (!keys.Add(key))
                 {

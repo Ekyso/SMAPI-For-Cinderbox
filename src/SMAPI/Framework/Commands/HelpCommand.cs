@@ -83,12 +83,11 @@ internal class HelpCommand : IInternalCommand
             foreach (var group in groups)
             {
                 string modName = group.Key;
-                string[] commandNames = group.ToArray();
                 message +=
                     $"""
 
                      {modName}:
-                       {string.Join("\n  ", commandNames)}
+                       {string.Join("\n  ", group)}
 
                      """;
             }

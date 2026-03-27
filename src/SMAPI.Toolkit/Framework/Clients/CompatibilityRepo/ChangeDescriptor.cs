@@ -141,7 +141,7 @@ public class ChangeDescriptor
     /// <param name="descriptor">The raw change descriptor.</param>
     /// <param name="errors">The human-readable error message describing any invalid values that were ignored.</param>
     /// <param name="formatValue">Format a raw value into a normalized form if needed.</param>
-    public static ChangeDescriptor Parse(string? descriptor, out string[] errors, Func<string, string>? formatValue = null)
+    public static ChangeDescriptor Parse(string? descriptor, out IReadOnlyList<string> errors, Func<string, string>? formatValue = null)
     {
         var parsed = new ChangeDescriptor(formatValue ?? (p => p));
 
@@ -194,7 +194,7 @@ public class ChangeDescriptor
                 }
             }
 
-            errors = rawErrors.ToArray();
+            errors = rawErrors;
         }
         else
             errors = [];

@@ -92,7 +92,7 @@ internal class HarmonySummaryCommand : IInternalCommand
             }
 
             // matches individual patchers
-            foreach ((string patcherId, ISet<PatchType> patchTypes) in patch.PatchTypesByOwner.ToArray())
+            foreach ((string patcherId, ISet<PatchType> patchTypes) in patch.PatchTypesByOwner)
             {
                 if (!IsMatch(patcherId) && !patchTypes.Any(type => IsMatch(type.ToString())))
                     patch.PatchTypesByOwner.Remove(patcherId);
@@ -120,13 +120,13 @@ internal class HarmonySummaryCommand : IInternalCommand
             };
 
             // get patch types by owner
-            var typesByOwner = new Dictionary<string, ISet<PatchType>>();
+            var typesByOwner = new Dictionary<string, HashSet<PatchType>>();
             foreach ((PatchType type, IReadOnlyCollection<Patch> patches) in patchGroups)
             {
                 foreach (Patch patch in patches)
                 {
-                    if (!typesByOwner.TryGetValue(patch.owner, out ISet<PatchType>? patchTypes))
-                        typesByOwner[patch.owner] = patchTypes = new HashSet<PatchType>();
+                    if (!typesByOwner.TryGetValue(patch.owner, out HashSet<PatchType>? patchTypes))
+                        typesByOwner[patch.owner] = patchTypes = [];
                     patchTypes.Add(type);
                 }
             }
@@ -165,7 +165,7 @@ internal class HarmonySummaryCommand : IInternalCommand
         public string MethodDescription { get; }
 
         /// <summary>The patch types by the Harmony instance ID that added them.</summary>
-        public IDictionary<string, ISet<PatchType>> PatchTypesByOwner { get; }
+        public Dictionary<string, HashSet<PatchType>> PatchTypesByOwner { get; }
 
 
         /*********
@@ -174,7 +174,7 @@ internal class HarmonySummaryCommand : IInternalCommand
         /// <summary>Construct an instance.</summary>
         /// <param name="method">The patched method.</param>
         /// <param name="patchTypesByOwner">The patch types by the Harmony instance ID that added them.</param>
-        public SearchResult(MethodBase method, IDictionary<string, ISet<PatchType>> patchTypesByOwner)
+        public SearchResult(MethodBase method, Dictionary<string, HashSet<PatchType>> patchTypesByOwner)
         {
             this.MethodName = $"{method.DeclaringType?.FullName}.{method.Name}";
             this.MethodDescription = method.FullDescription();

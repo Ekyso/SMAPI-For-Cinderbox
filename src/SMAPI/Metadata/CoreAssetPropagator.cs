@@ -634,32 +634,31 @@ internal class CoreAssetPropagator
     /// <returns>Returns whether any NPCs were updated.</returns>
     private bool UpdateNpcDialogue(IAssetName assetName)
     {
-        // get NPCs
         string name = Path.GetFileName(assetName.BaseName);
-        NPC[] villagers = this.GetCharacters()
-            .Where(npc => npc.Name == name && npc.IsVillager)
-            .ToArray();
-        if (!villagers.Any())
-            return false;
 
         // update dialogue
         // Note that marriage dialogue isn't reloaded after reset, but it doesn't need to be
         // propagated anyway since marriage dialogue keys can't be added/removed and the field
         // doesn't store the text itself.
-        foreach (NPC villager in villagers)
+        bool anyChanged = false;
+        foreach (NPC npc in this.GetCharacters())
         {
-            bool shouldSayMarriageDialogue = villager.shouldSayMarriageDialogue.Value;
-            MarriageDialogueReference[] marriageDialogue =
-                villager.currentMarriageDialogue.ToArray();
+            if (npc.Name != name || !npc.IsVillager)
+                continue;
 
-            villager.resetSeasonalDialogue(); // doesn't only affect seasonal dialogue
-            villager.resetCurrentDialogue();
+            bool shouldSayMarriageDialogue = npc.shouldSayMarriageDialogue.Value;
+            MarriageDialogueReference[] marriageDialogue = npc.currentMarriageDialogue.ToArray();
 
-            villager.shouldSayMarriageDialogue.Set(shouldSayMarriageDialogue);
-            villager.currentMarriageDialogue.Set(marriageDialogue);
+            npc.resetSeasonalDialogue(); // doesn't only affect seasonal dialogue
+            npc.resetCurrentDialogue();
+
+            npc.shouldSayMarriageDialogue.Set(shouldSayMarriageDialogue);
+            npc.currentMarriageDialogue.Set(marriageDialogue);
+
+            anyChanged = true;
         }
 
-        return true;
+        return anyChanged;
     }
 
     /// <summary>Update the character data for matching NPCs.</summary>
@@ -677,40 +676,40 @@ internal class CoreAssetPropagator
     /// <returns>Returns whether any NPCs were updated.</returns>
     private bool UpdateNpcSchedules(IAssetName assetName)
     {
-        // get NPCs
         string name = Path.GetFileName(assetName.BaseName);
-        NPC[] villagers = this.GetCharacters()
-            .Where(npc => npc.Name == name && npc.IsVillager)
-            .ToArray();
-        if (!villagers.Any())
-            return false;
 
-        // update schedule
-        foreach (NPC villager in villagers)
+        // update schedules
+        bool anyChanged = false;
+        foreach (NPC npc in this.GetCharacters())
         {
+            if (npc.Name != name || !npc.IsVillager)
+                continue;
+
             // reload schedule
-            this.Reflection.GetField<bool>(villager, "_hasLoadedMasterScheduleData")
-                .SetValue(false);
-            this.Reflection.GetField<Dictionary<string, string>?>(villager, "_masterScheduleData")
+            this.Reflection.GetField<bool>(npc, "_hasLoadedMasterScheduleData").SetValue(false);
+            this.Reflection.GetField<Dictionary<string, string>?>(npc, "_masterScheduleData")
                 .SetValue(null);
-            villager.TryLoadSchedule();
+            npc.TryLoadSchedule();
 
             // switch to new schedule if needed
-            if (villager.Schedule != null)
+            if (npc.Schedule != null)
             {
-                int lastScheduleTime = villager
+                int lastScheduleTime = npc
                     .Schedule.Keys.Where(p => p <= Game1.timeOfDay)
                     .OrderByDescending(p => p)
                     .FirstOrDefault();
                 if (lastScheduleTime != 0)
                 {
-                    villager.queuedSchedulePaths.Clear();
-                    villager.lastAttemptedSchedule = 0;
-                    villager.checkSchedule(lastScheduleTime);
+                    npc.queuedSchedulePaths.Clear();
+                    npc.lastAttemptedSchedule = 0;
+                    npc.checkSchedule(lastScheduleTime);
                 }
             }
+
+            anyChanged = true;
         }
-        return true;
+
+        return anyChanged;
     }
 
     /// <summary>Update cached translations from the <c>Strings\StringsFromCSFiles</c> asset.</summary>

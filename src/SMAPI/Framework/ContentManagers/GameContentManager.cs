@@ -313,8 +313,7 @@ internal class GameContentManager : BaseContentManager
         }
 
         // edit asset
-        AssetEditOperation[] editors = editOperations.OrderBy(p => p.Priority).ToArray();
-        foreach (AssetEditOperation editor in editors)
+        foreach (AssetEditOperation editor in editOperations.OrderBy(p => p.Priority))
         {
             IModMetadata mod = editor.Mod;
 

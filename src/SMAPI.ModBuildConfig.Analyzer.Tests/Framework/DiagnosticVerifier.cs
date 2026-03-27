@@ -59,14 +59,14 @@ public abstract partial class DiagnosticVerifier
     /// <param name="actualResults">The Diagnostics found by the compiler after running the analyzer on the source code</param>
     /// <param name="analyzer">The analyzer that was being run on the sources</param>
     /// <param name="expectedResults">Diagnostic Results that should have appeared in the code</param>
-    private static void VerifyDiagnosticResults(IEnumerable<Diagnostic> actualResults, DiagnosticAnalyzer analyzer, params DiagnosticResult[] expectedResults)
+    private static void VerifyDiagnosticResults(IReadOnlyList<Diagnostic> actualResults, DiagnosticAnalyzer analyzer, params DiagnosticResult[] expectedResults)
     {
         int expectedCount = expectedResults.Count();
         int actualCount = actualResults.Count();
 
         if (expectedCount != actualCount)
         {
-            string diagnosticsOutput = actualResults.Any() ? DiagnosticVerifier.FormatDiagnostics(analyzer, actualResults.ToArray()) : "    NONE.";
+            string diagnosticsOutput = actualResults.Any() ? DiagnosticVerifier.FormatDiagnostics(analyzer, actualResults) : "    NONE.";
 
             Assert.Fail(
                 string.Format("Mismatch between number of diagnostics returned, expected \"{0}\" actual \"{1}\"\r\n\r\nDiagnostics:\r\n{2}\r\n", expectedCount, actualCount, diagnosticsOutput));
@@ -89,17 +89,17 @@ public abstract partial class DiagnosticVerifier
             else
             {
                 DiagnosticVerifier.VerifyDiagnosticLocation(analyzer, actual, actual.Location, expected.Locations.First());
-                var additionalLocations = actual.AdditionalLocations.ToArray();
+                var additionalLocations = actual.AdditionalLocations;
 
-                if (additionalLocations.Length != expected.Locations.Length - 1)
+                if (additionalLocations.Count != expected.Locations.Length - 1)
                 {
                     Assert.Fail(
                         string.Format("Expected {0} additional locations but got {1} for Diagnostic:\r\n    {2}\r\n",
-                            expected.Locations.Length - 1, additionalLocations.Length,
+                            expected.Locations.Length - 1, additionalLocations.Count,
                             DiagnosticVerifier.FormatDiagnostics(analyzer, actual)));
                 }
 
-                for (int j = 0; j < additionalLocations.Length; ++j)
+                for (int j = 0; j < additionalLocations.Count; ++j)
                 {
                     DiagnosticVerifier.VerifyDiagnosticLocation(analyzer, actual, additionalLocations[j], expected.Locations[j + 1]);
                 }
@@ -176,10 +176,10 @@ public abstract partial class DiagnosticVerifier
     /// <param name="analyzer">The analyzer that this verifier tests</param>
     /// <param name="diagnostics">The Diagnostics to be formatted</param>
     /// <returns>The Diagnostics formatted as a string</returns>
-    private static string FormatDiagnostics(DiagnosticAnalyzer analyzer, params Diagnostic[] diagnostics)
+    private static string FormatDiagnostics(DiagnosticAnalyzer analyzer, params IReadOnlyList<Diagnostic> diagnostics)
     {
         var builder = new StringBuilder();
-        for (int i = 0; i < diagnostics.Length; ++i)
+        for (int i = 0; i < diagnostics.Count; ++i)
         {
             builder.AppendLine("// " + diagnostics[i]);
 
@@ -210,7 +210,7 @@ public abstract partial class DiagnosticVerifier
                             rule.Id);
                     }
 
-                    if (i != diagnostics.Length - 1)
+                    if (i != diagnostics.Count - 1)
                     {
                         builder.Append(',');
                     }

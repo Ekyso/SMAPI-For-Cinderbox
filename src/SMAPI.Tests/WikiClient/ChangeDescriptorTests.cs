@@ -35,7 +35,7 @@ internal class ChangeDescriptorTests
         ];
 
         // act
-        ChangeDescriptor parsed = ChangeDescriptor.Parse(rawDescriptor, out string[] errors);
+        ChangeDescriptor parsed = ChangeDescriptor.Parse(rawDescriptor, out IReadOnlyList<string> errors);
 
         // assert
         parsed.Add.Should().BeEquivalentTo(expectedAdd);
@@ -65,7 +65,7 @@ internal class ChangeDescriptorTests
         // act
         ChangeDescriptor parsed = ChangeDescriptor.Parse(
             rawDescriptor,
-            out string[] errors,
+            out IReadOnlyList<string> errors,
             formatValue: raw => SemanticVersion.TryParse(raw, out ISemanticVersion? version)
                 ? version.ToString()
                 : raw
@@ -112,7 +112,7 @@ internal class ChangeDescriptorTests
     [TestCase("Nexus:2400, Nexus:2401, Nexus:B,Chucklefish:14", "+Nexus:A, Nexus:B, -Chucklefish:14, Nexus:2400 → Nexus:2401, Nexus:A→Nexus:B", ExpectedResult = "Nexus:2401, Nexus:2401, Nexus:B, Nexus:A")]
     public string Apply_Raw(string input, string? descriptor)
     {
-        ChangeDescriptor parsed = ChangeDescriptor.Parse(descriptor, out string[] errors);
+        ChangeDescriptor parsed = ChangeDescriptor.Parse(descriptor, out IReadOnlyList<string> errors);
 
         errors.Should().BeEmpty();
 
@@ -129,7 +129,7 @@ internal class ChangeDescriptorTests
     [TestCase("+Nexus:A, Nexus:B, -Chucklefish:14, Nexus:2400 → Nexus:2401, Nexus:A→Nexus:B", ExpectedResult = "+Nexus:A, +Nexus:B, -Chucklefish:14, Nexus:2400 → Nexus:2401, Nexus:A → Nexus:B")]
     public string ToString(string? descriptor)
     {
-        var parsed = ChangeDescriptor.Parse(descriptor, out string[] errors);
+        var parsed = ChangeDescriptor.Parse(descriptor, out IReadOnlyList<string> errors);
 
         errors.Should().BeEmpty();
 

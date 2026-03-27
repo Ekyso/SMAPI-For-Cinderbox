@@ -73,7 +73,7 @@ internal class ChucklefishClient : IChucklefishClient
             name = name.Substring("[SMAPI]".Length).TrimStart();
 
         // return info
-        return page.SetInfo(name: name, version: version, url: url, downloads: Array.Empty<IModDownload>());
+        return page.SetInfo(name: name, version: version, url: url, downloads: []);
     }
 
     /// <summary>Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.</summary>

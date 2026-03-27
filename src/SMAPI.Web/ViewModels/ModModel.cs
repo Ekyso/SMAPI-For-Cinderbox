@@ -87,7 +87,7 @@ public class ModModel
     public ModModel(ModCompatibilityEntry entry)
     {
         // basic info
-        this.Id = entry.ID.ToArray();
+        this.Id = entry.ID;
         this.Name = entry.Name.FirstOrDefault();
         this.AlternateNames = entry.Name.Length > 1 ? string.Join(", ", entry.Name.Skip(1)) : null;
         this.Author = entry.Author.FirstOrDefault();

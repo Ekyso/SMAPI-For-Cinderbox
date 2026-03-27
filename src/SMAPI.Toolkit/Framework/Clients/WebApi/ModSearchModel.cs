@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Newtonsoft.Json;
 using StardewModdingAPI.Toolkit.Serialization.Converters;
 using StardewModdingAPI.Toolkit.Utilities;
@@ -55,7 +54,7 @@ public class ModSearchModel
     /// <param name="includeExtendedMetadata">Whether to include extended metadata for each mod.</param>
     public ModSearchModel(ModSearchEntryModel[] mods, ISemanticVersion apiVersion, ISemanticVersion gameVersion, Platform platform, bool includeExtendedMetadata)
     {
-        this.Mods = mods.ToArray();
+        this.Mods = mods;
         this.ApiVersion = apiVersion;
         this.GameVersion = gameVersion;
         this.Platform = platform;

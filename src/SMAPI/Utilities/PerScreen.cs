@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace StardewModdingAPI.Utilities;
 
@@ -54,7 +53,7 @@ public class PerScreen<T>
     public IEnumerable<KeyValuePair<int, T>> GetActiveValues()
     {
         this.RemoveDeadScreens();
-        return this.States.ToArray();
+        return this.States;
     }
 
     /// <summary>Get the value for a given screen ID, creating it if needed.</summary>
@@ -106,7 +105,7 @@ public class PerScreen<T>
     /// <param name="shouldRemove">Returns whether a screen ID should be removed.</param>
     private void RemoveScreens(Func<int, bool> shouldRemove)
     {
-        foreach (var pair in this.States.ToArray())
+        foreach (var pair in this.States)
         {
             if (shouldRemove(pair.Key))
                 this.States.Remove(pair.Key);

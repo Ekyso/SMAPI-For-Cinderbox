@@ -63,9 +63,25 @@ internal class ReferenceToInvalidMemberFinder : BaseInstructionHandler
             // wrong return type
             if (methodDef != null)
             {
-                MethodDefinition[]? candidateMethods = methodRef.DeclaringType.Resolve()?.Methods.Where(found => found.Name == methodRef.Name).ToArray();
-                if (candidateMethods is { Length: > 0 } && candidateMethods.All(method => !RewriteHelper.LooksLikeSameType(method.ReturnType, methodDef.ReturnType)))
-                    this.MarkFlag(InstructionHandleResult.NotCompatible, $"reference to {this.GetMemberDisplayName(methodDef)} (no such method returns {this.GetFriendlyTypeName(methodDef.ReturnType)})");
+                if (methodRef.DeclaringType.Resolve() is { } declaringType)
+                {
+                    bool foundName = false;
+                    bool foundMatch = true;
+
+                    foreach (MethodDefinition method in declaringType.Methods)
+                    {
+                        if (method.Name != methodRef.Name)
+                            continue;
+
+                        foundName = true;
+                        foundMatch = RewriteHelper.LooksLikeSameType(method.ReturnType, methodDef.ReturnType);
+                        if (foundMatch)
+                            break;
+                    }
+
+                    if (foundName && !foundMatch)
+                        this.MarkFlag(InstructionHandleResult.NotCompatible, $"reference to {this.GetMemberDisplayName(methodDef)} (no such method returns {this.GetFriendlyTypeName(methodDef.ReturnType)})");
+                }
             }
 
             // missing

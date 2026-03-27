@@ -1,4 +1,3 @@
-using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -62,8 +61,8 @@ internal class ModMessageModel
     {
         this.FromPlayerId = message.FromPlayerId;
         this.FromModId = message.FromModId;
-        this.ToPlayerIds = message.ToPlayerIds?.ToArray();
-        this.ToModIds = message.ToModIds?.ToArray();
+        this.ToPlayerIds = message.ToPlayerIds;
+        this.ToModIds = message.ToModIds;
         this.Type = message.Type;
         this.Data = message.Data;
     }

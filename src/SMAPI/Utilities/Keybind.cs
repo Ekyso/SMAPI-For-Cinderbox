@@ -106,28 +106,53 @@ public class Keybind
     /// <summary>Get the keybind state relative to the previous tick.</summary>
     public SButtonState GetState()
     {
-#pragma warning disable CS0618 // Type or member is obsolete: deliberate call to GetButtonState() for unit tests
-        SButtonState[] states = this.Buttons.Select(this.GetButtonState).Distinct().ToArray();
-#pragma warning restore CS0618
-
-        // single state
-        if (states.Length == 1)
-            return states[0];
-
-        // if any key has no state, the whole set wasn't enabled last tick
-        if (states.Contains(SButtonState.None))
+        if (!this.IsBound)
             return SButtonState.None;
 
-        // mix of held + pressed => pressed
-        if (states.All(p => p is SButtonState.Pressed or SButtonState.Held))
-            return SButtonState.Pressed;
+        bool anyPressed = false;
+        bool anyHeld = false;
+        bool anyReleased = false;
 
-        // mix of held + released => released
-        if (states.All(p => p is SButtonState.Held or SButtonState.Released))
-            return SButtonState.Released;
+        foreach (SButton button in this.Buttons)
+        {
+#pragma warning disable CS0618 // Type or member is obsolete: deliberate call to GetButtonState() for unit tests
+            switch (this.GetButtonState(button))
+#pragma warning restore CS0618
+            {
+                case SButtonState.Pressed:
+                    anyPressed = true;
+                    break;
 
-        // not down last tick or now
-        return SButtonState.None;
+                case SButtonState.Held:
+                    anyHeld = true;
+                    break;
+
+                case SButtonState.Released:
+                    anyReleased = true;
+                    break;
+
+                case SButtonState.None:
+                default:
+                    return SButtonState.None; // if any key has no state, then the whole set was inactive last + cur tick
+            }
+        }
+
+        return (anyPressed, anyHeld, anyReleased) switch
+        {
+            // single state
+            (true, false, false) => SButtonState.Pressed,
+            (false, true, false) => SButtonState.Held,
+            (false, false, true) => SButtonState.Released,
+
+            // held + pressed => pressed
+            (true, true, false) => SButtonState.Pressed,
+
+            // held + released => released
+            (false, true, true) => SButtonState.Released,
+
+            // any other combination => inactive (i.e. it wasn't fully down last tick or this tick)
+            _ => SButtonState.None
+        };
     }
 
     /// <summary>Get a string representation of the keybind.</summary>
@@ -136,6 +161,6 @@ public class Keybind
     {
         return this.Buttons.Length > 0
             ? string.Join(" + ", this.Buttons)
-            : SButton.None.ToString();
+            : nameof(SButton.None);
     }
 }

@@ -479,11 +479,7 @@ public static class Constants
         removeAssemblyReferences.Add("StardewValley");
         targetAssemblies.Add(typeof(StardewValley.Game1).Assembly);
 
-        return new PlatformAssemblyMap(
-            targetPlatform,
-            removeAssemblyReferences.ToArray(),
-            targetAssemblies.ToArray()
-        );
+        return new PlatformAssemblyMap(targetPlatform, removeAssemblyReferences, targetAssemblies);
     }
 
     /*********

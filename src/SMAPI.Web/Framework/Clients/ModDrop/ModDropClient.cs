@@ -158,7 +158,7 @@ internal class ModDropClient : IModDropClient
         // return info
         return this
             .InitModPage(id)
-            .SetInfo(name: mod.Mod.Title, version: null, url: this.GetDefaultModPageUrl(id), downloads: downloads);
+            .SetInfo(name: mod.Mod.Title, version: null, url: this.GetDefaultModPageUrl(id), downloads: downloads.ToArray());
     }
 
     /// <summary>Extract the version number from a ModDrop file's info, if possible.</summary>

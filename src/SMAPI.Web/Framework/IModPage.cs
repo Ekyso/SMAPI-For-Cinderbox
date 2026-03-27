@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using StardewModdingAPI.Toolkit.Framework.UpdateData;
 
@@ -59,7 +58,7 @@ internal interface IModPage
     /// <param name="version">The mod's semantic version number.</param>
     /// <param name="url">The mod's web URL.</param>
     /// <param name="downloads">The mod downloads.</param>
-    IModPage SetInfo(string name, string? version, string url, IEnumerable<IModDownload> downloads);
+    IModPage SetInfo(string name, string? version, string url, IModDownload[] downloads);
 
     /// <summary>Set a mod fetch error.</summary>
     /// <param name="status">The mod availability status on the remote site.</param>

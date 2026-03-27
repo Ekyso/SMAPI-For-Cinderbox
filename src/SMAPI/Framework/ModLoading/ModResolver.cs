@@ -85,10 +85,8 @@ internal class ModResolver
     /// <param name="validateFilesExist">Whether to validate that files referenced in the manifest (like <see cref="IManifest.EntryDll"/>) exist on disk. This can be disabled to only validate the manifest itself.</param>
     [SuppressMessage("ReSharper", "ConditionalAccessQualifierIsNonNullableAccordingToAPIContract", Justification = "Manifest values may be null before they're validated.")]
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract", Justification = "Manifest values may be null before they're validated.")]
-    public void ValidateManifests(IEnumerable<IModMetadata> mods, ISemanticVersion apiVersion, ISemanticVersion gameVersion, Func<string, string?> getUpdateUrl, Func<string, IFileLookup> getFileLookup, bool validateFilesExist = true)
+    public void ValidateManifests(IModMetadata[] mods, ISemanticVersion apiVersion, ISemanticVersion gameVersion, Func<string, string?> getUpdateUrl, Func<string, IFileLookup> getFileLookup, bool validateFilesExist = true)
     {
-        mods = mods.ToArray();
-
         // validate each manifest
         foreach (IModMetadata mod in mods)
         {
@@ -223,7 +221,6 @@ internal class ModResolver
     public IEnumerable<IModMetadata> ProcessDependencies(IReadOnlyList<IModMetadata> mods, ModDatabase modDatabase)
     {
         // initialize metadata
-        mods = mods.ToArray();
         var sortedMods = new Stack<IModMetadata>();
         var states = mods.ToDictionary(mod => mod, _ => ModDependencyStatus.Queued);
 
@@ -280,10 +277,10 @@ internal class ModResolver
         }
 
         // collect dependencies
-        ModDependency[] dependencies = this.GetDependenciesFrom(mod.Manifest, mods).ToArray();
+        IReadOnlyList<ModDependency> dependencies = this.GetDependenciesFrom(mod.Manifest, mods);
 
         // mark sorted if no dependencies
-        if (dependencies.Length == 0)
+        if (dependencies.Count == 0)
         {
             sortedMods.Push(mod);
             return states[mod] = ModDependencyStatus.Sorted;
@@ -291,41 +288,58 @@ internal class ModResolver
 
         // mark failed if missing dependencies
         {
-            string[] failedModNames = (
-                from entry in dependencies
-                where entry is { IsRequired: true, Mod: null }
+            List<string>? failedModNames = null;
 
-                let dataEntry = modDatabase.Get(entry.ID)
-                where dataEntry?.IgnoreDependencies is not true
+            foreach (ModDependency entry in dependencies)
+            {
+                // skip if not a missing dependency
+                if (entry is not { IsRequired: true, Mod: null })
+                    continue;
 
-                let displayName = dataEntry?.DisplayName ?? entry.ID
-                let modUrl = modDatabase.GetModPageUrlFor(entry.ID)
+                // skip if marked ignore
+                ModDataRecord? dataEntry = modDatabase.Get(entry.ID);
+                if (dataEntry?.IgnoreDependencies is true)
+                    continue;
 
-                orderby displayName
-                select modUrl != null
+                // track as failed
+                string displayName = dataEntry?.DisplayName ?? entry.ID;
+                string? modUrl = modDatabase.GetModPageUrlFor(entry.ID);
+                string formattedName = modUrl != null
                     ? $"{displayName}: {modUrl}"
-                    : displayName
-            ).ToArray();
-            if (failedModNames.Length > 0)
+                    : displayName;
+
+                failedModNames ??= [];
+                failedModNames.Add(formattedName);
+            }
+
+            if (failedModNames != null)
             {
                 sortedMods.Push(mod);
-                mod.SetStatus(ModMetadataStatus.Failed, ModFailReason.MissingDependencies, $"it requires mods which aren't installed ({string.Join(", ", failedModNames)}).");
+                mod.SetStatus(ModMetadataStatus.Failed, ModFailReason.MissingDependencies, $"it requires mods which aren't installed ({string.Join(", ", failedModNames.OrderBy(p => p))}).");
                 return states[mod] = ModDependencyStatus.Failed;
             }
         }
 
         // dependency min version not met, mark failed
         {
-            string[] failedLabels =
-                (
-                    from entry in dependencies
-                    where
-                        entry is { Mod: not null, MinVersion: not null }
-                        && entry.MinVersion.IsNewerThan(entry.Mod.Manifest.Version)
-                    select $"{entry.Mod!.DisplayName} (needs {entry.MinVersion} or later)"
-                )
-                .ToArray();
-            if (failedLabels.Length > 0)
+            List<string>? failedLabels = null;
+
+            foreach (ModDependency entry in dependencies)
+            {
+                // skip if mod isn't loaded with a min version
+                if (entry is not { Mod: not null, MinVersion: not null })
+                    continue;
+
+                // skip if version met
+                if (!entry.MinVersion.IsNewerThan(entry.Mod.Manifest.Version))
+                    continue;
+
+                // track as failed
+                failedLabels ??= [];
+                failedLabels.Add($"{entry.Mod!.DisplayName} (needs {entry.MinVersion} or later)");
+            }
+
+            if (failedLabels != null)
             {
                 sortedMods.Push(mod);
                 mod.SetStatus(ModMetadataStatus.Failed, ModFailReason.MissingDependencies, $"it needs newer versions of some mods: {string.Join(", ", failedLabels)}.");
@@ -389,17 +403,32 @@ internal class ModResolver
     /// <summary>Get the dependencies declared in a manifest.</summary>
     /// <param name="manifest">The mod manifest.</param>
     /// <param name="loadedMods">The loaded mods.</param>
-    private IEnumerable<ModDependency> GetDependenciesFrom(IManifest manifest, IReadOnlyList<IModMetadata> loadedMods)
+    private IReadOnlyList<ModDependency> GetDependenciesFrom(IManifest manifest, IReadOnlyList<IModMetadata> loadedMods)
     {
-        IModMetadata? FindMod(string id) => loadedMods.FirstOrDefault(m => m.HasId(id));
+        List<ModDependency>? dependencies = null;
 
         // yield dependencies
         foreach (IManifestDependency entry in manifest.Dependencies)
-            yield return new ModDependency(entry.UniqueID, entry.MinimumVersion, FindMod(entry.UniqueID), entry.IsRequired);
+        {
+            dependencies ??= [];
+            dependencies.Add(new ModDependency(entry.UniqueID, entry.MinimumVersion, FindMod(entry.UniqueID), entry.IsRequired));
+        }
 
         // yield content pack parent
         if (manifest.ContentPackFor != null)
-            yield return new ModDependency(manifest.ContentPackFor.UniqueID, manifest.ContentPackFor.MinimumVersion, FindMod(manifest.ContentPackFor.UniqueID), isRequired: true);
+        {
+            dependencies ??= [];
+            dependencies.Add(new ModDependency(manifest.ContentPackFor.UniqueID, manifest.ContentPackFor.MinimumVersion, FindMod(manifest.ContentPackFor.UniqueID), isRequired: true));
+        }
+
+        return dependencies != null
+            ? dependencies
+            : Array.Empty<ModDependency>();
+
+        IModMetadata? FindMod(string id)
+        {
+            return loadedMods.FirstOrDefault(m => m.HasId(id));
+        }
     }
 
     /// <summary>Get a technical message indicating why a mod's compatibility status was overridden, if applicable.</summary>

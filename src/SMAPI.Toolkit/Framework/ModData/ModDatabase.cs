@@ -27,9 +27,9 @@ public class ModDatabase
     /// <summary>Construct an instance.</summary>
     /// <param name="records">The underlying mod data records indexed by default display name.</param>
     /// <param name="getUpdateUrl">Get an update URL for an update key (if valid).</param>
-    public ModDatabase(IEnumerable<ModDataRecord> records, Func<string, string?> getUpdateUrl)
+    public ModDatabase(ModDataRecord[] records, Func<string, string?> getUpdateUrl)
     {
-        this.Records = records.ToArray();
+        this.Records = records;
         this.GetUpdateUrl = getUpdateUrl;
     }
 

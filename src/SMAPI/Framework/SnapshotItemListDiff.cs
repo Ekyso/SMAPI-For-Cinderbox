@@ -49,13 +49,24 @@ internal class SnapshotItemListDiff
     /// <returns>Returns whether anything changed.</returns>
     public static bool TryGetChanges(ISet<Item> added, ISet<Item> removed, IDictionary<Item, int> stackSizes, [NotNullWhen(true)] out SnapshotItemListDiff? changes)
     {
-        KeyValuePair<Item, int>[] sizesChanged = stackSizes.Where(p => p.Key.Stack != p.Value).ToArray();
-        if (sizesChanged.Length > 0 || added.Count > 0 || removed.Count > 0)
+        // detect item stack size changes
+        List<ItemStackSizeChange>? sizesChanges = null;
+        foreach ((Item item, int oldStack) in stackSizes)
+        {
+            if (item.Stack != oldStack)
+            {
+                sizesChanges ??= [];
+                sizesChanges.Add(new ItemStackSizeChange(item, oldStack, item.Stack));
+            }
+        }
+
+        // build diff if needed
+        if (added.Count > 0 || removed.Count > 0 || sizesChanges != null)
         {
             changes = new SnapshotItemListDiff(
                 added: added.ToArray(),
                 removed: removed.ToArray(),
-                sizesChanged: sizesChanged.Select(p => new ItemStackSizeChange(p.Key, p.Value, p.Key.Stack)).ToArray()
+                sizesChanged: sizesChanges?.ToArray() ?? []
             );
             return true;
         }

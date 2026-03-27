@@ -111,7 +111,7 @@ internal class CommandManager
         // parse input
         args = ArgUtility.SplitBySpaceQuoteAware(input);
         name = this.GetNormalizedName(args[0])!;
-        args = args.Skip(1).ToArray();
+        args = ArgUtility.GetSubsetOf(args, startAt: 1);
 
         // get screen ID argument
         screenId = 0;

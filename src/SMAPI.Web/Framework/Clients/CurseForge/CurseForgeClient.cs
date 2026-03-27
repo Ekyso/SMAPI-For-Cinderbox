@@ -173,7 +173,7 @@ internal class CurseForgeClient : ICurseForgeClient
         }
 
         // return info
-        return this.InitModPage(id).SetInfo(name: mod.Name, version: null, url: mod.Links.WebsiteUrl, downloads: downloads);
+        return this.InitModPage(id).SetInfo(name: mod.Name, version: null, url: mod.Links.WebsiteUrl, downloads: downloads.ToArray());
     }
 
     /// <summary>Get a raw version string for a mod file, if available.</summary>

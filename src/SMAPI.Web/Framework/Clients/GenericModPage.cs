@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using StardewModdingAPI.Toolkit.Framework.UpdateData;
 
 namespace StardewModdingAPI.Web.Framework.Clients;
@@ -60,12 +58,12 @@ internal class GenericModPage : IModPage
     /// <param name="version">The mod's semantic version number.</param>
     /// <param name="url">The mod's web URL.</param>
     /// <param name="downloads">The mod downloads.</param>
-    public IModPage SetInfo(string name, string? version, string url, IEnumerable<IModDownload> downloads)
+    public IModPage SetInfo(string name, string? version, string url, IModDownload[] downloads)
     {
         this.Name = name;
         this.Version = version;
         this.Url = url;
-        this.Downloads = downloads.ToArray();
+        this.Downloads = downloads;
         this.Status = RemoteModStatus.Ok;
 
         return this;

@@ -114,7 +114,7 @@ namespace StardewModdingAPI.Integrations.GenericModConfigMenu
                     tooltip: () => this.Translations.Get("config.color-scheme.desc"),
                     getValue: () => getConfig().ConsoleColorScheme.ToString(),
                     setValue: value => this.StageOption(nameof(SConfig.ConsoleColorScheme), value),
-                    allowedValues: Enum.GetValues<MonitorColorScheme>().Select(p => p.ToString()).ToArray(),
+                    allowedValues: Enum.GetNames<MonitorColorScheme>(),
                     formatAllowedValue: value => this.Translations.Get(
                         value is nameof(MonitorColorScheme.AutoDetect) && Constants.Platform == Platform.Windows
                             ? $"config.color-scheme.options.{value}.on-windows"

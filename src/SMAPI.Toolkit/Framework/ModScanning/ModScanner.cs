@@ -128,7 +128,9 @@ public class ModScanner
         // set appropriate invalid-mod error
         if (manifestFile == null)
         {
-            FileInfo[] files = this.RecursivelyGetFiles(searchFolder).ToArray();
+            List<FileInfo> files = [];
+            this.RecursivelyGetFiles(searchFolder, files);
+
             FileInfo[] relevantFiles = files.Where(this.IsRelevant).ToArray();
 
             // empty Vortex folder
@@ -294,7 +296,8 @@ public class ModScanner
 
     /// <summary>Recursively get all files in a folder.</summary>
     /// <param name="folder">The root folder to search.</param>
-    private IEnumerable<FileInfo> RecursivelyGetFiles(DirectoryInfo folder)
+    /// <param name="files">The list of files to populate.</param>
+    private void RecursivelyGetFiles(DirectoryInfo folder, List<FileInfo> files)
     {
         foreach (FileSystemInfo entry in folder.GetFileSystemInfos())
         {
@@ -302,13 +305,10 @@ public class ModScanner
                 continue;
 
             if (entry is FileInfo file)
-                yield return file;
+                files.Add(file);
 
             if (entry is DirectoryInfo subfolder)
-            {
-                foreach (FileInfo subfolderFile in this.RecursivelyGetFiles(subfolder))
-                    yield return subfolderFile;
-            }
+                this.RecursivelyGetFiles(subfolder, files);
         }
     }
 

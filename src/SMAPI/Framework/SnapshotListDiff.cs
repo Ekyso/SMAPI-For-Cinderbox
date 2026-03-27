@@ -24,10 +24,10 @@ internal class SnapshotListDiff<T>
     public bool IsChanged { get; private set; }
 
     /// <summary>The removed values.</summary>
-    public IEnumerable<T> Removed => this.RemovedImpl;
+    public IReadOnlyList<T> Removed => this.RemovedImpl;
 
     /// <summary>The added values.</summary>
-    public IEnumerable<T> Added => this.AddedImpl;
+    public IReadOnlyList<T> Added => this.AddedImpl;
 
 
     /*********

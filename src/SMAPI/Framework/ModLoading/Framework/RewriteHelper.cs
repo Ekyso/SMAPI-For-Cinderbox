@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 
 namespace StardewModdingAPI.Framework.ModLoading.Framework;
 
@@ -141,8 +142,8 @@ internal static class RewriteHelper
                 return false;
 
             Type[] defGenerics = type.GetGenericArguments();
-            TypeReference[] refGenerics = ((GenericInstanceType)reference).GenericArguments.ToArray();
-            if (defGenerics.Length != refGenerics.Length)
+            Collection<TypeReference> refGenerics = ((GenericInstanceType)reference).GenericArguments;
+            if (defGenerics.Length != refGenerics.Count)
                 return false;
             for (int i = 0; i < defGenerics.Length; i++)
             {
@@ -173,11 +174,11 @@ internal static class RewriteHelper
             if (!reference.IsGenericInstance)
                 return false;
 
-            TypeReference[] defGenerics = ((GenericInstanceType)type).GenericArguments.ToArray();
-            TypeReference[] refGenerics = ((GenericInstanceType)reference).GenericArguments.ToArray();
-            if (defGenerics.Length != refGenerics.Length)
+            Collection<TypeReference> defGenerics = ((GenericInstanceType)type).GenericArguments;
+            Collection<TypeReference> refGenerics = ((GenericInstanceType)reference).GenericArguments;
+            if (defGenerics.Count != refGenerics.Count)
                 return false;
-            for (int i = 0; i < defGenerics.Length; i++)
+            for (int i = 0; i < defGenerics.Count; i++)
             {
                 if (!RewriteHelper.IsSameType(defGenerics[i], refGenerics[i]))
                     return false;
@@ -222,10 +223,10 @@ internal static class RewriteHelper
 
         // same arguments
         ParameterInfo[] definitionParameters = definition.GetParameters();
-        ParameterDefinition[] referenceParameters = reference.Parameters.ToArray();
-        if (referenceParameters.Length != definitionParameters.Length)
+        Collection<ParameterDefinition> referenceParameters = reference.Parameters;
+        if (referenceParameters.Count != definitionParameters.Length)
             return false;
-        for (int i = 0; i < referenceParameters.Length; i++)
+        for (int i = 0; i < referenceParameters.Count; i++)
         {
             if (!RewriteHelper.IsSameType(definitionParameters[i].ParameterType, referenceParameters[i].ParameterType))
                 return false;
@@ -247,11 +248,11 @@ internal static class RewriteHelper
             return false;
 
         // same arguments
-        ParameterDefinition[] definitionParameters = definition.Parameters.ToArray();
-        ParameterDefinition[] referenceParameters = reference.Parameters.ToArray();
-        if (referenceParameters.Length != definitionParameters.Length)
+        Collection<ParameterDefinition> definitionParameters = definition.Parameters;
+        Collection<ParameterDefinition> referenceParameters = reference.Parameters;
+        if (referenceParameters.Count != definitionParameters.Count)
             return false;
-        for (int i = 0; i < referenceParameters.Length; i++)
+        for (int i = 0; i < referenceParameters.Count; i++)
         {
             if (!RewriteHelper.IsSameType(definitionParameters[i].ParameterType, referenceParameters[i].ParameterType))
                 return false;

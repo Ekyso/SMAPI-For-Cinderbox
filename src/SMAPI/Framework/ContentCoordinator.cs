@@ -56,7 +56,7 @@ internal class ContentCoordinator : IDisposable
     private readonly Action<BaseContentManager, IAssetName> OnAssetLoaded;
 
     /// <summary>A callback to invoke when any asset names have been invalidated from the cache.</summary>
-    private readonly Action<IList<IAssetName>> OnAssetsInvalidated;
+    private readonly Action<ICollection<IAssetName>> OnAssetsInvalidated;
 
     /// <summary>Get the load/edit operations to apply to an asset by querying registered <see cref="IContentEvents.AssetRequested"/> event handlers.</summary>
     private readonly Func<IAssetInfo, AssetOperationGroup?> RequestAssetOperations;
@@ -135,7 +135,7 @@ internal class ContentCoordinator : IDisposable
         Action onLoadingFirstAsset,
         Action<BaseContentManager, IAssetName> onAssetLoaded,
         Func<string, IFileLookup> getFileLookup,
-        Action<IList<IAssetName>> onAssetsInvalidated,
+        Action<ICollection<IAssetName>> onAssetsInvalidated,
         Func<IAssetInfo, AssetOperationGroup?> requestAssetOperations
     )
     {
@@ -567,7 +567,7 @@ internal class ContentCoordinator : IDisposable
                 this.AssetOperationsByKey.Remove(name);
 
             // raise event
-            this.OnAssetsInvalidated(invalidatedAssets.Keys.ToArray());
+            this.OnAssetsInvalidated(invalidatedAssets.Keys);
 
             // propagate changes to the game
             this.CoreAssets.Propagate(
@@ -581,7 +581,7 @@ internal class ContentCoordinator : IDisposable
             // log summary
             StringBuilder report = new();
             {
-                IAssetName[] invalidatedKeys = invalidatedAssets.Keys.ToArray();
+                ICollection<IAssetName> invalidatedKeys = invalidatedAssets.Keys;
                 IAssetName[] propagatedKeys = propagated
                     .Where(p => p.Value)
                     .Select(p => p.Key)
@@ -594,7 +594,7 @@ internal class ContentCoordinator : IDisposable
                     );
 
                 report.AppendLine(
-                    $"Invalidated {invalidatedKeys.Length} asset names ({FormatKeyList(invalidatedKeys)})."
+                    $"Invalidated {invalidatedKeys.Count} asset names ({FormatKeyList(invalidatedKeys)})."
                 );
                 report.AppendLine(
                     propagated.Count > 0
