@@ -29,7 +29,6 @@ internal class PlayerTracker : IDisposable
     /// <summary>Reusable set for deduplication in <see cref="GetInventory"/>.</summary>
     private readonly HashSet<Item> InventorySeenBuffer = new(new ObjectReferenceComparer<Item>());
 
-
     /*********
     ** Accessors
     *********/
@@ -41,7 +40,6 @@ internal class PlayerTracker : IDisposable
 
     /// <summary>Tracks changes to the player's skill levels.</summary>
     public IDictionary<SkillType, IValueWatcher<int>> SkillWatchers { get; }
-
 
     /*********
     ** Public methods
@@ -56,15 +54,36 @@ internal class PlayerTracker : IDisposable
         this.PreviousInventory = new Dictionary<Item, int>(this.CurrentInventory);
 
         // init trackers
-        this.LocationWatcher = WatcherFactory.ForReference($"player.{nameof(player.currentLocation)}", this.GetCurrentLocation);
+        this.LocationWatcher = WatcherFactory.ForReference(
+            $"player.{nameof(player.currentLocation)}",
+            this.GetCurrentLocation
+        );
         this.SkillWatchers = new Dictionary<SkillType, IValueWatcher<int>>
         {
-            [SkillType.Combat] = WatcherFactory.ForNetValue($"player.{nameof(player.combatLevel)}", player.combatLevel),
-            [SkillType.Farming] = WatcherFactory.ForNetValue($"player.{nameof(player.farmingLevel)}", player.farmingLevel),
-            [SkillType.Fishing] = WatcherFactory.ForNetValue($"player.{nameof(player.fishingLevel)}", player.fishingLevel),
-            [SkillType.Foraging] = WatcherFactory.ForNetValue($"player.{nameof(player.foragingLevel)}", player.foragingLevel),
-            [SkillType.Luck] = WatcherFactory.ForNetValue($"player.{nameof(player.luckLevel)}", player.luckLevel),
-            [SkillType.Mining] = WatcherFactory.ForNetValue($"player.{nameof(player.miningLevel)}", player.miningLevel)
+            [SkillType.Combat] = WatcherFactory.ForNetValue(
+                $"player.{nameof(player.combatLevel)}",
+                player.combatLevel
+            ),
+            [SkillType.Farming] = WatcherFactory.ForNetValue(
+                $"player.{nameof(player.farmingLevel)}",
+                player.farmingLevel
+            ),
+            [SkillType.Fishing] = WatcherFactory.ForNetValue(
+                $"player.{nameof(player.fishingLevel)}",
+                player.fishingLevel
+            ),
+            [SkillType.Foraging] = WatcherFactory.ForNetValue(
+                $"player.{nameof(player.foragingLevel)}",
+                player.foragingLevel
+            ),
+            [SkillType.Luck] = WatcherFactory.ForNetValue(
+                $"player.{nameof(player.luckLevel)}",
+                player.luckLevel
+            ),
+            [SkillType.Mining] = WatcherFactory.ForNetValue(
+                $"player.{nameof(player.miningLevel)}",
+                player.miningLevel
+            ),
         };
 
         // track watchers for convenience
@@ -107,23 +126,26 @@ internal class PlayerTracker : IDisposable
     /// <returns>Returns whether anything changed.</returns>
     public bool TryGetInventoryChanges([NotNullWhen(true)] out SnapshotItemListDiff? changes)
     {
-        IDictionary<Item, int> current = this.GetInventory();
-
         ISet<Item> added = new HashSet<Item>(new ObjectReferenceComparer<Item>());
         ISet<Item> removed = new HashSet<Item>(new ObjectReferenceComparer<Item>());
 
         foreach (Item item in this.PreviousInventory.Keys)
         {
-            if (!current.ContainsKey(item))
+            if (!this.CurrentInventory.ContainsKey(item))
                 removed.Add(item);
         }
-        foreach (Item item in current.Keys)
+        foreach (Item item in this.CurrentInventory.Keys)
         {
             if (!this.PreviousInventory.ContainsKey(item))
                 added.Add(item);
         }
 
-        return SnapshotItemListDiff.TryGetChanges(added: added, removed: removed, stackSizes: this.PreviousInventory, out changes);
+        return SnapshotItemListDiff.TryGetChanges(
+            added: added,
+            removed: removed,
+            stackSizes: this.PreviousInventory,
+            out changes
+        );
     }
 
     /// <summary>Release watchers and resources.</summary>
@@ -135,7 +157,6 @@ internal class PlayerTracker : IDisposable
         foreach (IWatcher watcher in this.Watchers)
             watcher.Dispose();
     }
-
 
     /*********
     ** Private methods
