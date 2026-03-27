@@ -136,6 +136,7 @@ internal class PlayerTracker : IDisposable
             if (!this.CurrentInventory.ContainsKey(item))
                 removed.Add(item);
         }
+
         foreach (Item item in this.CurrentInventory.Keys)
         {
             if (!this.PreviousInventory.ContainsKey(item))
