@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using StardewModdingAPI.Framework.StateTracking.Comparers;
 using StardewValley;
+using StardewValley.Extensions;
 using StardewValley.Inventories;
 
 namespace StardewModdingAPI.Framework.StateTracking.FieldWatchers;
@@ -15,10 +16,16 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
     private readonly Inventory Inventory;
 
     /// <summary>The pairs added since the last reset.</summary>
-    private readonly ISet<Item> AddedImpl = new HashSet<Item>(new ObjectReferenceComparer<Item>());
+    private readonly HashSet<Item> AddedImpl = new(new ObjectReferenceComparer<Item>());
 
     /// <summary>The pairs removed since the last reset.</summary>
-    private readonly ISet<Item> RemovedImpl = new HashSet<Item>(new ObjectReferenceComparer<Item>());
+    private readonly HashSet<Item> RemovedImpl = new(new ObjectReferenceComparer<Item>());
+
+    /// <summary>A pooled set used to track the previous inventory when detecting changes.</summary>
+    private readonly HashSet<Item> PooledOldSet = new(new ObjectReferenceComparer<Item>());
+
+    /// <summary>A pooled set used to track the new inventory when detecting changes.</summary>
+    private readonly HashSet<Item> PooledNewSet = new(new ObjectReferenceComparer<Item>());
 
 
     /*********
@@ -87,17 +94,21 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
     /// <param name="newValues">The new list of values.</param>
     private void OnInventoryReplaced(Inventory inventory, IList<Item> oldValues, IList<Item> newValues)
     {
-        ISet<Item> oldSet = new HashSet<Item>(oldValues, new ObjectReferenceComparer<Item>());
-        ISet<Item> changed = new HashSet<Item>(newValues, new ObjectReferenceComparer<Item>());
+        this.PooledOldSet.Clear();
+        this.PooledOldSet.AddRange(oldValues);
 
-        foreach (Item value in oldSet)
+        this.PooledNewSet.Clear();
+        this.PooledNewSet.AddRange(newValues);
+
+        foreach (Item value in this.PooledOldSet)
         {
-            if (!changed.Contains(value))
+            if (!this.PooledNewSet.Contains(value))
                 this.Remove(value);
         }
-        foreach (Item value in changed)
+
+        foreach (Item value in this.PooledNewSet)
         {
-            if (!oldSet.Contains(value))
+            if (!this.PooledOldSet.Contains(value))
                 this.Add(value);
         }
     }
