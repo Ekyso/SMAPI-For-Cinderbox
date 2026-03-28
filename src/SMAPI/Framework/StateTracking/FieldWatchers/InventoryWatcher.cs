@@ -120,11 +120,8 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
         if (value == null)
             return;
 
-        if (this.RemovedImpl.Contains(value))
-        {
+        if (this.RemovedImpl.Remove(value))
             this.AddedImpl.Remove(value);
-            this.RemovedImpl.Remove(value);
-        }
         else
             this.AddedImpl.Add(value);
     }
@@ -136,11 +133,8 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
         if (value == null)
             return;
 
-        if (this.AddedImpl.Contains(value))
-        {
-            this.AddedImpl.Remove(value);
+        if (this.AddedImpl.Remove(value))
             this.RemovedImpl.Remove(value);
-        }
         else
             this.RemovedImpl.Add(value);
     }

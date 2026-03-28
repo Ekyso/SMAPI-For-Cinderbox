@@ -50,10 +50,8 @@ internal class FieldFinder : BaseInstructionHandler
         if (this.FieldNames.Count > 0)
         {
             FieldReference? fieldRef = RewriteHelper.AsFieldReference(instruction);
-            if (fieldRef != null && fieldRef.DeclaringType.FullName == this.FullTypeName && this.FieldNames.Contains(fieldRef.Name))
+            if (fieldRef != null && fieldRef.DeclaringType.FullName == this.FullTypeName && this.FieldNames.Remove(fieldRef.Name))
             {
-                this.FieldNames.Remove(fieldRef.Name);
-
                 this.MarkFlag(this.Result);
                 this.Phrases.Add($"{this.FullTypeName}.{fieldRef.Name} field");
             }

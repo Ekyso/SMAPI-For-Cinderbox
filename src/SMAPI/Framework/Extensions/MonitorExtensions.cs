@@ -14,11 +14,8 @@ internal static class MonitorExtensions
         /// <param name="level">The log severity level.</param>
         public void LogOnce(HashSet<string> hash, string message, LogLevel level = LogLevel.Trace)
         {
-            if (!hash.Contains(message))
-            {
+            if (hash.Add(message))
                 monitor.Log(message, level);
-                hash.Add(message);
-            }
         }
     }
 }

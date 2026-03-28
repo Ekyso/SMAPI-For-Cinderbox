@@ -111,11 +111,8 @@ public class ChangeDescriptor
             HashSet<string> curValues = new(values.Select(p => p.Trim()), StringComparer.OrdinalIgnoreCase);
             foreach (string add in this.Add)
             {
-                if (!curValues.Contains(add))
-                {
+                if (curValues.Add(add))
                     values.Add(add);
-                    curValues.Add(add);
-                }
             }
         }
     }
