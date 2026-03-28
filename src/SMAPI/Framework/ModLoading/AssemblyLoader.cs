@@ -506,10 +506,7 @@ internal class AssemblyLoader : IDisposable
                     module.AssemblyReferences.Add(target);
 
                 // rewrite type scopes to use target assemblies
-                IEnumerable<TypeReference> typeReferences = module
-                    .GetTypeReferences()
-                    .OrderBy(p => p.FullName);
-                foreach (TypeReference type in typeReferences)
+                foreach (TypeReference type in module.GetTypeReferences())
                     this.ChangeTypeScope(type);
 
                 // rewrite types using custom attributes
