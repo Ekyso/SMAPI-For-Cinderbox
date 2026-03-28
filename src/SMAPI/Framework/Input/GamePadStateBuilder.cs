@@ -15,8 +15,8 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
     /// <summary>The maximum direction to ignore for the left thumbstick.</summary>
     private const float LeftThumbstickDeadZone = 0.2f;
 
-    /// <summary>The maximum direction to ignore for the right thumbstick.</summary>
-    private const float RightThumbstickDeadZone = 0.9f;
+    /// <summary>The maximum direction to ignore for the right thumbstick, squared for comparison.</summary>
+    private const float RightThumbstickDeadZoneSquared = 0.9f * 0.9f;
 
     /// <summary>The underlying controller state.</summary>
     /// <remarks>This value is null if it needs to be regenerated for overrides. Most code should call <see cref="GetState"/> instead.</remarks>
@@ -188,7 +188,7 @@ internal class GamePadStateBuilder : IInputStateBuilder<GamePadStateBuilder, Gam
             set.Add(SButton.LeftThumbstickLeft);
 
         // right thumbstick direction
-        if (this.RightStickPos.Length() > GamePadStateBuilder.RightThumbstickDeadZone)
+        if (this.RightStickPos.LengthSquared() > GamePadStateBuilder.RightThumbstickDeadZoneSquared)
         {
             if (this.RightStickPos.Y > 0)
                 set.Add(SButton.RightThumbstickUp);
