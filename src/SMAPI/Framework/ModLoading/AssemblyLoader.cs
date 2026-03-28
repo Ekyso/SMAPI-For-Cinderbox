@@ -123,12 +123,14 @@ internal class AssemblyLoader : IDisposable
         // get referenced local assemblies
         AssemblyParseResult[] assemblies;
         {
-            HashSet<string> visitedAssemblyNames = new( // don't try loading assemblies that are already loaded
-                from assembly in AppDomain.CurrentDomain.GetAssemblies()
-                let name = assembly.GetName().Name
-                where name != null
-                select name
-            );
+            // don't try loading assemblies that are already loaded
+            HashSet<string> visitedAssemblyNames = [];
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                string? name = assembly.GetName().Name;
+                if (name != null)
+                    visitedAssemblyNames.Add(name);
+            }
             assemblies = this.GetReferencedLocalAssemblies(
                     assemblyFile,
                     visitedAssemblyNames,

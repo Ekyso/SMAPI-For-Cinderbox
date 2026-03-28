@@ -24,7 +24,6 @@ internal class ComparableListWatcher<TValue> : BaseDisposableWatcher, ICollectio
     /// <summary>The pairs removed since the last reset.</summary>
     private readonly List<TValue> RemovedImpl = [];
 
-
     /*********
     ** Accessors
     *********/
@@ -40,7 +39,6 @@ internal class ComparableListWatcher<TValue> : BaseDisposableWatcher, ICollectio
     /// <inheritdoc />
     public IEnumerable<TValue> Removed => this.RemovedImpl;
 
-
     /*********
     ** Public methods
     *********/
@@ -48,7 +46,11 @@ internal class ComparableListWatcher<TValue> : BaseDisposableWatcher, ICollectio
     /// <param name="name">A name which identifies what the watcher is watching, used for troubleshooting.</param>
     /// <param name="values">The collection to watch.</param>
     /// <param name="comparer">The equality comparer which indicates whether two values are the same.</param>
-    public ComparableListWatcher(string name, ICollection<TValue> values, IEqualityComparer<TValue> comparer)
+    public ComparableListWatcher(
+        string name,
+        ICollection<TValue> values,
+        IEqualityComparer<TValue> comparer
+    )
     {
         this.Name = name;
         this.CurrentValues = values;

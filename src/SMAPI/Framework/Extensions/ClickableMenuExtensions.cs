@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StardewValley.Menus;
 
 namespace StardewModdingAPI.Framework.Extensions;
@@ -13,13 +12,12 @@ internal static class ClickableMenuExtensions
         /// <summary>Get a string representation of the menu chain to the given menu (including the specified menu), in parent to child order.</summary>
         public string GetMenuChainLabel()
         {
-            static IEnumerable<IClickableMenu> GetAncestors(IClickableMenu menu)
-            {
-                for (; menu != null; menu = menu.GetParentMenu())
-                    yield return menu;
-            }
+            Stack<string> chain = [];
 
-            return string.Join(" > ", GetAncestors(menu).Reverse().Select(p => p.GetType().FullName));
+            for (; menu != null; menu = menu.GetParentMenu())
+                chain.Push(menu.GetType().FullName!);
+
+            return string.Join(" > ", chain);
         }
     }
 }

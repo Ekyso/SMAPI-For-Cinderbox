@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
-using System.Linq;
 using StardewModdingAPI.Toolkit.Utilities;
 
 namespace StardewModdingAPI.Framework.Content;
@@ -117,7 +116,7 @@ internal class ContentCache
             this.Remove(key, dispose);
 
         return removed.Count == 0
-            ? Enumerable.Empty<string>() // let GC collect the list in gen0 instead of potentially living longer
+            ? Array.Empty<string>() // let GC collect the list in gen0 instead of potentially living longer
             : removed;
     }
 }

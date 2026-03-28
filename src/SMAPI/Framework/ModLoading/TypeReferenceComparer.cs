@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Mono.Cecil;
 
 namespace StardewModdingAPI.Framework.ModLoading;
@@ -73,12 +72,12 @@ internal class TypeReferenceComparer : IEqualityComparer<TypeReference?>
                 typeNameB = this.MapPlaceholder(placeholder: typeNameB, type: typeNameA, map: tokenMap);
 
             // compare inner tokens
-            string[] symbolsA = this.GetTypeSymbols(typeNameA).ToArray();
-            string[] symbolsB = this.GetTypeSymbols(typeNameB).ToArray();
-            if (symbolsA.Length != symbolsB.Length)
+            IReadOnlyList<string> symbolsA = this.GetTypeSymbols(typeNameA);
+            IReadOnlyList<string> symbolsB = this.GetTypeSymbols(typeNameB);
+            if (symbolsA.Count != symbolsB.Count)
                 return false;
 
-            for (int i = 0; i < symbolsA.Length; i++)
+            for (int i = 0; i < symbolsA.Count; i++)
             {
                 if (!HeuristicallyEqualsImpl(symbolsA[i], symbolsB[i], tokenMap))
                     return false;
@@ -106,10 +105,11 @@ internal class TypeReferenceComparer : IEqualityComparer<TypeReference?>
 
     /// <summary>Get the top-level type symbols in a type name (e.g. <code>List</code> and <code>NetRef&lt;T&gt;</code> in <code>List&lt;NetRef&lt;T&gt;&gt;</code>)</summary>
     /// <param name="typeName">The full type name.</param>
-    private IEnumerable<string> GetTypeSymbols(string typeName)
+    private IReadOnlyList<string> GetTypeSymbols(string typeName)
     {
-        int openGenerics = 0;
+        List<string> symbols = [];
 
+        int openGenerics = 0;
         Queue<char> queue = new(typeName);
         string symbol = "";
         while (queue.Count > 0)
@@ -129,7 +129,7 @@ internal class TypeReferenceComparer : IEqualityComparer<TypeReference?>
                     {
                         // start new generic symbol
                         case 0:
-                            yield return symbol;
+                            symbols.Add(symbol);
                             symbol = "";
                             openGenerics++;
                             break;
@@ -152,7 +152,7 @@ internal class TypeReferenceComparer : IEqualityComparer<TypeReference?>
 
                         // start next generic symbol
                         case 1:
-                            yield return symbol;
+                            symbols.Add(symbol);
                             symbol = "";
                             break;
 
@@ -174,7 +174,7 @@ internal class TypeReferenceComparer : IEqualityComparer<TypeReference?>
 
                         // end generic symbol
                         case 1:
-                            yield return symbol;
+                            symbols.Add(symbol);
                             symbol = "";
                             openGenerics--;
                             break;
@@ -195,6 +195,8 @@ internal class TypeReferenceComparer : IEqualityComparer<TypeReference?>
         }
 
         if (symbol != "")
-            yield return symbol;
+            symbols.Add(symbol);
+
+        return symbols;
     }
 }

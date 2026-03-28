@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 using StardewModdingAPI.Framework.ModLoading.Framework;
 
 namespace StardewModdingAPI.Framework.ModLoading.Rewriters;
@@ -46,6 +46,7 @@ internal class HeuristicMethodRewriter : BaseInstructionHandler
             return false;
 
         // get method definition
+        int firstMissingIndex = methodRef.Parameters.Count;
         MethodDefinition? method = null;
         foreach (MethodDefinition match in type.Methods)
         {
@@ -53,11 +54,11 @@ internal class HeuristicMethodRewriter : BaseInstructionHandler
                 continue;
 
             // reference matches initial parameters of definition
-            if (methodRef.Parameters.Count >= match.Parameters.Count || !this.InitialParametersMatch(methodRef, match))
+            if (firstMissingIndex >= match.Parameters.Count || !this.InitialParametersMatch(methodRef, match))
                 continue;
 
             // all remaining parameters in definition are optional
-            if (!match.Parameters.Skip(methodRef.Parameters.Count).All(p => p.IsOptional))
+            if (!this.RemainingParametersAreOptional(match.Parameters, startAt: firstMissingIndex))
                 continue;
 
             method = match;
@@ -67,15 +68,14 @@ internal class HeuristicMethodRewriter : BaseInstructionHandler
             return false;
 
         // get instructions to inject parameter values
-        var loadInstructions = method.Parameters.Skip(methodRef.Parameters.Count)
-            .Select(p => RewriteHelper.GetLoadValueInstruction(p.Constant))
-            .ToArray();
-
-        // skip if invalid
-        foreach (Instruction? loadInstruction in loadInstructions)
+        Instruction[] loadInstructions = new Instruction[method.Parameters.Count - firstMissingIndex];
+        for (int i = 0; i + firstMissingIndex < method.Parameters.Count; i++)
         {
+            Instruction? loadInstruction = RewriteHelper.GetLoadValueInstruction(method.Parameters[i + firstMissingIndex].Constant);
             if (loadInstruction is null)
                 return false; // SMAPI needs to load the value onto the stack before the method call, but the optional parameter type wasn't recognized
+
+            loadInstructions[i] = loadInstruction;
         }
 
         // rewrite method reference
@@ -109,6 +109,20 @@ internal class HeuristicMethodRewriter : BaseInstructionHandler
         for (int i = 0; i < methodRef.Parameters.Count; i++)
         {
             if (!RewriteHelper.IsSameType(methodRef.Parameters[i].ParameterType, method.Parameters[i].ParameterType))
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>Get whether all parameters starting from the given index are marked optional.</summary>
+    /// <param name="parameters">The parameters to check.</param>
+    /// <param name="startAt">The index of the first parameter to check.</param>
+    private bool RemainingParametersAreOptional(Collection<ParameterDefinition> parameters, int startAt)
+    {
+        for (int i = startAt; i < parameters.Count; i++)
+        {
+            if (!parameters[i].IsOptional)
                 return false;
         }
 

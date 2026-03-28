@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using StardewModdingAPI.Framework.Content;
 using StardewModdingAPI.Framework.ContentManagers;
 using StardewModdingAPI.Framework.Exceptions;

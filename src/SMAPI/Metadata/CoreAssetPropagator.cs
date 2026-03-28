@@ -810,8 +810,11 @@ internal class CoreAssetPropagator
             {
                 List<NPC> characters = [];
 
-                foreach (NPC character in this.GetLocations().SelectMany(p => p.characters))
-                    characters.Add(character);
+                foreach (GameLocation location in this.GetLocations())
+                {
+                    foreach (NPC character in location.characters)
+                        characters.Add(character);
+                }
 
                 if (Game1.CurrentEvent?.actors != null)
                 {
@@ -882,9 +885,9 @@ internal class CoreAssetPropagator
                 // get child locations
                 if (buildingInteriors)
                 {
-                    foreach (GameLocation location in locations.Select(p => p.Location).ToArray())
+                    foreach (LocationInfo location in locations.ToArray())
                     {
-                        foreach (Building building in location.buildings)
+                        foreach (Building building in location.Location.buildings)
                         {
                             GameLocation indoors = building.indoors.Value;
                             if (indoors is not null)

@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
@@ -292,10 +291,18 @@ internal class RecursiveRewriter
             if (curChanged)
             {
                 // get constructor
-                MethodDefinition? constructor = (newAttrType ?? attribute.AttributeType)
-                    .Resolve()
-                    ?.Methods
-                    .FirstOrDefault(method => method.IsConstructor && RewriteHelper.HasMatchingSignature(method, attribute.Constructor));
+                MethodDefinition? constructor = null;
+                if ((newAttrType ?? attribute.AttributeType).Resolve() is { } typeDef)
+                {
+                    foreach (MethodDefinition method in typeDef.Methods)
+                    {
+                        if (method.IsConstructor && RewriteHelper.HasMatchingSignature(method, attribute.Constructor))
+                        {
+                            constructor = method;
+                            break;
+                        }
+                    }
+                }
                 if (constructor == null)
                     throw new InvalidOperationException($"Can't rewrite attribute type '{attribute.AttributeType.FullName}' to '{newAttrType?.FullName}', no equivalent constructor found.");
 

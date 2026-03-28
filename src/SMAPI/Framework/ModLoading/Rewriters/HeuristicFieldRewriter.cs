@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using StardewModdingAPI.Framework.ModLoading.Framework;
@@ -94,21 +93,32 @@ internal class HeuristicFieldRewriter : BaseInstructionHandler
         ModuleDefinition module,
         Instruction instruction,
         FieldReference fieldRef,
-        TypeDefinition declaringType,
+        TypeDefinition? declaringType,
         bool isRead
     )
     {
         // get equivalent property
-        PropertyDefinition? property = declaringType?.Properties.FirstOrDefault(p =>
-            p.Name == fieldRef.Name
-        );
-        MethodDefinition? method = isRead ? property?.GetMethod : property?.SetMethod;
-        if (method == null)
+        MethodDefinition? accessor = null;
+        if (declaringType is not null)
+        {
+            PropertyDefinition? targetProperty = null;
+            foreach (PropertyDefinition property in declaringType.Properties)
+            {
+                if (property.Name == fieldRef.Name)
+                {
+                    targetProperty = property;
+                    break;
+                }
+            }
+
+            accessor = isRead ? targetProperty?.GetMethod : targetProperty?.SetMethod;
+        }
+        if (accessor is null)
             return false;
 
         // rewrite field to property
         instruction.OpCode = OpCodes.Call;
-        instruction.Operand = module.ImportReference(method);
+        instruction.Operand = module.ImportReference(accessor);
 
         this.Phrases.Add($"{fieldRef.DeclaringType.Name}.{fieldRef.Name} (field => property)");
         return this.MarkRewritten();

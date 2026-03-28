@@ -152,7 +152,13 @@ public class KeybindList
     /// <summary>Get the keybind which is currently down, if any. If there are multiple keybinds down, the first one is returned.</summary>
     public Keybind? GetKeybindCurrentlyDown()
     {
-        return this.Keybinds.FirstOrDefault(p => p.GetState().IsDown());
+        foreach (Keybind keybind in this.Keybinds)
+        {
+            if (keybind.GetState().IsDown())
+                return keybind;
+        }
+
+        return null;
     }
 
     /// <summary>Get a string representation of the input binding.</summary>
@@ -161,6 +167,6 @@ public class KeybindList
     {
         return this.Keybinds.Length > 0
             ? string.Join(", ", this.Keybinds.Select(p => p.ToString()))
-            : SButton.None.ToString();
+            : nameof(SButton.None);
     }
 }

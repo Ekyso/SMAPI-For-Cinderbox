@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI.Enums;
@@ -159,7 +158,13 @@ internal class SGameRunner : GameRunner
     /// <param name="playerId">The player ID to check.</param>
     public int? GetScreenId(long playerId)
     {
-        return this.gameInstances.FirstOrDefault(p => ((SGame)p).PlayerId == playerId)?.instanceId;
+        foreach (Game1 gameInstance in this.gameInstances)
+        {
+            if (((SGame)gameInstance).PlayerId == playerId)
+                return gameInstance.instanceId;
+        }
+
+        return null;
     }
 
     /*********

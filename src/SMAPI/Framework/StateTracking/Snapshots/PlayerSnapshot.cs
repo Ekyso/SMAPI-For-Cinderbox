@@ -28,8 +28,7 @@ internal class PlayerSnapshot
     /// <summary>Tracks changes to the player's skill levels.</summary>
     public IDictionary<SkillType, SnapshotDiff<int>> Skills { get; } =
         Enum
-            .GetValues(typeof(SkillType))
-            .Cast<SkillType>()
+            .GetValues<SkillType>()
             .ToDictionary(skill => skill, _ => new SnapshotDiff<int>());
 
     /// <summary>Get a list of inventory changes.</summary>

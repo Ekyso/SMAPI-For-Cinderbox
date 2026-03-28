@@ -231,7 +231,7 @@ internal class GameContentManager : BaseContentManager
                 return null;
             }
 
-            loader = loadOperations.OrderByDescending(p => p.Priority).FirstOrDefault();
+            loader = loadOperations.MaxBy(p => p.Priority);
         }
         if (loader == null)
             return null;

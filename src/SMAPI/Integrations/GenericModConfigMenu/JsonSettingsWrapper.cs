@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -163,7 +162,7 @@ internal class JsonSettingsWrapper
         {
             oldSet = new HashSet<string>(oldSet, StringComparer.OrdinalIgnoreCase);
 
-            bool changed = newValue.Count != oldSet.Count || !oldSet.All(newValue.Contains);
+            bool changed = newValue.Count != oldSet.Count || !oldSet.IsSubsetOf(newValue);
             if (changed)
             {
                 this.Properties[fieldName] = JToken.FromObject(newValue);
