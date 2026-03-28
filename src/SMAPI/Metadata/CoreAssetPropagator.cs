@@ -198,10 +198,18 @@ internal class CoreAssetPropagator
                     this.UpdateMap(info);
                     var newWarps = GetWarpSet(location);
 
-                    changedWarpRoutes =
-                        changedWarpRoutes
-                        || oldWarps.Count != newWarps.Count
-                        || oldWarps.Any(p => !newWarps.Contains(p));
+                    changedWarpRoutes = changedWarpRoutes || oldWarps.Count != newWarps.Count;
+                    if (!changedWarpRoutes)
+                    {
+                        foreach (string oldWarp in oldWarps)
+                        {
+                            if (!newWarps.Contains(oldWarp))
+                            {
+                                changedWarpRoutes = true;
+                                break;
+                            }
+                        }
+                    }
                     changed = true;
                 }
             }

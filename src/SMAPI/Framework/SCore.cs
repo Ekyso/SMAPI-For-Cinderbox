@@ -1779,12 +1779,14 @@ internal class SCore : IDisposable
 
                         if (verbose)
                         {
-                            string addedText = added.Any()
-                                ? string.Join(", ", added.Select(p => p.Name))
-                                : "none";
-                            string removedText = removed.Any()
-                                ? string.Join(", ", removed.Select(p => p.Name))
-                                : "none";
+                            string addedText =
+                                added.Count > 0
+                                    ? string.Join(", ", added.Select(p => p.Name))
+                                    : "none";
+                            string removedText =
+                                removed.Count > 0
+                                    ? string.Join(", ", removed.Select(p => p.Name))
+                                    : "none";
                             this.Monitor.Log(
                                 $"Context: location list changed (added {addedText}; removed {removedText}).",
                                 Monitor.ContextLogLevel

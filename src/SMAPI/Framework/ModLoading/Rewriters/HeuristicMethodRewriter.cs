@@ -70,8 +70,13 @@ internal class HeuristicMethodRewriter : BaseInstructionHandler
         var loadInstructions = method.Parameters.Skip(methodRef.Parameters.Count)
             .Select(p => RewriteHelper.GetLoadValueInstruction(p.Constant))
             .ToArray();
-        if (loadInstructions.Any(p => p == null))
-            return false; // SMAPI needs to load the value onto the stack before the method call, but the optional parameter type wasn't recognized
+
+        // skip if invalid
+        foreach (Instruction? loadInstruction in loadInstructions)
+        {
+            if (loadInstruction is null)
+                return false; // SMAPI needs to load the value onto the stack before the method call, but the optional parameter type wasn't recognized
+        }
 
         // rewrite method reference
         foreach (Instruction? loadInstruction in loadInstructions)

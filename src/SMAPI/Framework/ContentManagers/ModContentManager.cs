@@ -301,7 +301,11 @@ internal sealed class ModContentManager : BaseContentManager
 
             T? asset = this.JsonHelper.Deserialize<T>(json!);
             if (asset == null)
-                this.ThrowLoadError(assetName, ContentLoadErrorType.InvalidData, "the JSON file is invalid.");
+                this.ThrowLoadError(
+                    assetName,
+                    ContentLoadErrorType.InvalidData,
+                    "the JSON file is invalid."
+                );
             return asset!;
         }
 #endif
@@ -472,12 +476,17 @@ internal sealed class ModContentManager : BaseContentManager
         params Type[] validTypes
     )
     {
-        if (!validTypes.Any(validType => validType.IsAssignableFrom(typeof(TAsset))))
-            this.ThrowLoadError(
-                assetName,
-                ContentLoadErrorType.InvalidData,
-                $"can't read file with extension '{file.Extension}' as type '{typeof(TAsset)}'; must be type '{string.Join("' or '", validTypes.Select(p => p.FullName))}'."
-            );
+        foreach (Type type in validTypes)
+        {
+            if (type.IsAssignableFrom(typeof(TAsset)))
+                return;
+        }
+
+        this.ThrowLoadError(
+            assetName,
+            ContentLoadErrorType.InvalidData,
+            $"can't read file with extension '{file.Extension}' as type '{typeof(TAsset)}'; must be type '{string.Join("' or '", validTypes.Select(p => p.FullName))}'."
+        );
     }
 
     /// <summary>Throw an error which indicates that an asset couldn't be loaded.</summary>

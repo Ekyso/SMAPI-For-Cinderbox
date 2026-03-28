@@ -37,7 +37,6 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
     /// <summary>Whether any of the handlers have a custom priority.</summary>
     private bool HasPriorities;
 
-
     /*********
     ** Accessors
     *********/
@@ -46,8 +45,6 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
 
     /// <inheritdoc />
     public bool HasListeners { get; private set; }
-
-
 
     /*********
     ** Public methods
@@ -68,8 +65,15 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
     {
         lock (this.Handlers)
         {
-            EventPriority priority = handler.Method.GetCustomAttribute<EventPriorityAttribute>()?.Priority ?? EventPriority.Normal;
-            var managedHandler = new ManagedEventHandler<TEventArgs>(handler, this.RegistrationIndex++, priority, mod);
+            EventPriority priority =
+                handler.Method.GetCustomAttribute<EventPriorityAttribute>()?.Priority
+                ?? EventPriority.Normal;
+            var managedHandler = new ManagedEventHandler<TEventArgs>(
+                handler,
+                this.RegistrationIndex++,
+                priority,
+                mod
+            );
 
             this.Handlers.Add(managedHandler);
             this.CachedHandlers = null;
@@ -193,8 +197,6 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
         }
     }
 
-
-
     /*********
     ** Private methods
     *********/
@@ -203,7 +205,10 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
     /// <param name="ex">The exception that was raised.</param>
     private void LogError(ManagedEventHandler<TEventArgs> handler, Exception ex)
     {
-        handler.SourceMod.LogAsMod($"This mod failed in the {this.EventName} event. Technical details: \n{ex.GetLogSummary()}", LogLevel.Error);
+        handler.SourceMod.LogAsMod(
+            $"This mod failed in the {this.EventName} event. Technical details: \n{ex.GetLogSummary()}",
+            LogLevel.Error
+        );
     }
 
     /// <summary>Get cached copy of the sorted handlers to invoke.</summary>
@@ -218,7 +223,17 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
             {
                 // recheck priorities
                 if (this.HasRemovedHandlers)
-                    this.HasPriorities = this.Handlers.Any(p => p.Priority != EventPriority.Normal);
+                {
+                    this.HasPriorities = false;
+                    foreach (var handler in this.Handlers)
+                    {
+                        if (handler.Priority != EventPriority.Normal)
+                        {
+                            this.HasPriorities = true;
+                            break;
+                        }
+                    }
+                }
 
                 // sort by priority if needed
                 if (this.HasPriorities)

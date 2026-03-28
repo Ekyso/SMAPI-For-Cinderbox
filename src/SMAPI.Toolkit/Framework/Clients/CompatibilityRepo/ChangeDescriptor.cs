@@ -80,7 +80,7 @@ public class ChangeDescriptor
         this.Apply(values);
 
         // format
-        if (rawField == null && !values.Any())
+        if (rawField == null && values.Count == 0)
             return null;
         return string.Join(", ", values);
     }
@@ -91,7 +91,7 @@ public class ChangeDescriptor
     public void Apply(List<string> values)
     {
         // replace/remove values
-        if (this.Replace.Any() || this.Remove.Any())
+        if (this.Replace.Count > 0 || this.Remove.Count > 0)
         {
             for (int i = values.Count - 1; i >= 0; i--)
             {
@@ -106,7 +106,7 @@ public class ChangeDescriptor
         }
 
         // add values
-        if (this.Add.Any())
+        if (this.Add.Count > 0)
         {
             HashSet<string> curValues = new(values.Select(p => p.Trim()), StringComparer.OrdinalIgnoreCase);
             foreach (string add in this.Add)

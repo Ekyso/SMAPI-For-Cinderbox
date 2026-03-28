@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI.Framework.StateTracking.FieldWatchers;
 using StardewValley;
@@ -20,6 +19,9 @@ internal class LocationTracker : IWatcher
     /// <summary>The underlying watchers.</summary>
     private readonly List<IWatcher> Watchers = [];
 
+    /// <summary>Whether any of the <see cref="Watchers"/> changed.</summary>
+    private bool WatchersHaveChanges;
+
 
     /*********
     ** Accessors
@@ -28,7 +30,7 @@ internal class LocationTracker : IWatcher
     public string Name { get; }
 
     /// <inheritdoc />
-    public bool IsChanged => this.Watchers.Any(p => p.IsChanged);
+    public bool IsChanged => this.WatchersHaveChanges;
 
     /// <summary>The tracked location.</summary>
     public GameLocation Location { get; }
@@ -93,8 +95,14 @@ internal class LocationTracker : IWatcher
     /// <inheritdoc />
     public void Update()
     {
+        this.WatchersHaveChanges = false;
         foreach (IWatcher watcher in this.Watchers)
+        {
             watcher.Update();
+
+            if (watcher.IsChanged)
+                this.WatchersHaveChanges = true;
+        }
 
         this.UpdateChestWatcherList(added: this.ObjectsWatcher.Added, removed: this.ObjectsWatcher.Removed);
 
@@ -105,6 +113,8 @@ internal class LocationTracker : IWatcher
     /// <inheritdoc />
     public void Reset()
     {
+        this.WatchersHaveChanges = false;
+
         foreach (IWatcher watcher in this.Watchers)
             watcher.Reset();
 
@@ -118,7 +128,7 @@ internal class LocationTracker : IWatcher
         foreach (IWatcher watcher in this.Watchers)
             watcher.Dispose();
 
-        foreach (var watcher in this.ChestWatchers.Values)
+        foreach (ChestTracker watcher in this.ChestWatchers.Values)
             watcher.Dispose();
     }
 

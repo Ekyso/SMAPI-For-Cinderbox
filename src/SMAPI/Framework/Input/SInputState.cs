@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StardewValley;
@@ -266,7 +265,13 @@ internal sealed class SInputState : InputState
     /// <param name="buttons">The buttons to check.</param>
     public bool IsAnyDown(InputButton[] buttons)
     {
-        return buttons.Any(button => this.IsDown(button.ToSButton()));
+        foreach (InputButton button in buttons)
+        {
+            if (this.IsDown(button.ToSButton()))
+                return true;
+        }
+
+        return false;
     }
 
     /// <summary>Get the state of a button.</summary>

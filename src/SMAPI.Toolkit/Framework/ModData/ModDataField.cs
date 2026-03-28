@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace StardewModdingAPI.Toolkit.Framework.ModData;
 
 /// <summary>A versioned mod metadata field.</summary>
@@ -66,7 +64,13 @@ public class ModDataField
         {
             // update key
             case ModDataFieldKey.UpdateKey:
-                return manifest.UpdateKeys.Any(p => !string.IsNullOrWhiteSpace(p));
+                foreach (string updateKey in manifest.UpdateKeys)
+                {
+                    if (!string.IsNullOrWhiteSpace(updateKey))
+                        return true;
+                }
+
+                return false;
 
             // non-manifest fields
             case ModDataFieldKey.StatusReasonPhrase:

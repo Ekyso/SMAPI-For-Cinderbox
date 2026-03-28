@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using StardewModdingAPI.Framework;
 
 namespace StardewModdingAPI.Utilities;
@@ -36,7 +35,15 @@ public class Keybind
     public Keybind(params SButton[] buttons)
     {
         this.Buttons = buttons;
-        this.IsBound = buttons.Any(p => p != SButton.None);
+
+        foreach (SButton button in buttons)
+        {
+            if (button != SButton.None)
+            {
+                this.IsBound = true;
+                break;
+            }
+        }
     }
 
     /// <summary>Parse a keybind string, if it's valid.</summary>

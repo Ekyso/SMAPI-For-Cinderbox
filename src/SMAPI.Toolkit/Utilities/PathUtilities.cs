@@ -93,7 +93,7 @@ public static class PathUtilities
         }
 
         // keep trailing separator
-        if ((!hasRoot || segments.Any()) && PathUtilities.PossiblePathSeparators.Contains(path[path.Length - 1]))
+        if ((!hasRoot || segments.Length > 0) && PathUtilities.PossiblePathSeparators.Contains(path[path.Length - 1]))
             newPath += PathUtilities.PreferredPathSeparator;
 
         return newPath;

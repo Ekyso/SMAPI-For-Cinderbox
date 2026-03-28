@@ -267,14 +267,22 @@ internal static class RewriteHelper
     {
         if (reference.Name == ".ctor")
         {
-            return type
-                .GetConstructors(BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly | BindingFlags.Public)
-                .Any(method => RewriteHelper.HasMatchingSignature(method, reference));
+            foreach (ConstructorInfo constructor in type.GetConstructors(BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly | BindingFlags.Public))
+            {
+                if (RewriteHelper.HasMatchingSignature(constructor, reference))
+                    return true;
+            }
+        }
+        else
+        {
+            foreach (MethodInfo method in type.GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly | BindingFlags.Public))
+            {
+                if (RewriteHelper.HasMatchingSignature(method, reference))
+                    return true;
+            }
         }
 
-        return type
-            .GetMethods(BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly | BindingFlags.Public)
-            .Any(method => RewriteHelper.HasMatchingSignature(method, reference));
+        return false;
     }
 
     /****

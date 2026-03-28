@@ -4,7 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -255,7 +254,7 @@ internal abstract class BaseContentManager : LocalizedContentManager, IContentMa
                 ContentLoadErrorType.InvalidName,
                 "The asset key or local path is empty."
             );
-        if (assetName.Intersect(Path.GetInvalidPathChars()).Any())
+        if (assetName.IndexOfAny(Path.GetInvalidPathChars()) > -1)
             throw new SContentLoadException(
                 ContentLoadErrorType.InvalidName,
                 "The asset key or local path contains invalid characters."

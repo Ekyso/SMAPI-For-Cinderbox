@@ -241,14 +241,23 @@ internal class ModMetadata : IModMetadata
     /// <inheritdoc />
     public bool HasValidUpdateKeys()
     {
-        return this.GetUpdateKeys(validOnly: true).Any();
+        foreach (UpdateKey _ in this.GetUpdateKeys(validOnly: true))
+            return true;
+        return false;
     }
 
     /// <inheritdoc />
     public bool HasWarnings(params ModWarning[] warnings)
     {
         ModWarning curWarnings = this.Warnings;
-        return warnings.Any(warning => curWarnings.HasFlag(warning));
+
+        foreach (ModWarning matchWarning in warnings)
+        {
+            if (curWarnings.HasFlag(matchWarning))
+                return true;
+        }
+
+        return false;
     }
 
     /// <inheritdoc />

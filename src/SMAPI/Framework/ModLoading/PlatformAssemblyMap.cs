@@ -21,7 +21,7 @@ internal class PlatformAssemblyMap : IDisposable
     public readonly Platform TargetPlatform;
 
     /// <summary>The short assembly names to remove as assembly reference, and replace with the <see cref="Targets"/>. These should be short names (like "Stardew Valley").</summary>
-    public readonly IReadOnlyList<string> RemoveNames;
+    public readonly HashSet<string> RemoveNames;
 
     /****
     ** Metadata
@@ -43,7 +43,7 @@ internal class PlatformAssemblyMap : IDisposable
     /// <param name="targetPlatform">The target game platform.</param>
     /// <param name="removeAssemblyNames">The assembly short names to remove (like <c>Stardew Valley</c>).</param>
     /// <param name="targetAssemblies">The assemblies to target.</param>
-    public PlatformAssemblyMap(Platform targetPlatform, IReadOnlyList<string> removeAssemblyNames, IReadOnlyList<Assembly> targetAssemblies)
+    public PlatformAssemblyMap(Platform targetPlatform, HashSet<string> removeAssemblyNames, IReadOnlyList<Assembly> targetAssemblies)
     {
         // save data
         this.TargetPlatform = targetPlatform;

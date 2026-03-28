@@ -488,11 +488,7 @@ internal class AssemblyLoader : IDisposable
             for (int i = 0; i < module.AssemblyReferences.Count; i++)
             {
                 // remove old assembly reference
-                if (
-                    this.AssemblyMap.RemoveNames.Any(name =>
-                        module.AssemblyReferences[i].Name == name
-                    )
-                )
+                if (this.AssemblyMap.RemoveNames.Contains(module.AssemblyReferences[i].Name))
                 {
                     platformChanged = true;
                     module.AssemblyReferences.RemoveAt(i);

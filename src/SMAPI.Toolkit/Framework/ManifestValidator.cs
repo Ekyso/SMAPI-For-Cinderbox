@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using StardewModdingAPI.Toolkit.Utilities;
 
 namespace StardewModdingAPI.Toolkit.Framework;
@@ -37,7 +36,7 @@ public static class ManifestValidator
         // validate EntryDll/ContentPackFor format
         if (hasDll)
         {
-            if (manifest.EntryDll!.Intersect(Path.GetInvalidFileNameChars()).Any())
+            if (manifest.EntryDll!.IndexOfAny(Path.GetInvalidFileNameChars()) > -1)
             {
                 error = $"manifest has invalid filename '{manifest.EntryDll}' for the {nameof(IManifest.EntryDll)} field.";
                 return false;
@@ -63,7 +62,7 @@ public static class ManifestValidator
             if (string.IsNullOrWhiteSpace(manifest.UniqueID))
                 missingFields.Add(nameof(IManifest.UniqueID));
 
-            if (missingFields.Any())
+            if (missingFields.Count > 0)
             {
                 error = $"manifest is missing required fields ({string.Join(", ", missingFields)}).";
                 return false;

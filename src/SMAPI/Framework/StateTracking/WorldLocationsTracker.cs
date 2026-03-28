@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Linq;
 using StardewModdingAPI.Framework.StateTracking.Comparers;
 using StardewModdingAPI.Framework.StateTracking.FieldWatchers;
 using StardewValley;
@@ -33,6 +32,9 @@ internal class WorldLocationsTracker : IWatcher
     /// <summary>The pooled list instance for <see cref="GetLocationsWhoseBuildingsChanged"/>.</summary>
     private static readonly List<LocationTracker> PooledLocationsWithBuildingsChanged = [];
 
+    /// <summary>Whether any of the <see cref="Locations"/> have content changes.</summary>
+    private bool LocationsHaveChanges;
+
 
     /*********
     ** Accessors
@@ -44,7 +46,7 @@ internal class WorldLocationsTracker : IWatcher
     public bool IsLocationListChanged => this.Added.Count > 0 || this.Removed.Count > 0;
 
     /// <inheritdoc />
-    public bool IsChanged => this.IsLocationListChanged || this.Locations.Any(p => p.IsChanged);
+    public bool IsChanged => this.IsLocationListChanged || this.LocationsHaveChanges;
 
     /// <summary>The tracked locations.</summary>
     public IEnumerable<LocationTracker> Locations => this.LocationDict.Values;
@@ -77,8 +79,15 @@ internal class WorldLocationsTracker : IWatcher
         this.LocationListWatcher.Update();
         this.MineLocationListWatcher.Update();
         this.VolcanoLocationListWatcher.Update();
+
+        // update location content watchers
+        this.LocationsHaveChanges = false;
         foreach (LocationTracker watcher in this.Locations)
+        {
             watcher.Update();
+            if (watcher.IsChanged)
+                this.LocationsHaveChanges = true;
+        }
 
         // detect added/removed locations
         if (this.LocationListWatcher.IsChanged)
@@ -131,6 +140,8 @@ internal class WorldLocationsTracker : IWatcher
     /// <inheritdoc />
     public void Reset()
     {
+        this.LocationsHaveChanges = false;
+
         this.ResetLocationList();
         foreach (IWatcher watcher in this.GetWatchers())
             watcher.Reset();

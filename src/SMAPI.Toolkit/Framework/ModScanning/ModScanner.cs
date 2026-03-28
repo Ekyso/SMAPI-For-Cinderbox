@@ -139,7 +139,7 @@ public class ModScanner
                 return new ModFolder(root, searchFolder, ModType.Invalid, null, ModParseError.EmptyVortexFolder, "it's an empty Vortex folder (is the mod disabled in Vortex?).");
 
             // empty folder
-            if (!relevantFiles.Any())
+            if (relevantFiles.Length == 0)
                 return new ModFolder(root, searchFolder, ModType.Invalid, null, ModParseError.EmptyFolder, "it's an empty folder.");
 
             // XNB mod
@@ -291,7 +291,7 @@ public class ModScanner
 
         DirectoryInfo[] subfolders = folder.GetDirectories().Where(this.IsRelevant).ToArray();
         FileInfo[] files = folder.GetFiles().Where(this.IsRelevant).ToArray();
-        return subfolders.Any() && !files.Any();
+        return subfolders.Length > 0 && files.Length == 0;
     }
 
     /// <summary>Recursively get all files in a folder.</summary>
@@ -321,7 +321,13 @@ public class ModScanner
             return false;
 
         // ignored entry name
-        return !this.IgnoreFilesystemNames.Any(p => p.IsMatch(entry.Name));
+        foreach (Regex rule in this.IgnoreFilesystemNames)
+        {
+            if (rule.IsMatch(entry.Name))
+                return false;
+        }
+
+        return true;
     }
 
     /// <summary>Get whether a set of files looks like an XNB mod.</summary>
