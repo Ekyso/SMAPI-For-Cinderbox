@@ -11,45 +11,44 @@
     /*********
     ** Generic Mod Config Menu UI
     *********/
-    // TODO
     // 'SMAPI features' section
-    "config.section.features": "SMAPI features",
+    "config.section.features": "SMAPI 기능",
 
-    "config.check-for-updates.name": "Check for updates",
-    "config.check-for-updates.desc": "Whether to automatically check for newer versions of SMAPI and mods when you load the game. If new versions are available, an alert will be shown in the console. This doesn't affect the load time even if your connection is offline or slow, because it happens in the background.",
+    "config.check-for-updates.name": "업데이트 확인",
+    "config.check-for-updates.desc": "게임 실행 시 SMAPI와 모드의 최신 버전을 자동으로 확인할지 여부입니다. 새로운 버전이 있을 경우 콘솔에 알림이 표시됩니다. 이 과정은 백그라운드에서 진행되므로 인터넷 연결이 느리거나 오프라인 상태여도 로딩 시간에는 영향을 주지 않습니다.",
 
-    "config.check-content-integrity.name": "Check content integrity",
-    "config.check-content-integrity.desc": "Whether SMAPI should check whether the game's content files are present and unmodified. This should nearly always be enabled. If disabled, SMAPI will log a warning for visibility when someone helps you troubleshoot game issues.",
+    "config.check-content-integrity.name": "콘텐츠 무결성 확인",
+    "config.check-content-integrity.desc": "게임 콘텐츠 파일이 존재하며 수정되지 않았는지 SMAPI가 확인할지 여부입니다. 대부분의 경우 항상 활성화하는 것이 좋습니다. 비활성화하면 문제 해결 시 참고할 수 있도록 SMAPI가 경고를 기록합니다.",
 
-    "config.read-console-input.name": "Read console input",
-    "config.read-console-input.desc": "Whether SMAPI should listen for console input. Disabling this will prevent you from using console commands. On some specific Linux systems, disabling this may reduce CPU usage.",
+    "config.read-console-input.name": "콘솔 입력 읽기",
+    "config.read-console-input.desc": "SMAPI가 콘솔 입력을 수신할지 여부입니다. 비활성화하면 콘솔 명령어를 사용할 수 없습니다. 일부 특정 Linux 시스템에서는 비활성화 시 CPU 사용량이 줄어들 수 있습니다.",
 
     // 'Console window' section
-    "config.section.console-window": "Console window",
+    "config.section.console-window": "콘솔 창",
 
-    "config.developer-mode.name": "Developer mode",
-    "config.developer-mode.desc": "Whether to show much more info in the SMAPI consoler window, intended for mod developers. Not recommended for most players.",
+    "config.developer-mode.name": "개발자 모드",
+    "config.developer-mode.desc": "SMAPI 콘솔 창에 더 많은 정보를 표시할지 여부입니다. 주로 모드 개발자를 위한 기능이며 일반 플레이어에게는 권장되지 않습니다.",
 
-    "config.color-scheme.name": "Color scheme",
-    "config.color-scheme.desc": "The color scheme to apply to text in the SMAPI console window. This has no effect on the game, mods, or SMAPI log file.",
-    "config.color-scheme.options.AutoDetect": "Auto-detect",
-    "config.color-scheme.options.AutoDetect.on-windows": "Auto-detect (recommended)",
-    "config.color-scheme.options.DarkBackground": "Lighter text (for dark backgrounds)",
-    "config.color-scheme.options.LightBackground": "Darker text (for light backgrounds)",
-    "config.color-scheme.options.None": "No colors",
+    "config.color-scheme.name": "색상 테마",
+    "config.color-scheme.desc": "SMAPI 콘솔 창 텍스트에 적용할 색상 테마입니다. 게임, 모드, SMAPI 로그 파일에는 영향을 주지 않습니다.",
+    "config.color-scheme.options.AutoDetect": "자동 감지",
+    "config.color-scheme.options.AutoDetect.on-windows": "자동 감지 (권장)",
+    "config.color-scheme.options.DarkBackground": "밝은 글씨 (어두운 배경용)",
+    "config.color-scheme.options.LightBackground": "어두운 글씨 (밝은 배경용)",
+    "config.color-scheme.options.None": "색상 없음",
 
     // 'Verbose logging' section
-    "config.section.verbose-logs": "Verbose logs",
-    "config.section.verbose-logs.explanation": "To help troubleshoot, SMAPI and many mods can send extra info to the SMAPI log (called 'verbose logging'). This may cause performance issues, and should usually be disabled.",
+    "config.section.verbose-logs": "상세 로그",
+    "config.section.verbose-logs.explanation": "문제 해결을 돕기 위해 SMAPI와 여러 모드는 SMAPI 로그에 추가 정보를 기록할 수 있습니다(이를 '상세 로그'라고 합니다). 성능에 영향을 줄 수 있으므로 특별한 경우가 아니라면 비활성화하는 것이 좋습니다.",
 
-    "config.enable-for.name": "Enable for",
-    "config.enable-for.desc": "Choose which mods have verbose logging enabled.",
-    "config.enable-for.options.all": "All (not recommended)",
-    "config.enable-for.options.selected": "Mods selected below",
+    "config.enable-for.name": "활성화 대상",
+    "config.enable-for.desc": "상세 로그를 활성화할 모드를 선택하세요.",
+    "config.enable-for.options.all": "모두 (권장하지 않음)",
+    "config.enable-for.options.selected": "아래에서 선택한 모드",
 
     "config.enable-for-smapi.name": "SMAPI",
-    "config.enable-for-smapi.desc": "Whether to enable verbose logs for SMAPI itself.",
+    "config.enable-for-smapi.desc": "SMAPI 자체에 대해 상세 로그를 활성화할지 여부입니다.",
 
     "config.enable-for-mod.name": "{{modName}}",
-    "config.enable-for-mod.desc": "Whether to enable verbose logs for the '{{modName}}' mod."
+    "config.enable-for-mod.desc": "'{{modName}}' 모드에 대해 상세 로그를 활성화할지 여부입니다."
 }

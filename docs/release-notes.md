@@ -5,6 +5,7 @@
 * For players:
   * Improved performance.
   * Improved error message when a mod is blocked by Windows Smart App Control.
+  * Improved translations. Thanks to To2morrow (updated Korean)!
 
 * For mod authors:
   * Added OS metrics to the [metrics API](technical/web.md#modsmetrics).
