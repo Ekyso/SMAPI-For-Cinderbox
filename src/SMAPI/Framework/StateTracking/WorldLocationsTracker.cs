@@ -49,7 +49,7 @@ internal class WorldLocationsTracker : IWatcher
     public string Name => nameof(WorldLocationsTracker);
 
     /// <summary>Whether locations were added or removed since the last reset.</summary>
-    public bool IsLocationListChanged => this.Added.Count > 0 || this.Removed.Count > 0;
+    public bool IsLocationListChanged { get; private set; }
 
     /// <inheritdoc />
     public bool IsChanged => this.IsLocationListChanged || this.LocationsHaveChanges;
@@ -81,13 +81,15 @@ internal class WorldLocationsTracker : IWatcher
     /// <inheritdoc />
     public void Update()
     {
+        this.LocationsHaveChanges = false;
+        this.IsLocationListChanged = false;
+
         // update watchers
         this.LocationListWatcher.Update();
         this.MineLocationListWatcher.Update();
         this.VolcanoLocationListWatcher.Update();
 
         // update location content watchers
-        this.LocationsHaveChanges = false;
         foreach (LocationTracker watcher in this.Locations)
         {
             watcher.Update();
@@ -142,6 +144,8 @@ internal class WorldLocationsTracker : IWatcher
         this.LocationListWatcher.Reset();
         this.MineLocationListWatcher.Reset();
         this.VolcanoLocationListWatcher.Reset();
+
+        this.IsLocationListChanged = false;
     }
 
     /// <inheritdoc />
@@ -243,6 +247,8 @@ internal class WorldLocationsTracker : IWatcher
 
         // add buildings
         this.Add(location.buildings);
+
+        this.IsLocationListChanged = true;
     }
 
     /// <summary>Remove the given building.</summary>
@@ -272,6 +278,8 @@ internal class WorldLocationsTracker : IWatcher
             this.LocationDict.Remove(location);
             watcher.Dispose();
             this.Remove(location.buildings);
+
+            this.IsLocationListChanged = true;
         }
     }
 

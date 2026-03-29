@@ -28,7 +28,7 @@ internal class NetCollectionWatcher<TValue> : BaseDisposableWatcher, ICollection
     public string Name { get; }
 
     /// <inheritdoc />
-    public bool IsChanged => this.AddedImpl.Count > 0 || this.RemovedImpl.Count > 0;
+    public bool IsChanged { get; private set; }
 
     /// <inheritdoc />
     public IReadOnlyCollection<TValue> Added => this.AddedImpl;
@@ -64,6 +64,7 @@ internal class NetCollectionWatcher<TValue> : BaseDisposableWatcher, ICollection
 
         this.AddedImpl.Clear();
         this.RemovedImpl.Clear();
+        this.IsChanged = false;
     }
 
     /// <inheritdoc />
@@ -87,6 +88,7 @@ internal class NetCollectionWatcher<TValue> : BaseDisposableWatcher, ICollection
     private void OnValueAdded(TValue value)
     {
         this.AddedImpl.Add(value);
+        this.IsChanged = true;
     }
 
     /// <summary>A callback invoked when an entry is removed from the collection.</summary>
@@ -94,5 +96,6 @@ internal class NetCollectionWatcher<TValue> : BaseDisposableWatcher, ICollection
     private void OnValueRemoved(TValue value)
     {
         this.RemovedImpl.Add(value);
+        this.IsChanged = true;
     }
 }

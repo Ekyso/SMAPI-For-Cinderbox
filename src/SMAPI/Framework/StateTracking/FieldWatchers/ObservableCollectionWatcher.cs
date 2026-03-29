@@ -31,7 +31,7 @@ internal class ObservableCollectionWatcher<TValue> : BaseDisposableWatcher, ICol
     public string Name { get; }
 
     /// <inheritdoc />
-    public bool IsChanged => this.AddedImpl.Count > 0 || this.RemovedImpl.Count > 0;
+    public bool IsChanged { get; private set; }
 
     /// <inheritdoc />
     public IReadOnlyCollection<TValue> Added => this.AddedImpl;
@@ -66,6 +66,8 @@ internal class ObservableCollectionWatcher<TValue> : BaseDisposableWatcher, ICol
 
         this.AddedImpl.Clear();
         this.RemovedImpl.Clear();
+
+        this.IsChanged = false;
     }
 
     /// <inheritdoc />
@@ -88,7 +90,12 @@ internal class ObservableCollectionWatcher<TValue> : BaseDisposableWatcher, ICol
         // clear
         if (e.Action == NotifyCollectionChangedAction.Reset)
         {
-            this.RemovedImpl.AddRange(this.PreviousValues);
+            if (this.PreviousValues.Count > 0)
+            {
+                this.RemovedImpl.AddRange(this.PreviousValues);
+                this.IsChanged = true;
+            }
+
             this.PreviousValues.Clear();
             return;
         }
@@ -97,7 +104,11 @@ internal class ObservableCollectionWatcher<TValue> : BaseDisposableWatcher, ICol
         if (e.OldItems != null)
         {
             foreach (TValue value in e.OldItems)
+            {
                 this.RemovedImpl.Add(value);
+                this.IsChanged = true;
+            }
+
             this.PreviousValues.RemoveRange(e.OldStartingIndex, e.OldItems.Count);
         }
 
@@ -108,6 +119,8 @@ internal class ObservableCollectionWatcher<TValue> : BaseDisposableWatcher, ICol
             foreach (TValue value in e.NewItems)
             {
                 this.AddedImpl.Add(value);
+                this.IsChanged = true;
+
                 this.PreviousValues.Insert(insertAt, value);
                 insertAt++;
             }

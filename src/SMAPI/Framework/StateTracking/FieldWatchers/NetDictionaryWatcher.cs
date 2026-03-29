@@ -35,7 +35,7 @@ internal class NetDictionaryWatcher<TKey, TValue, TField, TSerialDict, TSelf> : 
     public string Name { get; }
 
     /// <inheritdoc />
-    public bool IsChanged => this.PairsAdded.Count > 0 || this.PairsRemoved.Count > 0;
+    public bool IsChanged { get; private set; }
 
     /// <inheritdoc />
     public IReadOnlyCollection<KeyValuePair<TKey, TValue>> Added => this.PairsAdded;
@@ -72,6 +72,7 @@ internal class NetDictionaryWatcher<TKey, TValue, TField, TSerialDict, TSelf> : 
 
         this.PairsAdded.Clear();
         this.PairsRemoved.Clear();
+        this.IsChanged = false;
     }
 
     /// <inheritdoc />
@@ -95,6 +96,7 @@ internal class NetDictionaryWatcher<TKey, TValue, TField, TSerialDict, TSelf> : 
     private void OnValueAdded(TKey key, TValue value)
     {
         this.PairsAdded[key] = value;
+        this.IsChanged = true;
     }
 
     /// <summary>A callback invoked when an entry is removed from the dictionary.</summary>
@@ -103,5 +105,6 @@ internal class NetDictionaryWatcher<TKey, TValue, TField, TSerialDict, TSelf> : 
     private void OnValueRemoved(TKey key, TValue value)
     {
         this.PairsRemoved.TryAdd(key, value);
+        this.IsChanged = true;
     }
 }

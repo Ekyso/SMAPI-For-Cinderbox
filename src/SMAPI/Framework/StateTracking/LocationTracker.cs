@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI.Framework.StateTracking.FieldWatchers;
@@ -19,9 +18,6 @@ internal class LocationTracker : IWatcher
     /// <summary>The underlying watchers.</summary>
     private readonly List<IWatcher> Watchers = [];
 
-    /// <summary>Whether any of the <see cref="Watchers"/> changed.</summary>
-    private bool WatchersHaveChanges;
-
 
     /*********
     ** Accessors
@@ -30,7 +26,8 @@ internal class LocationTracker : IWatcher
     public string Name { get; }
 
     /// <inheritdoc />
-    public bool IsChanged => this.WatchersHaveChanges;
+    /// <remarks>This covers added/removed chests in the location, but *not* changes to chest inventories; see <see cref="ChestWatchers"/> for those.</remarks>
+    public bool IsChanged { get; private set; }
 
     /// <summary>The tracked location.</summary>
     public GameLocation Location { get; }
@@ -95,17 +92,22 @@ internal class LocationTracker : IWatcher
     /// <inheritdoc />
     public void Update()
     {
-        this.WatchersHaveChanges = false;
+        // track changes to location content
+        bool changed = false;
         foreach (IWatcher watcher in this.Watchers)
         {
             watcher.Update();
 
-            if (watcher.IsChanged)
-                this.WatchersHaveChanges = true;
+            if (!changed && watcher.IsChanged)
+                changed = true;
         }
+        this.IsChanged = changed;
 
-        this.UpdateChestWatcherList(added: this.ObjectsWatcher.Added, removed: this.ObjectsWatcher.Removed);
+        // add/remove chests to match
+        if (changed && this.ObjectsWatcher.IsChanged)
+            this.UpdateChestWatcherList(added: this.ObjectsWatcher.Added, removed: this.ObjectsWatcher.Removed);
 
+        // update chest inventory watchers
         foreach (var watcher in this.ChestWatchers)
             watcher.Value.Update();
     }
@@ -113,7 +115,7 @@ internal class LocationTracker : IWatcher
     /// <inheritdoc />
     public void Reset()
     {
-        this.WatchersHaveChanges = false;
+        this.IsChanged = false;
 
         foreach (IWatcher watcher in this.Watchers)
             watcher.Reset();

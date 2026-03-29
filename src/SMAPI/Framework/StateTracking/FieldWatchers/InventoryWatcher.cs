@@ -35,7 +35,7 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
     public string Name { get; }
 
     /// <inheritdoc />
-    public bool IsChanged => this.AddedImpl.Count > 0 || this.RemovedImpl.Count > 0;
+    public bool IsChanged { get; private set; }
 
     /// <inheritdoc />
     public IReadOnlyCollection<Item> Added => this.AddedImpl;
@@ -64,6 +64,7 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
     {
         this.AddedImpl.Clear();
         this.RemovedImpl.Clear();
+        this.IsChanged = false;
     }
 
     /// <inheritdoc />
@@ -131,10 +132,16 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
         if (value == null)
             return;
 
-        if (this.RemovedImpl.Remove(value))
+        if (this.RemovedImpl.Remove(value)) // re-added an item that was just removed
+        {
             this.AddedImpl.Remove(value);
+            this.IsChanged = this.AddedImpl.Count > 0 || this.RemovedImpl.Count > 0;
+        }
         else
+        {
             this.AddedImpl.Add(value);
+            this.IsChanged = true;
+        }
     }
 
     /// <summary>Track a removed item.</summary>
@@ -144,9 +151,15 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
         if (value == null)
             return;
 
-        if (this.AddedImpl.Remove(value))
+        if (this.AddedImpl.Remove(value)) // removed an item that was just added
+        {
             this.RemovedImpl.Remove(value);
+            this.IsChanged = this.AddedImpl.Count > 0 || this.RemovedImpl.Count > 0;
+        }
         else
+        {
             this.RemovedImpl.Add(value);
+            this.IsChanged = true;
+        }
     }
 }
