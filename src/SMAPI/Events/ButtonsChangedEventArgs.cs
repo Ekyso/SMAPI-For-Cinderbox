@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StardewModdingAPI.Framework.Input;
 
 namespace StardewModdingAPI.Events;
@@ -9,26 +8,19 @@ namespace StardewModdingAPI.Events;
 public class ButtonsChangedEventArgs : EventArgs
 {
     /*********
-    ** Fields
-    *********/
-    /// <summary>The buttons that were pressed, held, or released since the previous tick.</summary>
-    private readonly Lazy<Dictionary<SButtonState, SButton[]>> ButtonsByState;
-
-
-    /*********
     ** Accessors
     *********/
     /// <summary>The current cursor position.</summary>
     public ICursorPosition Cursor { get; }
 
     /// <summary>The buttons which were pressed since the previous tick.</summary>
-    public IEnumerable<SButton> Pressed => this.ButtonsByState.Value[SButtonState.Pressed];
+    public IEnumerable<SButton> Pressed { get; }
 
     /// <summary>The buttons which were held since the previous tick.</summary>
-    public IEnumerable<SButton> Held => this.ButtonsByState.Value[SButtonState.Held];
+    public IEnumerable<SButton> Held { get; }
 
     /// <summary>The buttons which were released since the previous tick.</summary>
-    public IEnumerable<SButton> Released => this.ButtonsByState.Value[SButtonState.Released];
+    public IEnumerable<SButton> Released { get; }
 
 
     /*********
@@ -39,29 +31,31 @@ public class ButtonsChangedEventArgs : EventArgs
     /// <param name="inputState">The game's current input state.</param>
     internal ButtonsChangedEventArgs(ICursorPosition cursor, SInputState inputState)
     {
-        this.Cursor = cursor;
-        this.ButtonsByState = new Lazy<Dictionary<SButtonState, SButton[]>>(() => this.GetButtonsByState(inputState));
-    }
+        var pressed = new List<SButton>();
+        var held = new List<SButton>();
+        var released = new List<SButton>();
 
-
-    /*********
-    ** Private methods
-    *********/
-    /// <summary>Get the buttons that were pressed, held, or released since the previous tick.</summary>
-    /// <param name="inputState">The game's current input state.</param>
-    private Dictionary<SButtonState, SButton[]> GetButtonsByState(SInputState inputState)
-    {
-        Dictionary<SButtonState, SButton[]> lookup = inputState
-            .GetActiveButtonStates()
-            .GroupBy(p => p.Value)
-            .ToDictionary(p => p.Key, p => p.Select(p => p.Key).ToArray());
-
-        foreach (SButtonState state in new[] { SButtonState.Pressed, SButtonState.Held, SButtonState.Released })
+        foreach ((SButton button, SButtonState state) in inputState.GetActiveButtonStates())
         {
-            if (!lookup.ContainsKey(state))
-                lookup[state] = [];
+            switch (state)
+            {
+                case SButtonState.Pressed:
+                    pressed.Add(button);
+                    break;
+
+                case SButtonState.Held:
+                    held.Add(button);
+                    break;
+
+                case SButtonState.Released:
+                    released.Add(button);
+                    break;
+            }
         }
 
-        return lookup;
+        this.Cursor = cursor;
+        this.Pressed = pressed;
+        this.Held = held;
+        this.Released = released;
     }
 }
