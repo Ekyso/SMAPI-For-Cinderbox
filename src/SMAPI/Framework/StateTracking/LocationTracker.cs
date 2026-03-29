@@ -89,7 +89,7 @@ internal class LocationTracker : IWatcher
             this.FurnitureWatcher
         ]);
 
-        this.UpdateChestWatcherList(added: location.Objects.Pairs, removed: Array.Empty<KeyValuePair<Vector2, SObject>>());
+        this.UpdateChestWatcherList(added: location.Objects.Pairs, removed: []);
     }
 
     /// <inheritdoc />

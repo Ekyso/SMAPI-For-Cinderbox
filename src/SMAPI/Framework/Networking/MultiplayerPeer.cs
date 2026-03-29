@@ -69,7 +69,7 @@ internal class MultiplayerPeer : IMultiplayerPeer
             this.Mods = model.Mods.Select(mod => new MultiplayerPeerMod(mod)).ToArray();
         }
         else
-            this.Mods = Array.Empty<IMultiplayerPeerMod>();
+            this.Mods = [];
 
         this.SendMessageImpl = sendMessage;
     }

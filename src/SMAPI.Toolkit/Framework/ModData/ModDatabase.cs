@@ -22,7 +22,7 @@ public class ModDatabase
     *********/
     /// <summary>Construct an empty instance.</summary>
     public ModDatabase()
-        : this(Array.Empty<ModDataRecord>(), _ => null) { }
+        : this([], _ => null) { }
 
     /// <summary>Construct an instance.</summary>
     /// <param name="records">The underlying mod data records indexed by default display name.</param>

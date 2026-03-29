@@ -86,7 +86,7 @@ internal class ModsApiController : Controller
         metrics.TrackRequest(model?.ApiVersion, model?.GameVersion, model?.Platform);
 
         if (model?.Mods == null)
-            return Array.Empty<ModEntryModel>();
+            return [];
 
         ModUpdateCheckConfig config = this.Config.Value;
 

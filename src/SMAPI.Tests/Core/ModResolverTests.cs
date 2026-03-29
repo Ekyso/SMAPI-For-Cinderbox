@@ -263,7 +263,7 @@ public class ModResolverTests
     public void ProcessDependencies_NoMods_DoesNothing()
     {
         // act
-        IModMetadata[] mods = new ModResolver().ProcessDependencies(Array.Empty<IModMetadata>(), new ModDatabase()).ToArray();
+        IModMetadata[] mods = new ModResolver().ProcessDependencies([], new ModDatabase()).ToArray();
 
         // assert
         mods.Should().BeEmpty("it should match number of mods input");

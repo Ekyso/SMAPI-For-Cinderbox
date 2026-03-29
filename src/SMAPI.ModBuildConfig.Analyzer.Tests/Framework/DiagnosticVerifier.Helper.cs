@@ -61,7 +61,7 @@ public abstract partial class DiagnosticVerifier
         var diagnostics = new List<Diagnostic>();
         foreach (Project project in projects)
         {
-            CompilationWithAnalyzers compilationWithAnalyzers = project.GetCompilationAsync().Result!.WithAnalyzers(ImmutableArray.Create(analyzer));
+            CompilationWithAnalyzers compilationWithAnalyzers = project.GetCompilationAsync().Result!.WithAnalyzers([analyzer]);
             var diags = compilationWithAnalyzers.GetAnalyzerDiagnosticsAsync().Result;
             foreach (Diagnostic diag in diags)
             {

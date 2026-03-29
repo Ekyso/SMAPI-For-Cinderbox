@@ -45,7 +45,7 @@ public struct DiagnosticResult
         {
             if (this.locations == null)
             {
-                this.locations = new DiagnosticResultLocation[] { };
+                this.locations = [];
             }
             return this.locations;
         }

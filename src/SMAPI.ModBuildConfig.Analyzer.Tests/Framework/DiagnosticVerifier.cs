@@ -32,7 +32,7 @@ public abstract partial class DiagnosticVerifier
     /// <param name="expected"> DiagnosticResults that should appear after the analyzer is run on the source</param>
     protected void VerifyCSharpDiagnostic(string source, params DiagnosticResult[] expected)
     {
-        this.VerifyDiagnostics(new[] { source }, LanguageNames.CSharp, this.GetCSharpDiagnosticAnalyzer(), expected);
+        this.VerifyDiagnostics([source], LanguageNames.CSharp, this.GetCSharpDiagnosticAnalyzer(), expected);
     }
 
     /// <summary>

@@ -2954,7 +2954,7 @@ internal class SCore : IDisposable
                 {
                     using RegistryKey? key = Registry.LocalMachine.OpenSubKey(registryKey);
                     if (key == null)
-                        return Array.Empty<string>();
+                        return [];
 
                     return key.GetSubKeyNames()
                         .Select(subkeyName =>
