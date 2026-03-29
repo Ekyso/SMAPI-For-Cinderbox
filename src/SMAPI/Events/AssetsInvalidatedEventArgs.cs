@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace StardewModdingAPI.Events;
 
@@ -22,11 +21,16 @@ public class AssetsInvalidatedEventArgs : EventArgs
     ** Public methods
     *********/
     /// <summary>Construct an instance.</summary>
-    /// <param name="names">The asset names that were invalidated.</param>
-    /// <param name="namesWithoutLocale">The <paramref name="names"/> with any locale codes stripped.</param>
-    internal AssetsInvalidatedEventArgs(IEnumerable<IAssetName> names, IEnumerable<IAssetName> namesWithoutLocale)
+    /// <param name="assetNames">The asset names that were invalidated.</param>
+    internal AssetsInvalidatedEventArgs(ICollection<IAssetName> assetNames)
     {
-        this.Names = names.ToImmutableHashSet();
-        this.NamesWithoutLocale = namesWithoutLocale.ToImmutableHashSet();
+        HashSet<IAssetName> names = new(assetNames);
+
+        HashSet<IAssetName> namesWithoutLocale = [];
+        foreach (IAssetName name in names)
+            namesWithoutLocale.Add(name.GetBaseAssetName());
+
+        this.Names = names;
+        this.NamesWithoutLocale = namesWithoutLocale;
     }
 }

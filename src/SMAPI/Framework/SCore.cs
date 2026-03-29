@@ -2671,12 +2671,7 @@ internal class SCore : IDisposable
     private void OnAssetsInvalidated(ICollection<IAssetName> assetNames)
     {
         if (this.EventManager.AssetsInvalidated.HasListeners)
-            this.EventManager.AssetsInvalidated.Raise(
-                new AssetsInvalidatedEventArgs(
-                    assetNames,
-                    assetNames.Select(p => p.GetBaseAssetName())
-                )
-            );
+            this.EventManager.AssetsInvalidated.Raise(new AssetsInvalidatedEventArgs(assetNames));
     }
 
     /// <summary>Reload the SMAPI settings.</summary>
