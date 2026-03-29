@@ -34,7 +34,7 @@ public class ModDatabase
     }
 
     /// <summary>Get all mod data records.</summary>
-    public IEnumerable<ModDataRecord> GetAll()
+    public IReadOnlyList<ModDataRecord> GetAll()
     {
         return this.Records;
     }

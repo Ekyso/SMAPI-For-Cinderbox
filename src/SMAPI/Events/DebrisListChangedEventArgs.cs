@@ -31,7 +31,7 @@ public class DebrisListChangedEventArgs : EventArgs
     /// <param name="location">The location which changed.</param>
     /// <param name="added">The debris added to the location.</param>
     /// <param name="removed">The debris removed from the location.</param>
-    internal DebrisListChangedEventArgs(GameLocation location, IEnumerable<Debris> added, IEnumerable<Debris> removed)
+    internal DebrisListChangedEventArgs(GameLocation location, IReadOnlyList<Debris> added, IReadOnlyList<Debris> removed)
     {
         this.Location = location;
         this.Added = added.ToArray();

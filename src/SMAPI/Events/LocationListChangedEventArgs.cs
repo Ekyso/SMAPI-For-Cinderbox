@@ -24,7 +24,7 @@ public class LocationListChangedEventArgs : EventArgs
     /// <summary>Construct an instance.</summary>
     /// <param name="added">The added locations.</param>
     /// <param name="removed">The removed locations.</param>
-    internal LocationListChangedEventArgs(IEnumerable<GameLocation> added, IEnumerable<GameLocation> removed)
+    internal LocationListChangedEventArgs(IReadOnlyList<GameLocation> added, IReadOnlyList<GameLocation> removed)
     {
         this.Added = added.ToArray();
         this.Removed = removed.ToArray();

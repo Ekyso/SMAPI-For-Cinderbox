@@ -39,7 +39,7 @@ public class ModDataRecord
     {
         this.DisplayName = displayName;
         this.ID = model.Id;
-        this.FormerIDs = model.GetFormerIds().ToArray();
+        this.FormerIDs = model.GetFormerIds();
         this.SuppressWarnings = model.SuppressWarnings;
         this.IgnoreDependencies = model.IgnoreDependencies;
         this.Fields = model.GetFields().ToArray();

@@ -109,13 +109,17 @@ internal class ModDataModel
     }
 
     /// <summary>Get the former mod IDs.</summary>
-    public IEnumerable<string> GetFormerIds()
+    public string[] GetFormerIds()
     {
-        if (this.FormerIds != null)
-        {
-            foreach (string id in this.FormerIds.Split('|'))
-                yield return id.Trim();
-        }
+#if NET6_0_OR_GREATER
+        return
+            this.FormerIds?.Split('|', StringSplitOptions.TrimEntries)
+            ?? [];
+#else
+        return this.FormerIds != null
+            ? this.FormerIds.Split('|').Select(id => id.Trim()).ToArray()
+            : [];
+#endif
     }
 
 

@@ -150,14 +150,14 @@ internal class DataHelper : BaseHelper, IDataHelper
 
     /// <summary>Get the data fields to read/write for save data.</summary>
     /// <param name="stage">The current load stage.</param>
-    private IEnumerable<IDictionary<string, string>> GetDataFields(LoadStage stage)
+    private IDictionary<string, string>[] GetDataFields(LoadStage stage)
     {
         if (stage == LoadStage.None)
-            yield break;
+            return [];
 
-        yield return Game1.CustomData;
-        if (SaveGame.loaded != null)
-            yield return SaveGame.loaded.CustomData;
+        return SaveGame.loaded != null
+            ? [Game1.CustomData, SaveGame.loaded.CustomData]
+            : [Game1.CustomData];
     }
 
     /// <summary>Get the absolute path for a global data file.</summary>

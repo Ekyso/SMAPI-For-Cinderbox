@@ -33,7 +33,7 @@ public class ObjectListChangedEventArgs : EventArgs
     /// <param name="location">The location which changed.</param>
     /// <param name="added">The objects added to the location.</param>
     /// <param name="removed">The objects removed from the location.</param>
-    internal ObjectListChangedEventArgs(GameLocation location, IEnumerable<KeyValuePair<Vector2, Object>> added, IEnumerable<KeyValuePair<Vector2, Object>> removed)
+    internal ObjectListChangedEventArgs(GameLocation location, IReadOnlyList<KeyValuePair<Vector2, Object>> added, IReadOnlyList<KeyValuePair<Vector2, Object>> removed)
     {
         this.Location = location;
         this.Added = added.ToArray();

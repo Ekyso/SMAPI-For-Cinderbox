@@ -37,7 +37,7 @@ internal class SnapshotListDiff<T>
     /// <param name="isChanged">Whether the value changed since the last update.</param>
     /// <param name="removed">The removed values.</param>
     /// <param name="added">The added values.</param>
-    public void Update(bool isChanged, IEnumerable<T>? removed, IEnumerable<T>? added)
+    public void Update(bool isChanged, IReadOnlyCollection<T>? removed, IReadOnlyCollection<T>? added)
     {
         this.IsChanged = isChanged;
 

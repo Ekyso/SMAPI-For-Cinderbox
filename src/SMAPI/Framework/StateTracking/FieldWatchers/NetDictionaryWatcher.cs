@@ -19,10 +19,10 @@ internal class NetDictionaryWatcher<TKey, TValue, TField, TSerialDict, TSelf> : 
     ** Fields
     *********/
     /// <summary>The pairs added since the last reset.</summary>
-    private readonly IDictionary<TKey, TValue> PairsAdded = new Dictionary<TKey, TValue>();
+    private readonly Dictionary<TKey, TValue> PairsAdded = [];
 
     /// <summary>The pairs removed since the last reset.</summary>
-    private readonly IDictionary<TKey, TValue> PairsRemoved = new Dictionary<TKey, TValue>();
+    private readonly Dictionary<TKey, TValue> PairsRemoved = [];
 
     /// <summary>The field being watched.</summary>
     private readonly NetDictionary<TKey, TValue, TField, TSerialDict, TSelf> Field;
@@ -38,10 +38,10 @@ internal class NetDictionaryWatcher<TKey, TValue, TField, TSerialDict, TSelf> : 
     public bool IsChanged => this.PairsAdded.Count > 0 || this.PairsRemoved.Count > 0;
 
     /// <inheritdoc />
-    public IEnumerable<KeyValuePair<TKey, TValue>> Added => this.PairsAdded;
+    public IReadOnlyCollection<KeyValuePair<TKey, TValue>> Added => this.PairsAdded;
 
     /// <inheritdoc />
-    public IEnumerable<KeyValuePair<TKey, TValue>> Removed => this.PairsRemoved;
+    public IReadOnlyCollection<KeyValuePair<TKey, TValue>> Removed => this.PairsRemoved;
 
 
     /*********

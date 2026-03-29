@@ -111,7 +111,7 @@ internal class ArgumentParser : IReadOnlyList<string>
     /// <returns>An enumerator that can be used to iterate through the collection.</returns>
     public IEnumerator<string> GetEnumerator()
     {
-        return ((IEnumerable<string>)this.Values).GetEnumerator();
+        return ((IReadOnlyList<string>)this.Values).GetEnumerator();
     }
 
     /// <summary>Returns an enumerator that iterates through a collection.</summary>

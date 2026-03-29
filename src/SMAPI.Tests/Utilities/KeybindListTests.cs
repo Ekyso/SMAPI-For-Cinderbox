@@ -121,10 +121,9 @@ internal class KeybindListTests
     ** Private methods
     *********/
     /// <summary>Get all defined buttons.</summary>
-    private static IEnumerable<SButton> GetAllButtons()
+    private static SButton[] GetAllButtons()
     {
-        foreach (SButton button in Enum.GetValues<SButton>())
-            yield return button;
+        return Enum.GetValues<SButton>();
     }
 
     /// <summary>Get the button state defined by a mapping string.</summary>

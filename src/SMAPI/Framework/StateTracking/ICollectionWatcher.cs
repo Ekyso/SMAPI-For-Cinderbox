@@ -9,8 +9,8 @@ internal interface ICollectionWatcher<out TValue> : IWatcher
     ** Accessors
     *********/
     /// <summary>The values added since the last reset.</summary>
-    IEnumerable<TValue> Added { get; }
+    IReadOnlyCollection<TValue> Added { get; }
 
     /// <summary>The values removed since the last reset.</summary>
-    IEnumerable<TValue> Removed { get; }
+    IReadOnlyCollection<TValue> Removed { get; }
 }

@@ -73,7 +73,7 @@ internal abstract class ConsoleCommand : IConsoleCommand
     /// <param name="data">The data to display.</param>
     /// <param name="header">The table header.</param>
     /// <param name="getRow">Returns a set of fields for a data value.</param>
-    protected string GetTableString<T>(IEnumerable<T> data, string[] header, Func<T, string[]> getRow)
+    protected string GetTableString<T>(T[] data, string[] header, Func<T, string[]> getRow)
     {
         // get table data
         int[] widths = header.Select(p => p.Length).ToArray();

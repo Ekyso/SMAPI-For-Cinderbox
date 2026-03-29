@@ -32,7 +32,7 @@ public class FurnitureListChangedEventArgs : EventArgs
     /// <param name="location">The location which changed.</param>
     /// <param name="added">The furniture added to the location.</param>
     /// <param name="removed">The furniture removed from the location.</param>
-    internal FurnitureListChangedEventArgs(GameLocation location, IEnumerable<Furniture> added, IEnumerable<Furniture> removed)
+    internal FurnitureListChangedEventArgs(GameLocation location, IReadOnlyList<Furniture> added, IReadOnlyList<Furniture> removed)
     {
         this.Location = location;
         this.Added = added.ToArray();

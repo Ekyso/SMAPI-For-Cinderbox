@@ -101,7 +101,7 @@ public class ModFolder
 
     /// <summary>Get the update keys for a mod.</summary>
     /// <param name="manifest">The mod manifest.</param>
-    public IEnumerable<string> GetUpdateKeys(Manifest manifest)
+    public IReadOnlyList<string> GetUpdateKeys(Manifest manifest)
     {
         return
             manifest.UpdateKeys

@@ -587,7 +587,7 @@ internal class ContentCoordinator : IDisposable
                     .Select(p => p.Key)
                     .ToArray();
 
-                string FormatKeyList(IEnumerable<IAssetName> keys) =>
+                string FormatKeyList(ICollection<IAssetName> keys) =>
                     string.Join(
                         ", ",
                         keys.Select(p => p.Name).OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
@@ -629,7 +629,7 @@ internal class ContentCoordinator : IDisposable
         "UnusedMember.Global",
         Justification = "This method is provided for Content Patcher."
     )]
-    public IEnumerable<object> GetLoadedValues(IAssetName assetName)
+    public IReadOnlyList<object> GetLoadedValues(IAssetName assetName)
     {
         return this.ContentManagerLock.InReadLock(() =>
         {
@@ -748,7 +748,7 @@ internal class ContentCoordinator : IDisposable
     /// <summary>Get the language enums (like <see cref="LocalizedContentManager.LanguageCode.ja"/>) indexed by locale code (like <c>ja-JP</c>).</summary>
     /// <param name="customLanguages">The custom languages to add to the lookup.</param>
     private Dictionary<string, LocalizedContentManager.LanguageCode> GetLocaleCodes(
-        IEnumerable<ModLanguage?> customLanguages
+        IReadOnlyList<ModLanguage?> customLanguages
     )
     {
         var map = new Dictionary<string, LocalizedContentManager.LanguageCode>(

@@ -20,10 +20,10 @@ internal class ImmutableCollectionWatcher<TValue> : BaseDisposableWatcher, IColl
     public bool IsChanged { get; } = false;
 
     /// <inheritdoc />
-    public IEnumerable<TValue> Added { get; } = [];
+    public IReadOnlyCollection<TValue> Added { get; } = [];
 
     /// <inheritdoc />
-    public IEnumerable<TValue> Removed { get; } = [];
+    public IReadOnlyCollection<TValue> Removed { get; } = [];
 
 
     /*********

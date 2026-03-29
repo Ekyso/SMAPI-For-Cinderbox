@@ -35,10 +35,10 @@ internal class ComparableListWatcher<TValue> : BaseDisposableWatcher, ICollectio
     public bool IsChanged => this.AddedImpl.Count > 0 || this.RemovedImpl.Count > 0;
 
     /// <inheritdoc />
-    public IEnumerable<TValue> Added => this.AddedImpl;
+    public IReadOnlyCollection<TValue> Added => this.AddedImpl;
 
     /// <inheritdoc />
-    public IEnumerable<TValue> Removed => this.RemovedImpl;
+    public IReadOnlyCollection<TValue> Removed => this.RemovedImpl;
 
     /*********
     ** Public methods

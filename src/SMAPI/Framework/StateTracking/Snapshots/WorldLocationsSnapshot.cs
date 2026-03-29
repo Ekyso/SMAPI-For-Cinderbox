@@ -24,7 +24,7 @@ internal class WorldLocationsSnapshot
     public SnapshotListDiff<GameLocation> LocationList { get; } = new();
 
     /// <summary>The tracked locations.</summary>
-    public IEnumerable<LocationSnapshot> Locations => this.LocationsDict.Values;
+    public IReadOnlyCollection<LocationSnapshot> Locations => this.LocationsDict.Values;
 
 
     /*********

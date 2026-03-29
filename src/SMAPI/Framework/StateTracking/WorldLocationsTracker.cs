@@ -29,6 +29,12 @@ internal class WorldLocationsTracker : IWatcher
     /// <summary>A lookup of registered buildings and their indoor location.</summary>
     private readonly Dictionary<Building, GameLocation?> BuildingIndoors = new(new ObjectReferenceComparer<Building>());
 
+    /// <summary>The backing field for <see cref="Added"/>.</summary>
+    private readonly HashSet<GameLocation> AddedImpl = new(new ObjectReferenceComparer<GameLocation>());
+
+    /// <summary>The backing field for <see cref="Removed"/>.</summary>
+    private readonly HashSet<GameLocation> RemovedImpl = new(new ObjectReferenceComparer<GameLocation>());
+
     /// <summary>The pooled list instance for <see cref="GetLocationsWhoseBuildingsChanged"/>.</summary>
     private static readonly List<LocationTracker> PooledLocationsWithBuildingsChanged = [];
 
@@ -49,13 +55,13 @@ internal class WorldLocationsTracker : IWatcher
     public bool IsChanged => this.IsLocationListChanged || this.LocationsHaveChanges;
 
     /// <summary>The tracked locations.</summary>
-    public IEnumerable<LocationTracker> Locations => this.LocationDict.Values;
-
-    /// <summary>The locations removed since the last update.</summary>
-    public ICollection<GameLocation> Added { get; } = new HashSet<GameLocation>(new ObjectReferenceComparer<GameLocation>());
+    public IReadOnlyCollection<LocationTracker> Locations => this.LocationDict.Values;
 
     /// <summary>The locations added since the last update.</summary>
-    public ICollection<GameLocation> Removed { get; } = new HashSet<GameLocation>(new ObjectReferenceComparer<GameLocation>());
+    public IReadOnlySet<GameLocation> Added => this.AddedImpl;
+
+    /// <summary>The locations removed since the last update.</summary>
+    public IReadOnlySet<GameLocation> Removed => this.RemovedImpl;
 
 
     /*********
@@ -130,8 +136,9 @@ internal class WorldLocationsTracker : IWatcher
     /// <summary>Set the current location list as the baseline.</summary>
     public void ResetLocationList()
     {
-        this.Removed.Clear();
-        this.Added.Clear();
+        this.RemovedImpl.Clear();
+        this.AddedImpl.Clear();
+
         this.LocationListWatcher.Reset();
         this.MineLocationListWatcher.Reset();
         this.VolcanoLocationListWatcher.Reset();
@@ -143,7 +150,8 @@ internal class WorldLocationsTracker : IWatcher
         this.LocationsHaveChanges = false;
 
         this.ResetLocationList();
-        foreach (IWatcher watcher in this.GetWatchers())
+
+        foreach (LocationTracker watcher in this.Locations)
             watcher.Reset();
     }
 
@@ -157,7 +165,11 @@ internal class WorldLocationsTracker : IWatcher
     /// <inheritdoc />
     public void Dispose()
     {
-        foreach (IWatcher watcher in this.GetWatchers())
+        this.LocationListWatcher.Dispose();
+        this.MineLocationListWatcher.Dispose();
+        this.VolcanoLocationListWatcher.Dispose();
+
+        foreach (LocationTracker watcher in this.Locations)
             watcher.Dispose();
     }
 
@@ -226,7 +238,7 @@ internal class WorldLocationsTracker : IWatcher
         this.Remove(location);
 
         // add location
-        this.Added.Add(location);
+        this.AddedImpl.Add(location);
         this.LocationDict[location] = new LocationTracker(location);
 
         // add buildings
@@ -254,7 +266,7 @@ internal class WorldLocationsTracker : IWatcher
         if (this.LocationDict.TryGetValue(location, out LocationTracker? watcher))
         {
             // track change
-            this.Removed.Add(location);
+            this.RemovedImpl.Add(location);
 
             // remove
             this.LocationDict.Remove(location);
@@ -266,16 +278,6 @@ internal class WorldLocationsTracker : IWatcher
     /****
     ** Helpers
     ****/
-    /// <summary>The underlying watchers.</summary>
-    private IEnumerable<IWatcher> GetWatchers()
-    {
-        yield return this.LocationListWatcher;
-        yield return this.MineLocationListWatcher;
-        yield return this.VolcanoLocationListWatcher;
-        foreach (LocationTracker watcher in this.Locations)
-            yield return watcher;
-    }
-
     /// <summary>Get the locations whose building list changed, if any.</summary>
     private List<LocationTracker> GetLocationsWhoseBuildingsChanged()
     {

@@ -802,7 +802,7 @@ internal class CoreAssetPropagator
     ** Helpers
     ****/
     /// <summary>Get all NPCs in the game (excluding farm animals).</summary>
-    private IEnumerable<NPC> GetCharacters()
+    private IReadOnlyList<NPC> GetCharacters()
     {
         return this.WorldCache.GetOrSet(
             nameof(this.GetCharacters),
@@ -828,7 +828,7 @@ internal class CoreAssetPropagator
     }
 
     /// <summary>Get all farm animals in the game.</summary>
-    private IEnumerable<FarmAnimal> GetFarmAnimals()
+    private IReadOnlyList<FarmAnimal> GetFarmAnimals()
     {
         return this.WorldCache.GetOrSet(
             nameof(this.GetFarmAnimals),
@@ -852,7 +852,7 @@ internal class CoreAssetPropagator
 
     /// <summary>Get all locations in the game.</summary>
     /// <param name="buildingInteriors">Whether to also get the interior locations for constructable buildings.</param>
-    private IEnumerable<GameLocation> GetLocations(bool buildingInteriors = true)
+    private IReadOnlyList<GameLocation> GetLocations(bool buildingInteriors = true)
     {
         return this.WorldCache.GetOrSet(
             $"{nameof(this.GetLocations)}_{buildingInteriors}",
@@ -863,7 +863,7 @@ internal class CoreAssetPropagator
 
     /// <summary>Get all locations in the game.</summary>
     /// <param name="buildingInteriors">Whether to also get the interior locations for constructable buildings.</param>
-    private IEnumerable<LocationInfo> GetLocationsWithInfo(bool buildingInteriors = true)
+    private IReadOnlyList<LocationInfo> GetLocationsWithInfo(bool buildingInteriors = true)
     {
         return this.WorldCache.GetOrSet(
             $"{nameof(this.GetLocationsWithInfo)}_{buildingInteriors}",

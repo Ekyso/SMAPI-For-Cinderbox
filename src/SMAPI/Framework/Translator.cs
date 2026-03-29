@@ -70,7 +70,7 @@ internal class Translator
     }
 
     /// <summary>Get all translations for the current locale.</summary>
-    public IEnumerable<Translation> GetTranslations()
+    public IReadOnlyList<Translation> GetTranslations()
     {
         return this.ForLocale.Values.ToArray();
     }
@@ -130,7 +130,7 @@ internal class Translator
     ** Private methods
     *********/
     /// <summary>Get all translation keys in the underlying translation data, ignoring the <see cref="ForLocale"/> cache.</summary>
-    private IEnumerable<string> GetAllKeysRaw()
+    private HashSet<string> GetAllKeysRaw()
     {
         return new HashSet<string>(
             this.All.SelectMany(p => p.Value.Keys),

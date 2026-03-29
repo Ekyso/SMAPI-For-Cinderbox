@@ -33,7 +33,7 @@ public class TerrainFeatureListChangedEventArgs : EventArgs
     /// <param name="location">The location which changed.</param>
     /// <param name="added">The terrain features added to the location.</param>
     /// <param name="removed">The terrain features removed from the location.</param>
-    internal TerrainFeatureListChangedEventArgs(GameLocation location, IEnumerable<KeyValuePair<Vector2, TerrainFeature>> added, IEnumerable<KeyValuePair<Vector2, TerrainFeature>> removed)
+    internal TerrainFeatureListChangedEventArgs(GameLocation location, IReadOnlyList<KeyValuePair<Vector2, TerrainFeature>> added, IReadOnlyList<KeyValuePair<Vector2, TerrainFeature>> removed)
     {
         this.Location = location;
         this.Added = added.ToArray();

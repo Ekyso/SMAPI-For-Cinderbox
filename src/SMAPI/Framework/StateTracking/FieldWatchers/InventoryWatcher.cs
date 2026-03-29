@@ -38,10 +38,10 @@ internal class InventoryWatcher : BaseDisposableWatcher, ICollectionWatcher<Item
     public bool IsChanged => this.AddedImpl.Count > 0 || this.RemovedImpl.Count > 0;
 
     /// <inheritdoc />
-    public IEnumerable<Item> Added => this.AddedImpl;
+    public IReadOnlyCollection<Item> Added => this.AddedImpl;
 
     /// <inheritdoc />
-    public IEnumerable<Item> Removed => this.RemovedImpl;
+    public IReadOnlyCollection<Item> Removed => this.RemovedImpl;
 
 
     /*********
