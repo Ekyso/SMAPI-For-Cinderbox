@@ -54,7 +54,7 @@
                 fetchedData: @this.ForJson(this.Model.FetchedData),
                 sectionNames: @this.ForJson(sectionName),
                 levelNames: @this.ForJson(levelNames),
-                showSections: @this.ForJson(Enum.GetNames(typeof(LogSection)).ToDictionary(section => section, _ => false)),
+                showSections: @this.ForJson(Enum.GetNames<LogSection>().ToDictionary(section => section, _ => false)),
                 showLevels: @this.ForJson(defaultFilters),
                 enableFilters: @this.ForJson(!Model.ShowRaw)
             });

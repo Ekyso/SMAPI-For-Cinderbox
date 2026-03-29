@@ -25,7 +25,7 @@ internal class RegenerateBundlesCommand : ConsoleCommand
                 Regenerate the game's community center bundle data. WARNING: this will reset all bundle progress, and may have unintended effects if you've already completed bundles. DO NOT USE THIS unless you're absolutely sure.
 
                 Usage: regenerate_bundles confirm [<type>] [ignore_seed]
-                Regenerate all bundles for this save. If the <type> is set to '{string.Join("' or '", Enum.GetNames(typeof(Game1.BundleType)))}', change the bundle type for the save. If an 'ignore_seed' option is included, remixed bundles are re-randomized without using the predetermined save seed.
+                Regenerate all bundles for this save. If the <type> is set to '{string.Join("' or '", Enum.GetNames<Game1.BundleType>())}', change the bundle type for the save. If an 'ignore_seed' option is included, remixed bundles are re-randomized without using the predetermined save seed.
 
                 Example: regenerate_bundles remixed confirm
                 """

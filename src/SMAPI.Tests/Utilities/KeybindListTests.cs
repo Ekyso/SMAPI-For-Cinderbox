@@ -123,7 +123,7 @@ internal class KeybindListTests
     /// <summary>Get all defined buttons.</summary>
     private static IEnumerable<SButton> GetAllButtons()
     {
-        foreach (SButton button in Enum.GetValues(typeof(SButton)))
+        foreach (SButton button in Enum.GetValues<SButton>())
             yield return button;
     }
 

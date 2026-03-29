@@ -644,11 +644,9 @@ public static class SButtonExtensions
         /// <returns>Returns whether the value was converted successfully.</returns>
         public bool TryGetKeyboard(out Keys key)
         {
-            if (Enum.IsDefined(typeof(Keys), (int)input))
-            {
-                key = (Keys)input;
+            key = (Keys)input;
+            if (Enum.IsDefined(key))
                 return true;
-            }
 
             key = Keys.None;
             return false;
@@ -659,11 +657,9 @@ public static class SButtonExtensions
         /// <returns>Returns whether the value was converted successfully.</returns>
         public bool TryGetController(out Buttons button)
         {
-            if (Enum.IsDefined(typeof(Buttons), (int)input - SButtonExtensions.ControllerOffset))
-            {
-                button = (Buttons)(input - SButtonExtensions.ControllerOffset);
+            button = (Buttons)(input - SButtonExtensions.ControllerOffset);
+            if (Enum.IsDefined(button))
                 return true;
-            }
 
             button = 0;
             return false;

@@ -764,9 +764,7 @@ internal class ContentCoordinator : IDisposable
 
         // vanilla languages (override custom language if they conflict)
         foreach (
-            LocalizedContentManager.LanguageCode code in Enum.GetValues(
-                typeof(LocalizedContentManager.LanguageCode)
-            )
+            LocalizedContentManager.LanguageCode code in Enum.GetValues<LocalizedContentManager.LanguageCode>()
         )
         {
             string? locale = this.GetLocaleCode(code);

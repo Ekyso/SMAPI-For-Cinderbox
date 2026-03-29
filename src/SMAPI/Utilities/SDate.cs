@@ -271,8 +271,8 @@ public class SDate : IEquatable<SDate>
     private SDate(int day, Season season, int year, bool allowDayZero)
     {
         // validate
-        if (!Enum.IsDefined(typeof(Season), season))
-            throw new ArgumentException($"Unknown season '{season}', must be one of [{string.Join(", ", Enum.GetNames(typeof(Season)))}].");
+        if (!Enum.IsDefined(season))
+            throw new ArgumentException($"Unknown season '{season}', must be one of [{string.Join(", ", Enum.GetNames<Season>())}].");
         if (day < 0 || day > this.DaysInSeason)
             throw new ArgumentException($"Invalid day '{day}', must be a value from 1 to {this.DaysInSeason}.");
         if (day == 0 && !(allowDayZero && this.IsDayZero(day, season, year)))
@@ -302,7 +302,7 @@ public class SDate : IEquatable<SDate>
             day,
             Utility.TryParseEnum(season, out Season parsedSeason)
                 ? parsedSeason
-                : throw new ArgumentException($"Unknown season '{season}', must be one of [{string.Join(", ", Enum.GetNames(typeof(Season)))}]."),
+                : throw new ArgumentException($"Unknown season '{season}', must be one of [{string.Join(", ", Enum.GetNames<Season>())}]."),
             year,
             allowDayZero
         )

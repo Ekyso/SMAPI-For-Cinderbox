@@ -93,7 +93,7 @@ internal class ApplySaveFixCommand : ConsoleCommand
     /// <summary>Get the valid save fix IDs.</summary>
     private IEnumerable<string> GetSaveIds()
     {
-        foreach (SaveFixes id in Enum.GetValues(typeof(SaveFixes)))
+        foreach (SaveFixes id in Enum.GetValues<SaveFixes>())
         {
             if (id == SaveFixes.MAX)
                 continue;
