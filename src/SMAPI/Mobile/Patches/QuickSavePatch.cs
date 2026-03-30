@@ -49,7 +49,7 @@ public static class QuickSavePatch
                     typeof(QuickSavePatch).GetMethod(nameof(OptionsPage_Postfix), AnyStatic)
                 )
             );
-            Log.Verbose(Tag, "Patched OptionsPage.ctor for QuickSave buttons");
+            global::Android.Util.Log.Verbose(Tag, "Patched OptionsPage.ctor for QuickSave buttons");
         }
 
         ResolveQuickSave(harmony);
@@ -65,21 +65,30 @@ public static class QuickSavePatch
 
             RefreshQuicksaveState();
 
-            var optionsList = __instance.options;
+            var optionsList =
+                typeof(OptionsPage)
+                    .GetField(
+                        "options",
+                        System.Reflection.BindingFlags.Public
+                            | System.Reflection.BindingFlags.Instance
+                    )
+                    ?.GetValue(__instance) as System.Collections.Generic.List<OptionsElement>;
+            if (optionsList == null)
+                return;
             for (int i = 0; i < optionsList.Count; i++)
             {
                 if (optionsList[i].whichOption == -1)
                 {
                     optionsList.Insert(i + 1, new QuickSaveOptionButton(isSaveButton: true));
                     optionsList.Insert(i + 2, new QuickSaveOptionButton(isSaveButton: false));
-                    Log.Verbose(Tag, "Inserted QuickSave/QuickLoad buttons");
+                    global::Android.Util.Log.Verbose(Tag, "Inserted QuickSave/QuickLoad buttons");
                     break;
                 }
             }
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"OptionsPage_Postfix failed: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"OptionsPage_Postfix failed: {ex.Message}");
         }
     }
 
@@ -93,7 +102,10 @@ public static class QuickSavePatch
             Game1.Date?.Year,
             Game1.timeOfDay
         )!;
-        Log.Verbose(Tag, $"Save completed: cached date={_quicksaveDateString}");
+        global::Android.Util.Log.Verbose(
+            Tag,
+            $"Save completed: cached date={_quicksaveDateString}"
+        );
     }
 
     public static void InvokeSave() => InvokeDelayed(_trySave, "TrySave");
@@ -127,7 +139,7 @@ public static class QuickSavePatch
         }
         catch (Exception ex)
         {
-            Log.Warn(Tag, $"RefreshQuicksaveState failed: {ex.Message}");
+            global::Android.Util.Log.Warn(Tag, $"RefreshQuicksaveState failed: {ex.Message}");
         }
     }
 
@@ -181,7 +193,7 @@ public static class QuickSavePatch
         }
         catch (Exception ex)
         {
-            Log.Warn(Tag, $"Failed to parse quicksave: {ex.Message}");
+            global::Android.Util.Log.Warn(Tag, $"Failed to parse quicksave: {ex.Message}");
             return null;
         }
 
@@ -201,7 +213,6 @@ public static class QuickSavePatch
             if (sub.NodeType != XmlNodeType.Element || sub.Name != "item")
                 continue;
 
-            
             string? key = null;
             string? value = null;
             int itemDepth = sub.Depth;
@@ -229,10 +240,7 @@ public static class QuickSavePatch
                 if (obj.TryGetValue("TimeOfDay", out var tok))
                     return tok.Value<int>();
             }
-            catch
-            {
-                
-            }
+            catch { }
 
             return null;
         }
@@ -301,7 +309,7 @@ public static class QuickSavePatch
                     }
                     catch (Exception ex)
                     {
-                        Log.Error(Tag, $"{name} failed: {ex.Message}");
+                        global::Android.Util.Log.Error(Tag, $"{name} failed: {ex.Message}");
                     }
                 },
                 50
@@ -309,7 +317,7 @@ public static class QuickSavePatch
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Invoke {name} failed: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Invoke {name} failed: {ex.Message}");
         }
     }
 
@@ -331,14 +339,14 @@ public static class QuickSavePatch
 
             if (assembly == null)
             {
-                Log.Verbose(Tag, "QuickSave assembly not loaded");
+                global::Android.Util.Log.Verbose(Tag, "QuickSave assembly not loaded");
                 return;
             }
 
             var mainType = assembly.GetType("QuickSave.Lib.Main");
             if (mainType == null)
             {
-                Log.Warn(Tag, "QuickSave.Lib.Main type not found");
+                global::Android.Util.Log.Warn(Tag, "QuickSave.Lib.Main type not found");
                 return;
             }
 
@@ -348,11 +356,11 @@ public static class QuickSavePatch
             if (_trySave != null && _tryLoad != null)
             {
                 IsAvailable = true;
-                Log.Info(Tag, "QuickSave integration resolved successfully");
+                global::Android.Util.Log.Info(Tag, "QuickSave integration resolved successfully");
             }
             else
             {
-                Log.Warn(
+                global::Android.Util.Log.Warn(
                     Tag,
                     $"Partial resolution: TrySave={_trySave != null}, TryLoad={_tryLoad != null}"
                 );
@@ -363,7 +371,7 @@ public static class QuickSavePatch
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to resolve QuickSave: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to resolve QuickSave: {ex.Message}");
         }
     }
 
@@ -378,7 +386,7 @@ public static class QuickSavePatch
 
             if (modApiField == null)
             {
-                Log.Warn(Tag, "Could not find ModEntry.ModAPI field");
+                global::Android.Util.Log.Warn(Tag, "Could not find ModEntry.ModAPI field");
                 return;
             }
 
@@ -389,7 +397,7 @@ public static class QuickSavePatch
 
             if (raiseSaved == null)
             {
-                Log.Warn(Tag, "Could not find QuickSaveAPI.RaiseSaved method");
+                global::Android.Util.Log.Warn(Tag, "Could not find QuickSaveAPI.RaiseSaved method");
                 return;
             }
 
@@ -399,11 +407,14 @@ public static class QuickSavePatch
                     typeof(QuickSavePatch).GetMethod(nameof(OnSaveCompleted), AnyStatic)
                 )
             );
-            Log.Info(Tag, "Hooked QuickSaveAPI.RaiseSaved for cache updates");
+            global::Android.Util.Log.Info(Tag, "Hooked QuickSaveAPI.RaiseSaved for cache updates");
         }
         catch (Exception ex)
         {
-            Log.Warn(Tag, $"Could not hook save event (non-fatal): {ex.Message}");
+            global::Android.Util.Log.Warn(
+                Tag,
+                $"Could not hook save event (non-fatal): {ex.Message}"
+            );
         }
     }
 }

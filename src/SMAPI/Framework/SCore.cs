@@ -409,7 +409,12 @@ internal class SCore : IDisposable
                     {
                         activity.SetContentView(gameView);
                         // Re-add loading overlay on top of the game surface
-                        SCore.LoadingProgressHandler?.Invoke("Setting up display...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+                        SCore.LoadingProgressHandler?.Invoke(
+                            "Setting up display...",
+                            0.0f,
+                            SCore.LoadingErrors,
+                            SCore.LoadingWarnings
+                        );
                         this.Monitor.Log("SetContentView completed successfully", LogLevel.Debug);
                     }
                     catch (Exception ex)
@@ -436,7 +441,12 @@ internal class SCore : IDisposable
                 }
 
                 // wait for Android surface
-                SCore.LoadingProgressHandler?.Invoke("Waiting for surface...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+                SCore.LoadingProgressHandler?.Invoke(
+                    "Waiting for surface...",
+                    0.0f,
+                    SCore.LoadingErrors,
+                    SCore.LoadingWarnings
+                );
                 this.Monitor.Log("Waiting for Android surface to be created...", LogLevel.Debug);
 
                 var gameViewType = gameView.GetType();
@@ -648,7 +658,12 @@ internal class SCore : IDisposable
                 }
 
                 // wait for GL context
-                SCore.LoadingProgressHandler?.Invoke("Waiting for GL context...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+                SCore.LoadingProgressHandler?.Invoke(
+                    "Waiting for GL context...",
+                    0.0f,
+                    SCore.LoadingErrors,
+                    SCore.LoadingWarnings
+                );
                 this.Monitor.Log("Waiting for GL context...", LogLevel.Debug);
                 var glContextField = gameViewType.GetField(
                     "glContextAvailable",
@@ -759,7 +774,12 @@ internal class SCore : IDisposable
                 });
 
                 // wait for game initialization
-                SCore.LoadingProgressHandler?.Invoke("Initializing game...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+                SCore.LoadingProgressHandler?.Invoke(
+                    "Initializing game...",
+                    0.0f,
+                    SCore.LoadingErrors,
+                    SCore.LoadingWarnings
+                );
                 this.Monitor.Log("Waiting for game to initialize...", LogLevel.Debug);
                 SCore.GameInitializedEvent = new ManualResetEventSlim(false);
                 var gameWaitStart = DateTime.UtcNow;
@@ -1009,7 +1029,12 @@ internal class SCore : IDisposable
             SCore.LoadingErrors = 0;
             SCore.LoadingWarnings = 0;
             SCore.IsCountingLoadErrors = true;
-            SCore.LoadingProgressHandler?.Invoke("Loading mod metadata...", 0.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+            SCore.LoadingProgressHandler?.Invoke(
+                "Loading mod metadata...",
+                0.0f,
+                SCore.LoadingErrors,
+                SCore.LoadingWarnings
+            );
 #endif
             this.Monitor.Log("Loading mod metadata...", LogLevel.Debug);
             ModResolver resolver = new();
@@ -2406,10 +2431,10 @@ internal class SCore : IDisposable
 
             case LoadStage.Loaded:
                 // override chat box
-                Game1.onScreenMenus.Remove(Game1.chatBox);
-                Game1.onScreenMenus.Add(
-                    Game1.chatBox = new SChatBox(this.LogManager.MonitorForGame)
-                );
+                CrossPlatform.GameAccessors.GetOnScreenMenus().Remove(Game1.chatBox);
+                CrossPlatform
+                    .GameAccessors.GetOnScreenMenus()
+                    .Add(Game1.chatBox = new SChatBox(this.LogManager.MonitorForGame));
                 break;
         }
 
@@ -2512,8 +2537,11 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_ANDROID
         // Hide the loading overlay once the title menu is actually rendering
         var handler = SCore.LoadingProgressHandler;
-        if (handler != null && Context.IsGameLaunched
-            && Game1.activeClickableMenu is StardewValley.Menus.TitleMenu)
+        if (
+            handler != null
+            && Context.IsGameLaunched
+            && Game1.activeClickableMenu is StardewValley.Menus.TitleMenu
+        )
         {
             SCore.LoadingProgressHandler = null;
             handler.Invoke("Ready!", 1.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
@@ -2612,8 +2640,11 @@ internal class SCore : IDisposable
         if (SCore.LoadingProgressHandler != null)
         {
             SCore.LoadingProgressHandler.Invoke(
-                $"Loading {assetName.BaseName}...", 0.48f,
-                SCore.LoadingErrors, SCore.LoadingWarnings);
+                $"Loading {assetName.BaseName}...",
+                0.48f,
+                SCore.LoadingErrors,
+                SCore.LoadingWarnings
+            );
         }
 #endif
 
@@ -3371,7 +3402,12 @@ internal class SCore : IDisposable
     {
         this.Monitor.Log("Loading mods...", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
-        SCore.LoadingProgressHandler?.Invoke("Loading mods...", 0.16f, SCore.LoadingErrors, SCore.LoadingWarnings);
+        SCore.LoadingProgressHandler?.Invoke(
+            "Loading mods...",
+            0.16f,
+            SCore.LoadingErrors,
+            SCore.LoadingWarnings
+        );
 #endif
 
         // load mods
@@ -3398,7 +3434,12 @@ internal class SCore : IDisposable
             {
 #if SMAPI_FOR_ANDROID
                 float progress = 0.16f + 0.12f * ((float)modIndex / mods.Length);
-                SCore.LoadingProgressHandler?.Invoke($"Loading {mod.DisplayName}...", progress, SCore.LoadingErrors, SCore.LoadingWarnings);
+                SCore.LoadingProgressHandler?.Invoke(
+                    $"Loading {mod.DisplayName}...",
+                    progress,
+                    SCore.LoadingErrors,
+                    SCore.LoadingWarnings
+                );
                 modIndex++;
 #endif
                 if (
@@ -3472,7 +3513,12 @@ internal class SCore : IDisposable
         // initialize loaded non-content-pack mods
         this.Monitor.Log("Launching mods...", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
-        SCore.LoadingProgressHandler?.Invoke("Launching mods...", 0.28f, SCore.LoadingErrors, SCore.LoadingWarnings);
+        SCore.LoadingProgressHandler?.Invoke(
+            "Launching mods...",
+            0.28f,
+            SCore.LoadingErrors,
+            SCore.LoadingWarnings
+        );
         this.Monitor.Log(
             $"Memory: {Mobile.MemoryDiagnostics.Snapshot("before mod Entry() calls")}",
             LogLevel.Debug
@@ -3483,7 +3529,12 @@ internal class SCore : IDisposable
         {
 #if SMAPI_FOR_ANDROID
             float entryProgress = 0.28f + 0.17f * ((float)entryCount / loadedMods.Length);
-            SCore.LoadingProgressHandler?.Invoke($"Launching {metadata.DisplayName}...", entryProgress, SCore.LoadingErrors, SCore.LoadingWarnings);
+            SCore.LoadingProgressHandler?.Invoke(
+                $"Launching {metadata.DisplayName}...",
+                entryProgress,
+                SCore.LoadingErrors,
+                SCore.LoadingWarnings
+            );
 #endif
             IMod mod =
                 metadata.Mod
@@ -3590,7 +3641,12 @@ internal class SCore : IDisposable
 #endif
         this.Monitor.Log("Mods loaded and ready!", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
-        SCore.LoadingProgressHandler?.Invoke("Starting game...", 0.45f, SCore.LoadingErrors, SCore.LoadingWarnings);
+        SCore.LoadingProgressHandler?.Invoke(
+            "Starting game...",
+            0.45f,
+            SCore.LoadingErrors,
+            SCore.LoadingWarnings
+        );
 #endif
     }
 

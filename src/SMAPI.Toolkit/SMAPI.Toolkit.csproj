@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>StardewModdingAPI.Toolkit</RootNamespace>
     <Description>A library which encapsulates mod-handling logic for mod managers and tools. Not intended for use by mods.</Description>
-    <TargetFrameworks>net6.0;netstandard2.0;net8.0-android</TargetFrameworks>
+    <TargetFrameworks>net6.0;netstandard2.0;net10.0-android</TargetFrameworks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
 
     <PublishTrimmed

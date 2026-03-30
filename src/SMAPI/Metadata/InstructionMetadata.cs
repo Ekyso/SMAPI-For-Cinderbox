@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -49,8 +50,13 @@ internal class InstructionMetadata
     *********/
     /// <summary>The assembly names to which to heuristically detect broken references.</summary>
     /// <remarks>The current implementation only works correctly with assemblies that should always be present.</remarks>
-    private readonly ISet<string> ValidateReferencesToAssemblies = new HashSet<string> { "StardewModdingAPI", "Stardew Valley", "StardewValley", "Netcode" };
-
+    private readonly ISet<string> ValidateReferencesToAssemblies = new HashSet<string>
+    {
+        "StardewModdingAPI",
+        "Stardew Valley",
+        "StardewValley",
+        "Netcode",
+    };
 
     /*********
     ** Public methods
@@ -59,7 +65,11 @@ internal class InstructionMetadata
     /// <param name="paranoidMode">Whether to detect paranoid mode issues.</param>
     /// <param name="rewriteMods">Whether to get handlers which rewrite mods for compatibility.</param>
     /// <param name="logTechnicalDetailsForBrokenMods">Whether to include more technical details about broken mods in the TRACE logs. This is mainly useful for creating compatibility rewriters.</param>
-    public IEnumerable<IInstructionHandler> GetHandlers(bool paranoidMode, bool rewriteMods, bool logTechnicalDetailsForBrokenMods)
+    public IEnumerable<IInstructionHandler> GetHandlers(
+        bool paranoidMode,
+        bool rewriteMods,
+        bool logTechnicalDetailsForBrokenMods
+    )
     {
         /****
         ** rewrite CIL to fix incompatible code
@@ -67,22 +77,34 @@ internal class InstructionMetadata
         // rewrite for crossplatform compatibility
         if (rewriteMods)
         {
+            bool isMobile = Mobile.AndroidPaths.IsInitialized && Mobile.AndroidPaths.IsMobile;
+
             // specific versions
             yield return new ReplaceReferencesRewriter()
                 /****
                 ** Stardew Valley 1.5
                 ****/
                 // fields moved
-                .MapField("Netcode.NetCollection`1<StardewValley.Objects.Furniture> StardewValley.Locations.DecoratableLocation::furniture", typeof(GameLocation), nameof(GameLocation.furniture))
-                .MapField("Netcode.NetCollection`1<StardewValley.TerrainFeatures.ResourceClump> StardewValley.Farm::resourceClumps", typeof(GameLocation), nameof(GameLocation.resourceClumps))
-                .MapField("Netcode.NetCollection`1<StardewValley.TerrainFeatures.ResourceClump> StardewValley.Locations.MineShaft::resourceClumps", typeof(GameLocation), nameof(GameLocation.resourceClumps))
-
+                .MapField(
+                    "Netcode.NetCollection`1<StardewValley.Objects.Furniture> StardewValley.Locations.DecoratableLocation::furniture",
+                    typeof(GameLocation),
+                    nameof(GameLocation.furniture)
+                )
+                .MapField(
+                    "Netcode.NetCollection`1<StardewValley.TerrainFeatures.ResourceClump> StardewValley.Farm::resourceClumps",
+                    typeof(GameLocation),
+                    nameof(GameLocation.resourceClumps)
+                )
+                .MapField(
+                    "Netcode.NetCollection`1<StardewValley.TerrainFeatures.ResourceClump> StardewValley.Locations.MineShaft::resourceClumps",
+                    typeof(GameLocation),
+                    nameof(GameLocation.resourceClumps)
+                )
                 /****
                 ** Stardew Valley 1.5.5
                 ****/
                 // XNA => MonoGame method changes
                 .MapFacade<SpriteBatch, SpriteBatchFacade>()
-
                 /****
                 ** Stardew Valley 1.6
                 ****/
@@ -94,7 +116,6 @@ internal class InstructionMetadata
                 .MapType("StardewValley.IAudioCategory", typeof(IAudioCategory))
                 .MapType("StardewValley.IAudioEngine", typeof(IAudioEngine))
                 .MapType("StardewValley.Network.NetAudio/SoundContext", typeof(SoundContext))
-
                 // moved types (enchantments)
                 .MapType("StardewValley.AmethystEnchantment", typeof(AmethystEnchantment))
                 .MapType("StardewValley.AquamarineEnchantment", typeof(AquamarineEnchantment))
@@ -131,12 +152,10 @@ internal class InstructionMetadata
                 .MapType("StardewValley.TopazEnchantment", typeof(TopazEnchantment))
                 .MapType("StardewValley.VampiricEnchantment", typeof(VampiricEnchantment))
                 .MapType("StardewValley.WateringCanEnchantment", typeof(WateringCanEnchantment))
-
                 // moved types (special orders)
                 .MapType("StardewValley.SpecialOrder", typeof(SpecialOrder))
                 .MapType("StardewValley.SpecialOrder/QuestDuration", typeof(QuestDuration))
                 .MapType("StardewValley.SpecialOrder/QuestState", typeof(SpecialOrderStatus))
-
                 .MapType("StardewValley.CollectObjective", typeof(CollectObjective))
                 .MapType("StardewValley.DeliverObjective", typeof(DeliverObjective))
                 .MapType("StardewValley.DonateObjective", typeof(DonateObjective))
@@ -147,14 +166,12 @@ internal class InstructionMetadata
                 .MapType("StardewValley.ReachMineFloorObjective", typeof(ReachMineFloorObjective))
                 .MapType("StardewValley.ShipObjective", typeof(ShipObjective))
                 .MapType("StardewValley.SlayObjective", typeof(SlayObjective))
-
                 .MapType("StardewValley.FriendshipReward", typeof(FriendshipReward))
                 .MapType("StardewValley.GemsReward", typeof(GemsReward))
                 .MapType("StardewValley.MailReward", typeof(MailReward))
                 .MapType("StardewValley.MoneyReward", typeof(MoneyReward))
                 .MapType("StardewValley.OrderReward", typeof(OrderReward))
                 .MapType("StardewValley.ResetEventReward", typeof(ResetEventReward))
-
                 // moved types (other)
                 .MapType("LocationWeather", typeof(LocationWeather))
                 .MapType("WaterTiles", typeof(WaterTiles))
@@ -164,19 +181,20 @@ internal class InstructionMetadata
                 .MapType("StardewValley.Network.IWorldState", typeof(NetWorldState))
                 .MapType("StardewValley.PathFindController", typeof(PathFindController))
                 .MapType("StardewValley.SchedulePathDescription", typeof(SchedulePathDescription))
-
                 // deleted delegates
                 .MapType("StardewValley.DelayedAction/delayedBehavior", typeof(Action))
-
                 // field renames
                 .MapFieldName(typeof(FloorPathData), "ID", nameof(FloorPathData.Id))
                 .MapFieldName(typeof(ModFarmType), "ID", nameof(ModFarmType.Id))
                 .MapFieldName(typeof(ModLanguage), "ID", nameof(ModLanguage.Id))
-                .MapFieldName(typeof(ModWallpaperOrFlooring), "ID", nameof(ModWallpaperOrFlooring.Id))
+                .MapFieldName(
+                    typeof(ModWallpaperOrFlooring),
+                    "ID",
+                    nameof(ModWallpaperOrFlooring.Id)
+                )
                 .MapFieldName(typeof(MovieData), "ID", nameof(MovieData.Id))
                 .MapFieldName(typeof(MovieReaction), "ID", nameof(MovieReaction.Id))
                 .MapFieldName(typeof(MovieScene), "ID", nameof(MovieScene.Id))
-
                 // general API changes
                 // note: types are mapped before members, regardless of the order listed here
                 .MapFacade<AbigailGame, AbigailGameFacade>()
@@ -193,6 +211,7 @@ internal class InstructionMetadata
                 .MapFacade<Butterfly, ButterflyFacade>()
                 .MapFacade<Building, BuildingFacade>()
                 .MapFacade<CarpenterMenu, CarpenterMenuFacade>()
+                .When(!isMobile, r => r.MapFacade<CarpenterMenu, CarpenterMenuDesktopFacade>())
                 .MapFacade<Cask, CaskFacade>()
                 .MapFacade<Character, CharacterFacade>()
                 .MapFacade<Chest, ChestFacade>()
@@ -200,12 +219,22 @@ internal class InstructionMetadata
                 .MapFacade<ColoredObject, ColoredObjectFacade>()
                 .MapFacade<CrabPot, CrabPotFacade>()
                 .MapFacade<CraftingRecipe, CraftingRecipeFacade>()
+                .When(
+                    isMobile,
+                    r =>
+                        r.MapFacade<CharacterCustomization, CharacterCustomizationMobileFacade>()
+                            .MapFacade<CraftingPage, CraftingPageMobileFacade>()
+                )
                 .MapFacade<Crop, CropFacade>()
                 .MapFacade<DebuffingProjectile, DebuffingProjectileFacade>()
                 .MapFacade<DelayedAction, DelayedActionFacade>()
                 .MapFacade<Dialogue, DialogueFacade>()
                 .MapFacade<DialogueBox, DialogueBoxFacade>()
                 .MapFacade<DiscreteColorPicker, DiscreteColorPickerFacade>()
+                .When(
+                    !isMobile,
+                    r => r.MapFacade<DiscreteColorPicker, DiscreteColorPickerDesktopFacade>()
+                )
                 .MapFacade<Event, EventFacade>()
                 .MapFacade<Farm, FarmFacade>()
                 .MapFacade<FarmAnimal, FarmAnimalFacade>()
@@ -220,18 +249,57 @@ internal class InstructionMetadata
                 .MapFacade<Furniture, FurnitureFacade>()
                 .MapFacade<FruitTree, FruitTreeFacade>()
                 .MapFacade<Game1, Game1Facade>()
+                .When(isMobile, r => r.MapFacade<GameMenu, GameMenuMobileFacade>())
                 .MapFacade<GameLocation, GameLocationFacade>()
                 .MapFacade<GiantCrop, GiantCropFacade>()
                 .MapFacade<Hat, HatFacade>()
                 .MapFacade<HoeDirt, HoeDirtFacade>()
                 .MapFacade<HUDMessage, HudMessageFacade>()
                 .MapFacade<IClickableMenu, IClickableMenuFacade>()
+                .When(isMobile, r => r.MapFacade<IClickableMenu, IClickableMenuMobileFacade>())
+                .When(
+                    isMobile,
+                    r =>
+                        r.MapFacade<InventoryMenu, InventoryMenuMobileFacade>()
+                            .MapFacade<InventoryPage, InventoryPageMobileFacade>()
+                            // Keyboard input types: Win32-only on desktop, don't exist on mobile
+                            .MapType(
+                                "StardewValley.KeyboardInput",
+                                typeof(Framework.ModLoading.Rewriters.StardewValley_1_6.Internal.KeyboardInput)
+                            )
+                            .MapType(
+                                "StardewValley.KeyEventArgs",
+                                typeof(Framework.ModLoading.Rewriters.StardewValley_1_6.Internal.KeyEventArgs)
+                            )
+                            .MapType(
+                                "StardewValley.KeyEventHandler",
+                                typeof(Framework.ModLoading.Rewriters.StardewValley_1_6.Internal.KeyEventHandler)
+                            )
+                )
                 .MapFacade<IslandWest, IslandWestFacade>()
                 .MapFacade<Item, ItemFacade>()
                 .MapFacade<ItemQueryContext, ItemQueryContextFacade>()
+                // ItemGrabMenu: TransferredItemSprite is inner class on desktop, top-level on mobile.
+                // Constructor has different param layout between platforms.
+                .When(
+                    isMobile,
+                    r =>
+                    {
+                        var transferredType = typeof(ItemGrabMenu).Assembly.GetType(
+                            "StardewValley.Menus.TransferredItemSprite"
+                        );
+                        if (transferredType != null)
+                            r.MapType(
+                                "StardewValley.Menus.ItemGrabMenu/TransferredItemSprite",
+                                transferredType
+                            );
+                        r.MapFacade<ItemGrabMenu, ItemGrabMenuMobileFacade>();
+                    }
+                )
                 .MapFacade<JunimoHut, JunimoHutFacade>()
                 .MapFacade<LargeTerrainFeature, LargeTerrainFeatureFacade>()
                 .MapFacade<Layer, LayerFacade>()
+                .When(isMobile, r => r.MapFacade<LetterViewerMenu, LetterViewerMenuMobileFacade>())
                 .MapFacade<LibraryMuseum, LibraryMuseumFacade>()
                 .MapFacade<LightSource, LightSourceFacade>()
                 .MapFacade<LocalizedContentManager, LocalizedContentManagerFacade>()
@@ -239,10 +307,21 @@ internal class InstructionMetadata
                 .MapFacade<MineShaft, MineShaftFacade>()
                 .MapFacade<Multiplayer, MultiplayerFacade>()
                 .MapFacade<MeleeWeapon, MeleeWeaponFacade>()
+                .When(
+                    isMobile,
+                    r => r.MapFacade<MenuWithInventory, MenuWithInventoryMobileFacade>()
+                )
                 .MapFacade<NetFields, NetFieldsFacade>()
                 .MapFacade<NetWorldState, NetWorldStateFacade>()
                 .MapFacade<NPC, NpcFacade>()
+                .When(
+                    isMobile,
+                    r =>
+                        r.MapFacade<OptionsElement, OptionsElementMobileFacade>()
+                            .MapFacade<OptionsDropDown, OptionsDropDownMobileFacade>()
+                )
                 .MapFacade<PathFindController, PathFindControllerFacade>()
+                .When(isMobile, r => r.MapFacade<PondQueryMenu, PondQueryMenuMobileFacade>())
                 .MapFacade<Projectile, ProjectileFacade>()
                 .MapFacade<ProfileMenu, ProfileMenuFacade>()
                 .MapFacade<Quest, QuestFacade>()
@@ -250,11 +329,43 @@ internal class InstructionMetadata
                 .MapFacade<Ring, RingFacade>()
                 .MapFacade<ShippingBin, ShippingBinFacade>()
                 .MapFacade<ShopMenu, ShopMenuFacade>()
+                .When(!isMobile, r => r.MapFacade<ShopMenu, ShopMenuDesktopFacade>())
+                .When(
+                    isMobile,
+                    r =>
+                        r.MapFacade<ShopMenu, ShopMenuMobileFacade>()
+                            .MapType(
+                                "StardewValley.Menus.ShopMenu/ShopTabClickableTextureComponent",
+                                typeof(Framework.ModLoading.Rewriters.StardewValley_1_6.Internal.ShopTabClickableTextureComponent)
+                            )
+                            .MapMethod(
+                                "System.Void StardewValley.Menus.ShopMenu::UseNoTabs()",
+                                typeof(ShopMenuMobileFacade),
+                                nameof(ShopMenuMobileFacade.UseNoTabs)
+                            )
+                            .MapMethod(
+                                "System.Void StardewValley.Menus.ShopMenu::UseCatalogueTabs()",
+                                typeof(ShopMenuMobileFacade),
+                                nameof(ShopMenuMobileFacade.UseCatalogueTabs)
+                            )
+                            .MapMethod(
+                                "System.Void StardewValley.Menus.ShopMenu::UseFurnitureCatalogueTabs()",
+                                typeof(ShopMenuMobileFacade),
+                                nameof(ShopMenuMobileFacade.UseFurnitureCatalogueTabs)
+                            )
+                            .MapMethod(
+                                "System.Void StardewValley.Menus.ShopMenu::UseDresserTabs()",
+                                typeof(ShopMenuMobileFacade),
+                                nameof(ShopMenuMobileFacade.UseDresserTabs)
+                            )
+                )
                 .MapFacade<Sign, SignFacade>()
                 .MapFacade<Slingshot, SlingshotFacade>()
                 .MapFacade<SObject, ObjectFacade>()
+                .When(isMobile, r => r.MapFacade<SocialPage, SocialPageMobileFacade>())
                 .MapFacade<SoundEffect, SoundEffectFacade>()
                 .MapFacade<SpriteText, SpriteTextFacade>()
+                .When(isMobile, r => r.MapFacade<SaveGame, SaveGameMobileFacade>())
                 .MapFacade<Stats, Stats_160_Facade>()
                 .MapFacade<Stats, Stats_1615_Facade>()
                 .MapFacade<StorageFurniture, StorageFurnitureFacade>()
@@ -264,36 +375,170 @@ internal class InstructionMetadata
                 .MapFacade<Tree, TreeFacade>()
                 .MapFacade<TV, TvFacade>()
                 .MapFacade<Utility, UtilityFacade>()
-                .MapFacade("Microsoft.Xna.Framework.Graphics.ViewportExtensions", typeof(ViewportExtensionsFacade))
+                .MapFacade(
+                    "Microsoft.Xna.Framework.Graphics.ViewportExtensions",
+                    typeof(ViewportExtensionsFacade)
+                )
                 .MapFacade<Wallpaper, WallpaperFacade>()
                 .MapFacade<WateringCan, WateringCanFacade>()
                 .MapFacade<WorldDate, WorldDateFacade>()
                 .MapFacade(typeof(WorldMapManager).FullName!, typeof(WorldMapManagerFacade))
-
                 // BuildableGameLocation merged into GameLocation
-                .MapFacade("StardewValley.Locations.BuildableGameLocation", typeof(BuildableGameLocationFacade))
-                .MapField("Netcode.NetCollection`1<StardewValley.Buildings.Building> StardewValley.Locations.BuildableGameLocation::buildings", typeof(GameLocation), nameof(GameLocation.buildings))
-
+                .MapFacade(
+                    "StardewValley.Locations.BuildableGameLocation",
+                    typeof(BuildableGameLocationFacade)
+                )
+                .MapField(
+                    "Netcode.NetCollection`1<StardewValley.Buildings.Building> StardewValley.Locations.BuildableGameLocation::buildings",
+                    typeof(GameLocation),
+                    nameof(GameLocation.buildings)
+                )
                 // OverlaidDictionary enumerators changed
                 // note: types are mapped before members, regardless of the order listed here
-                .MapType("StardewValley.Network.OverlaidDictionary/KeysCollection", typeof(OverlaidDictionaryFacade.KeysCollection))
-                .MapType("StardewValley.Network.OverlaidDictionary/KeysCollection/Enumerator", typeof(OverlaidDictionaryFacade.KeysCollection.Enumerator))
-                .MapType("StardewValley.Network.OverlaidDictionary/PairsCollection", typeof(OverlaidDictionaryFacade.PairsCollection))
-                .MapType("StardewValley.Network.OverlaidDictionary/PairsCollection/Enumerator", typeof(OverlaidDictionaryFacade.PairsCollection.Enumerator))
-                .MapType("StardewValley.Network.OverlaidDictionary/ValuesCollection", typeof(OverlaidDictionaryFacade.ValuesCollection))
-                .MapType("StardewValley.Network.OverlaidDictionary/ValuesCollection/Enumerator", typeof(OverlaidDictionaryFacade.ValuesCollection.Enumerator))
-                .MapMethod($"{typeof(OverlaidDictionaryFacade).FullName}/{nameof(OverlaidDictionaryFacade.KeysCollection)} StardewValley.Network.OverlaidDictionary::get_Keys()", typeof(OverlaidDictionaryFacade), $"get_{nameof(OverlaidDictionaryFacade.Keys)}")
-                .MapMethod($"{typeof(OverlaidDictionaryFacade).FullName}/{nameof(OverlaidDictionaryFacade.PairsCollection)} StardewValley.Network.OverlaidDictionary::get_Pairs()", typeof(OverlaidDictionaryFacade), $"get_{nameof(OverlaidDictionaryFacade.Pairs)}")
-                .MapMethod($"{typeof(OverlaidDictionaryFacade).FullName}/{nameof(OverlaidDictionaryFacade.ValuesCollection)} StardewValley.Network.OverlaidDictionary::get_Values()", typeof(OverlaidDictionaryFacade), $"get_{nameof(OverlaidDictionaryFacade.Values)}")
-
+                .MapType(
+                    "StardewValley.Network.OverlaidDictionary/KeysCollection",
+                    typeof(OverlaidDictionaryFacade.KeysCollection)
+                )
+                .MapType(
+                    "StardewValley.Network.OverlaidDictionary/KeysCollection/Enumerator",
+                    typeof(OverlaidDictionaryFacade.KeysCollection.Enumerator)
+                )
+                .MapType(
+                    "StardewValley.Network.OverlaidDictionary/PairsCollection",
+                    typeof(OverlaidDictionaryFacade.PairsCollection)
+                )
+                .MapType(
+                    "StardewValley.Network.OverlaidDictionary/PairsCollection/Enumerator",
+                    typeof(OverlaidDictionaryFacade.PairsCollection.Enumerator)
+                )
+                .MapType(
+                    "StardewValley.Network.OverlaidDictionary/ValuesCollection",
+                    typeof(OverlaidDictionaryFacade.ValuesCollection)
+                )
+                .MapType(
+                    "StardewValley.Network.OverlaidDictionary/ValuesCollection/Enumerator",
+                    typeof(OverlaidDictionaryFacade.ValuesCollection.Enumerator)
+                )
+                .MapMethod(
+                    $"{typeof(OverlaidDictionaryFacade).FullName}/{nameof(OverlaidDictionaryFacade.KeysCollection)} StardewValley.Network.OverlaidDictionary::get_Keys()",
+                    typeof(OverlaidDictionaryFacade),
+                    $"get_{nameof(OverlaidDictionaryFacade.Keys)}"
+                )
+                .MapMethod(
+                    $"{typeof(OverlaidDictionaryFacade).FullName}/{nameof(OverlaidDictionaryFacade.PairsCollection)} StardewValley.Network.OverlaidDictionary::get_Pairs()",
+                    typeof(OverlaidDictionaryFacade),
+                    $"get_{nameof(OverlaidDictionaryFacade.Pairs)}"
+                )
+                .MapMethod(
+                    $"{typeof(OverlaidDictionaryFacade).FullName}/{nameof(OverlaidDictionaryFacade.ValuesCollection)} StardewValley.Network.OverlaidDictionary::get_Values()",
+                    typeof(OverlaidDictionaryFacade),
+                    $"get_{nameof(OverlaidDictionaryFacade.Values)}"
+                )
                 // implicit NetField conversions removed
-                .MapMethod("Netcode.NetFieldBase`2::op_Implicit", typeof(NetFieldBaseFacade<,>), "op_Implicit")
-                .MapMethod("System.Int64 Netcode.NetLong::op_Implicit(Netcode.NetLong)", typeof(NetLongFacade), nameof(NetLongFacade.op_Implicit))
-                .MapMethod("System.Boolean Netcode.NetBool::op_Implicit(Netcode.NetBool)", typeof(ImplicitConversionOperatorsFacade), nameof(ImplicitConversionOperatorsFacade.NetBool_ToBool))
-                .MapMethod("System.Int32 Netcode.NetInt::op_Implicit(Netcode.NetInt)", typeof(ImplicitConversionOperatorsFacade), nameof(ImplicitConversionOperatorsFacade.NetInt_ToInt))
-                .MapMethod("System.String Netcode.NetString::op_Implicit(Netcode.NetString)", typeof(ImplicitConversionOperatorsFacade), nameof(ImplicitConversionOperatorsFacade.NetString_ToString))
-                .MapMethod("System.Int32 StardewValley.Network.NetDirection::op_Implicit(StardewValley.Network.NetDirection)", typeof(ImplicitConversionOperatorsFacade), nameof(ImplicitConversionOperatorsFacade.NetDirection_ToInt))
-                .MapMethod("!0 StardewValley.Network.NetPausableField`3<Microsoft.Xna.Framework.Vector2,Netcode.NetVector2,Netcode.NetVector2>::op_Implicit(StardewValley.Network.NetPausableField`3<!0,!1,!2>)", typeof(NetPausableFieldFacade<Vector2, NetVector2, NetVector2>), nameof(NetPausableFieldFacade<Vector2, NetVector2, NetVector2>.op_Implicit));
+                .MapMethod(
+                    "Netcode.NetFieldBase`2::op_Implicit",
+                    typeof(NetFieldBaseFacade<,>),
+                    "op_Implicit"
+                )
+                .MapMethod(
+                    "System.Int64 Netcode.NetLong::op_Implicit(Netcode.NetLong)",
+                    typeof(NetLongFacade),
+                    nameof(NetLongFacade.op_Implicit)
+                )
+                .MapMethod(
+                    "System.Boolean Netcode.NetBool::op_Implicit(Netcode.NetBool)",
+                    typeof(ImplicitConversionOperatorsFacade),
+                    nameof(ImplicitConversionOperatorsFacade.NetBool_ToBool)
+                )
+                .MapMethod(
+                    "System.Int32 Netcode.NetInt::op_Implicit(Netcode.NetInt)",
+                    typeof(ImplicitConversionOperatorsFacade),
+                    nameof(ImplicitConversionOperatorsFacade.NetInt_ToInt)
+                )
+                .MapMethod(
+                    "System.String Netcode.NetString::op_Implicit(Netcode.NetString)",
+                    typeof(ImplicitConversionOperatorsFacade),
+                    nameof(ImplicitConversionOperatorsFacade.NetString_ToString)
+                )
+                .MapMethod(
+                    "System.Int32 StardewValley.Network.NetDirection::op_Implicit(StardewValley.Network.NetDirection)",
+                    typeof(ImplicitConversionOperatorsFacade),
+                    nameof(ImplicitConversionOperatorsFacade.NetDirection_ToInt)
+                )
+                .MapMethod(
+                    "!0 StardewValley.Network.NetPausableField`3<Microsoft.Xna.Framework.Vector2,Netcode.NetVector2,Netcode.NetVector2>::op_Implicit(StardewValley.Network.NetPausableField`3<!0,!1,!2>)",
+                    typeof(NetPausableFieldFacade<Vector2, NetVector2, NetVector2>),
+                    nameof(NetPausableFieldFacade<Vector2, NetVector2, NetVector2>.op_Implicit)
+                )
+                // Audio interface members missing on mobile - redirect to facade that
+                // accesses the underlying XNA objects via reflection
+                .When(
+                    isMobile,
+                    r =>
+                        r.MapMethod(
+                                "System.Single StardewValley.ICue::get_Pitch()",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.GetCuePitch)
+                            )
+                            .MapMethod(
+                                "System.Void StardewValley.ICue::set_Pitch(System.Single)",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.SetCuePitch)
+                            )
+                            .MapMethod(
+                                "System.Single StardewValley.ICue::get_Volume()",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.GetCueVolume)
+                            )
+                            .MapMethod(
+                                "System.Void StardewValley.ICue::set_Volume(System.Single)",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.SetCueVolume)
+                            )
+                            .MapMethod(
+                                "System.Boolean StardewValley.ICue::get_IsPitchBeingControlledByRPC()",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.GetCueIsPitchBeingControlledByRPC)
+                            )
+                            .MapMethod(
+                                "System.Boolean StardewValley.ISoundBank::Exists(System.String)",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.SoundBankExists)
+                            )
+                            .MapMethod(
+                                "System.Void StardewValley.ISoundBank::AddCue(Microsoft.Xna.Framework.Audio.CueDefinition)",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.SoundBankAddCue)
+                            )
+                            .MapMethod(
+                                "Microsoft.Xna.Framework.Audio.CueDefinition StardewValley.ISoundBank::GetCueDefinition(System.String)",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.SoundBankGetCueDefinition)
+                            )
+                            .MapMethod(
+                                "System.Int32 StardewValley.Audio.IAudioEngine::GetCategoryIndex(System.String)",
+                                typeof(AudioInterfaceMobileFacade),
+                                nameof(AudioInterfaceMobileFacade.AudioEngineGetCategoryIndex)
+                            )
+                )
+                // DeepCloner is embedded in desktop Stardew Valley.dll but missing from mobile.
+                // Remap to the standalone NuGet package so mods can resolve DeepClone/ShallowCloneTo.
+                // Must use runtime type loading - typeof() would trigger assembly load at JIT time.
+                .When(
+                    isMobile,
+                    r =>
+                    {
+                        // Find DeepCloner from already-loaded assemblies or load from disk
+                        var asm =
+                            AppDomain
+                                .CurrentDomain.GetAssemblies()
+                                .FirstOrDefault(a => a.GetName().Name == "DeepCloner")
+                            ?? TryLoadAssembly("DeepCloner");
+                        var deepClonerType = asm?.GetType("Force.DeepCloner.DeepClonerExtensions");
+                        if (deepClonerType != null)
+                            r.MapType("Force.DeepCloner.DeepClonerExtensions", deepClonerType);
+                    }
+                );
 
 #if SMAPI_FOR_ANDROID
             // rewrite Assembly.Location for Android compatibility
@@ -303,6 +548,7 @@ internal class InstructionMetadata
             // heuristic rewrites
             yield return new HeuristicFieldRewriter(this.ValidateReferencesToAssemblies);
             yield return new HeuristicMethodRewriter(this.ValidateReferencesToAssemblies);
+            yield return new HeuristicReturnTypeRewriter(this.ValidateReferencesToAssemblies);
 
             // 32-bit to 64-bit in Stardew Valley 1.5.5
             yield return new ArchitectureAssemblyRewriter();
@@ -315,14 +561,37 @@ internal class InstructionMetadata
         yield return new HarmonyDetector();
 
         // broken code
-        yield return new ReferenceToInvalidMemberFinder(this.ValidateReferencesToAssemblies, logTechnicalDetailsForBrokenMods);
+        yield return new ReferenceToInvalidMemberFinder(
+            this.ValidateReferencesToAssemblies,
+            logTechnicalDetailsForBrokenMods
+        );
 
         // code which may impact game stability
-        yield return new FieldFinder(typeof(SaveGame).FullName!, [nameof(SaveGame.serializer), nameof(SaveGame.farmerSerializer), nameof(SaveGame.locationSerializer)], InstructionHandleResult.DetectedSaveSerializer);
-        yield return new EventFinder(typeof(ISpecializedEvents).FullName!, [nameof(ISpecializedEvents.UnvalidatedUpdateTicked), nameof(ISpecializedEvents.UnvalidatedUpdateTicking)], InstructionHandleResult.DetectedUnvalidatedUpdateTick);
+#if !SMAPI_FOR_ANDROID
+        yield return new FieldFinder(
+            typeof(SaveGame).FullName!,
+            [
+                nameof(SaveGame.serializer),
+                nameof(SaveGame.farmerSerializer),
+                nameof(SaveGame.locationSerializer),
+            ],
+            InstructionHandleResult.DetectedSaveSerializer
+        );
+#endif
+        yield return new EventFinder(
+            typeof(ISpecializedEvents).FullName!,
+            [
+                nameof(ISpecializedEvents.UnvalidatedUpdateTicked),
+                nameof(ISpecializedEvents.UnvalidatedUpdateTicking),
+            ],
+            InstructionHandleResult.DetectedUnvalidatedUpdateTick
+        );
 
         // direct console access
-        yield return new TypeFinder(typeof(System.Console).FullName!, InstructionHandleResult.DetectedConsoleAccess);
+        yield return new TypeFinder(
+            typeof(System.Console).FullName!,
+            InstructionHandleResult.DetectedConsoleAccess
+        );
 
         // paranoid issues
         if (paranoidMode)
@@ -336,13 +605,29 @@ internal class InstructionMetadata
                     typeof(System.IO.Directory).FullName!,
                     typeof(System.IO.DirectoryInfo).FullName!,
                     typeof(System.IO.DriveInfo).FullName!,
-                    typeof(System.IO.FileSystemWatcher).FullName!
+                    typeof(System.IO.FileSystemWatcher).FullName!,
                 ],
                 InstructionHandleResult.DetectedFilesystemAccess
             );
 
             // shell access
-            yield return new TypeFinder(typeof(System.Diagnostics.Process).FullName!, InstructionHandleResult.DetectedShellAccess);
+            yield return new TypeFinder(
+                typeof(System.Diagnostics.Process).FullName!,
+                InstructionHandleResult.DetectedShellAccess
+            );
+        }
+    }
+
+    /// <summary>Try to load an assembly by name, returning null on failure.</summary>
+    private static System.Reflection.Assembly? TryLoadAssembly(string name)
+    {
+        try
+        {
+            return System.Reflection.Assembly.Load(name);
+        }
+        catch
+        {
+            return null;
         }
     }
 }

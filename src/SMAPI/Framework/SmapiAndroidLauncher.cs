@@ -23,7 +23,7 @@ public static class SmapiAndroidLauncher
     public static Action? OnAfterHarmonyBridgeInitialized { get; set; }
 
     /// <summary>Initialize and launch SMAPI on Android.</summary>
-    /// <param name="desktopDlls">Directory containing game DLLs.</param>
+    /// <param name="gameDlls">Directory containing game DLLs.</param>
     /// <param name="smapiInternal">Directory for SMAPI internal files.</param>
     /// <param name="stardewData">Root directory for Stardew Valley data.</param>
     /// <param name="smapiLogs">Directory for SMAPI logs.</param>
@@ -43,13 +43,16 @@ public static class SmapiAndroidLauncher
     /// <param name="useRawFileCache">Cache decoded PNG/JSON/OGG data across invalidation cycles.</param>
     /// <remarks>This should be called instead of directly creating GameRunner. SMAPI creates its own SGameRunner and manages the game lifecycle.</remarks>
     public static void Launch(
-        string desktopDlls,
+        string gameDlls,
+        string patchDeps,
         string smapiInternal,
         string stardewData,
         string smapiLogs,
         string saves,
         string mods,
         string externalRoot,
+        string gameFiles = "",
+        bool isMobile = false,
         bool useAsyncModEvents = true,
         int modEventThreads = 0,
         bool useEventArgsPooling = true,
@@ -72,13 +75,16 @@ public static class SmapiAndroidLauncher
         try
         {
             AndroidPaths.Initialize(
-                desktopDlls,
+                gameDlls,
+                patchDeps,
                 smapiInternal,
                 stardewData,
                 smapiLogs,
                 saves,
                 mods,
-                externalRoot
+                externalRoot,
+                gameFiles,
+                isMobile
             );
 
             AndroidPaths.InitializeConfig(
@@ -97,15 +103,19 @@ public static class SmapiAndroidLauncher
 
             AndroidLogger.Log("[SMAPI] Starting SMAPI Android Launch");
             AndroidLogger.Log($"[SMAPI] Mods path: {AndroidPaths.Mods}");
-            AndroidLogger.Log($"[SMAPI] Game path: {AndroidPaths.DesktopDlls}");
+            AndroidLogger.Log($"[SMAPI] Game path: {AndroidPaths.GameDllsPath}");
             AndroidLogger.Log($"[SMAPI] Data path: {AndroidPaths.StardewData}");
             AndroidLogger.Log($"[SMAPI] Logs path: {AndroidPaths.SmapiLogs}");
 
             // initialize Android-specific components
             AndroidPatcher.Setup();
 
+            // apply mobile-specific patches before SCore construction
+            if (isMobile)
+                AndroidPatcher.ApplyMobilePatches();
+
             // initialize AssemblyLocationHelper for mod rewriting
-            AssemblyLocationHelper.Initialize(AndroidPaths.DesktopDlls, AndroidPaths.Mods);
+            AssemblyLocationHelper.Initialize(AndroidPaths.GameDllsPath, AndroidPaths.Mods);
 
             // invoke callback for core patch registration
             OnAfterHarmonyBridgeInitialized?.Invoke();
@@ -258,13 +268,14 @@ public static class SmapiAndroidLauncher
             bool isAndroid =
                 monoGameAsm.GetType("Microsoft.Xna.Framework.AndroidGameWindow") != null
                 || monoGameAsm.GetType("Microsoft.Xna.Framework.AndroidGameActivity") != null;
-            bool isDesktop =
-                monoGameAsm.GetType("Microsoft.Xna.Framework.SdlGameWindow") != null;
+            bool isDesktop = monoGameAsm.GetType("Microsoft.Xna.Framework.SdlGameWindow") != null;
 
             if (isAndroid && !isDesktop)
                 AndroidLogger.Log("[SMAPI] MonoGame.Framework: Android variant loaded");
             else if (isDesktop)
-                AndroidLogger.Log("[SMAPI] ERROR: Desktop MonoGame.Framework loaded - this will cause runtime failures");
+                AndroidLogger.Log(
+                    "[SMAPI] ERROR: Desktop MonoGame.Framework loaded - this will cause runtime failures"
+                );
             else
                 AndroidLogger.Log("[SMAPI] WARNING: Could not determine MonoGame platform variant");
         }

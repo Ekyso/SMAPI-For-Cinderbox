@@ -63,7 +63,10 @@ internal static class UnofficialModUpdateMenuPatch
 
             if (_updateMenuType == null)
             {
-                Log.Info(Tag, "UnofficialModUpdateMenu not found, skipping patches");
+                global::Android.Util.Log.Info(
+                    Tag,
+                    "UnofficialModUpdateMenu not found, skipping patches"
+                );
                 return;
             }
 
@@ -75,77 +78,118 @@ internal static class UnofficialModUpdateMenuPatch
             _originalStatusesField = _updateMenuType.GetField("originalStatuses", flags)!;
             _displayIndexField = _updateMenuType.GetField("displayIndex", flags)!;
             _numDisplayableModsField = _updateMenuType.GetField("numDisplayableMods", flags)!;
-            _scrollMethod = _updateMenuType.GetMethod("receiveScrollWheelAction",
-                BindingFlags.Public | BindingFlags.Instance, null, new[] { typeof(int) }, null)!;
+            _scrollMethod = _updateMenuType.GetMethod(
+                "receiveScrollWheelAction",
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new[] { typeof(int) },
+                null
+            )!;
             _updateComponentsMethod = _updateMenuType.GetMethod("UpdateComponents", flags)!;
 
             var patchType = typeof(UnofficialModUpdateMenuPatch);
 
-            var draw = _updateMenuType.GetMethod("draw",
-                BindingFlags.Public | BindingFlags.Instance, null,
-                new[] { typeof(SpriteBatch) }, null);
+            var draw = _updateMenuType.GetMethod(
+                "draw",
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new[] { typeof(SpriteBatch) },
+                null
+            );
             if (draw != null)
             {
-                harmony.Patch(draw,
+                harmony.Patch(
+                    draw,
                     transpiler: new HarmonyMethod(patchType, nameof(Draw_Transpiler)),
-                    postfix: new HarmonyMethod(patchType, nameof(Draw_Postfix)));
-                Log.Info(Tag, "Patched draw (scrollbar replacement)");
+                    postfix: new HarmonyMethod(patchType, nameof(Draw_Postfix))
+                );
+                global::Android.Util.Log.Info(Tag, "Patched draw (scrollbar replacement)");
             }
 
-            var receiveLeftClick = _updateMenuType.GetMethod("receiveLeftClick",
-                BindingFlags.Public | BindingFlags.Instance, null,
-                new[] { typeof(int), typeof(int), typeof(bool) }, null);
+            var receiveLeftClick = _updateMenuType.GetMethod(
+                "receiveLeftClick",
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new[] { typeof(int), typeof(int), typeof(bool) },
+                null
+            );
             if (receiveLeftClick != null)
             {
-                harmony.Patch(receiveLeftClick,
-                    prefix: new HarmonyMethod(patchType, nameof(ReceiveLeftClick_Prefix)));
-                Log.Info(Tag, "Patched receiveLeftClick");
+                harmony.Patch(
+                    receiveLeftClick,
+                    prefix: new HarmonyMethod(patchType, nameof(ReceiveLeftClick_Prefix))
+                );
+                global::Android.Util.Log.Info(Tag, "Patched receiveLeftClick");
             }
 
-            var performHoverAction = _updateMenuType.GetMethod("performHoverAction",
-                BindingFlags.Public | BindingFlags.Instance, null,
-                new[] { typeof(int), typeof(int) }, null);
+            var performHoverAction = _updateMenuType.GetMethod(
+                "performHoverAction",
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new[] { typeof(int), typeof(int) },
+                null
+            );
             if (performHoverAction != null)
             {
-                harmony.Patch(performHoverAction,
-                    prefix: new HarmonyMethod(patchType, nameof(PerformHoverAction_Prefix)));
-                Log.Info(Tag, "Patched performHoverAction");
+                harmony.Patch(
+                    performHoverAction,
+                    prefix: new HarmonyMethod(patchType, nameof(PerformHoverAction_Prefix))
+                );
+                global::Android.Util.Log.Info(Tag, "Patched performHoverAction");
             }
 
-            var releaseLeftClick = typeof(IClickableMenu).GetMethod("releaseLeftClick",
-                BindingFlags.Public | BindingFlags.Instance, null,
-                new[] { typeof(int), typeof(int) }, null);
+            var releaseLeftClick = typeof(IClickableMenu).GetMethod(
+                "releaseLeftClick",
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new[] { typeof(int), typeof(int) },
+                null
+            );
             if (releaseLeftClick != null)
             {
-                harmony.Patch(releaseLeftClick,
-                    prefix: new HarmonyMethod(patchType, nameof(ReleaseLeftClick_Prefix)));
-                Log.Info(Tag, "Patched releaseLeftClick");
+                harmony.Patch(
+                    releaseLeftClick,
+                    prefix: new HarmonyMethod(patchType, nameof(ReleaseLeftClick_Prefix))
+                );
+                global::Android.Util.Log.Info(Tag, "Patched releaseLeftClick");
             }
 
-            var leftClickHeld = typeof(IClickableMenu).GetMethod("leftClickHeld",
-                BindingFlags.Public | BindingFlags.Instance, null,
-                new[] { typeof(int), typeof(int) }, null);
+            var leftClickHeld = typeof(IClickableMenu).GetMethod(
+                "leftClickHeld",
+                BindingFlags.Public | BindingFlags.Instance,
+                null,
+                new[] { typeof(int), typeof(int) },
+                null
+            );
             if (leftClickHeld != null)
             {
-                harmony.Patch(leftClickHeld,
-                    prefix: new HarmonyMethod(patchType, nameof(LeftClickHeld_Prefix)));
-                Log.Info(Tag, "Patched leftClickHeld");
+                harmony.Patch(
+                    leftClickHeld,
+                    prefix: new HarmonyMethod(patchType, nameof(LeftClickHeld_Prefix))
+                );
+                global::Android.Util.Log.Info(Tag, "Patched leftClickHeld");
             }
 
-            Log.Info(Tag, "All UpdateMenu patches applied");
+            global::Android.Util.Log.Info(Tag, "All UpdateMenu patches applied");
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to apply patches: {ex.Message}");
-            Log.Error(Tag, ex.StackTrace ?? "");
+            global::Android.Util.Log.Error(Tag, $"Failed to apply patches: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, ex.StackTrace ?? "");
         }
     }
 
     #region Scrollbar geometry helpers
 
-    private static void GetScrollMetrics(object instance, out int maxScroll, out int displayIndex, out int numDisplayable)
+    private static void GetScrollMetrics(
+        object instance,
+        out int maxScroll,
+        out int displayIndex,
+        out int numDisplayable
+    )
     {
-        var originalStatuses = _originalStatusesField?.GetValue(instance) as System.Collections.IList;
+        var originalStatuses =
+            _originalStatusesField?.GetValue(instance) as System.Collections.IList;
         numDisplayable = (int)(_numDisplayableModsField?.GetValue(instance) ?? 1);
         displayIndex = (int)(_displayIndexField?.GetValue(instance) ?? 0);
         maxScroll = Math.Max(1, (originalStatuses?.Count ?? 0) - numDisplayable);
@@ -235,8 +279,12 @@ internal static class UnofficialModUpdateMenuPatch
                         if (statusIdx >= 0 && statusIdx < statuses.Count)
                         {
                             var status = statuses[statusIdx];
-                            var urlProp = status?.GetType().GetProperty("UpdateURL",
-                                BindingFlags.Public | BindingFlags.Instance);
+                            var urlProp = status
+                                ?.GetType()
+                                .GetProperty(
+                                    "UpdateURL",
+                                    BindingFlags.Public | BindingFlags.Instance
+                                );
                             var url = urlProp?.GetValue(status) as string;
                             if (!string.IsNullOrEmpty(url))
                             {
@@ -325,15 +373,21 @@ internal static class UnofficialModUpdateMenuPatch
     }
 
     /// <summary>Hide the original scrollbar so Draw_Postfix can draw a replacement.</summary>
-    public static IEnumerable<CodeInstruction> Draw_Transpiler(IEnumerable<CodeInstruction> instructions)
+    public static IEnumerable<CodeInstruction> Draw_Transpiler(
+        IEnumerable<CodeInstruction> instructions
+    )
     {
         var codes = new List<CodeInstruction>(instructions);
         bool patched = false;
 
         for (int i = 0; i < codes.Count - 6; i++)
         {
-            if (IsLdcI4(codes[i], 325) && IsLdcI4(codes[i + 1], 448) &&
-                IsLdcI4(codes[i + 2], 5) && IsLdcI4(codes[i + 3], 17))
+            if (
+                IsLdcI4(codes[i], 325)
+                && IsLdcI4(codes[i + 1], 448)
+                && IsLdcI4(codes[i + 2], 5)
+                && IsLdcI4(codes[i + 3], 17)
+            )
             {
                 for (int j = i + 4; j < Math.Min(i + 20, codes.Count - 1); j++)
                 {
@@ -342,7 +396,10 @@ internal static class UnofficialModUpdateMenuPatch
                         codes[j] = new CodeInstruction(OpCodes.Ldc_I4_0);
                         codes[j + 1] = new CodeInstruction(OpCodes.Ldc_I4_0);
                         patched = true;
-                        Log.Info(Tag, "Transpiler: zeroed original scrollbar dimensions");
+                        global::Android.Util.Log.Info(
+                            Tag,
+                            "Transpiler: zeroed original scrollbar dimensions"
+                        );
                         break;
                     }
                 }
@@ -351,7 +408,10 @@ internal static class UnofficialModUpdateMenuPatch
         }
 
         if (!patched)
-            Log.Error(Tag, "Transpiler: failed to find scrollbar dimensions in draw()");
+            global::Android.Util.Log.Error(
+                Tag,
+                "Transpiler: failed to find scrollbar dimensions in draw()"
+            );
 
         return codes;
     }
@@ -359,7 +419,8 @@ internal static class UnofficialModUpdateMenuPatch
     /// <summary>Draw a touch-friendly scrollbar with track and draggable thumb.</summary>
     public static void Draw_Postfix(object __instance, SpriteBatch b)
     {
-        var originalStatuses = _originalStatusesField?.GetValue(__instance) as System.Collections.IList;
+        var originalStatuses =
+            _originalStatusesField?.GetValue(__instance) as System.Collections.IList;
         if (originalStatuses == null || originalStatuses.Count == 0)
             return;
 
@@ -370,15 +431,31 @@ internal static class UnofficialModUpdateMenuPatch
         var track = GetTrackBounds(__instance);
         var thumb = GetThumbBounds(__instance);
 
-        IClickableMenu.drawTextureBox(b, Game1.mouseCursors,
+        IClickableMenu.drawTextureBox(
+            b,
+            Game1.mouseCursors,
             new Rectangle(403, 383, 6, 6),
-            track.X, track.Y, track.Width, track.Height,
-            Color.White, 4f, false);
+            track.X,
+            track.Y,
+            track.Width,
+            track.Height,
+            Color.White,
+            4f,
+            false
+        );
 
-        IClickableMenu.drawTextureBox(b, Game1.mouseCursors,
+        IClickableMenu.drawTextureBox(
+            b,
+            Game1.mouseCursors,
             new Rectangle(435, 463, 6, 10),
-            thumb.X, thumb.Y, thumb.Width, thumb.Height,
-            Color.White, 4f, false);
+            thumb.X,
+            thumb.Y,
+            thumb.Width,
+            thumb.Height,
+            Color.White,
+            4f,
+            false
+        );
     }
 
     #endregion
@@ -397,11 +474,16 @@ internal static class UnofficialModUpdateMenuPatch
         {
             var expected = value switch
             {
-                0 => OpCodes.Ldc_I4_0, 1 => OpCodes.Ldc_I4_1,
-                2 => OpCodes.Ldc_I4_2, 3 => OpCodes.Ldc_I4_3,
-                4 => OpCodes.Ldc_I4_4, 5 => OpCodes.Ldc_I4_5,
-                6 => OpCodes.Ldc_I4_6, 7 => OpCodes.Ldc_I4_7,
-                8 => OpCodes.Ldc_I4_8, _ => OpCodes.Nop
+                0 => OpCodes.Ldc_I4_0,
+                1 => OpCodes.Ldc_I4_1,
+                2 => OpCodes.Ldc_I4_2,
+                3 => OpCodes.Ldc_I4_3,
+                4 => OpCodes.Ldc_I4_4,
+                5 => OpCodes.Ldc_I4_5,
+                6 => OpCodes.Ldc_I4_6,
+                7 => OpCodes.Ldc_I4_7,
+                8 => OpCodes.Ldc_I4_8,
+                _ => OpCodes.Nop,
             };
             if (instr.opcode == expected)
                 return true;
@@ -413,8 +495,8 @@ internal static class UnofficialModUpdateMenuPatch
     {
         try
         {
-            var activity = SMAPIActivityTool.MainActivity
-                ?? (Activity)Microsoft.Xna.Framework.Game.Activity;
+            var activity =
+                SMAPIActivityTool.MainActivity ?? (Activity)Microsoft.Xna.Framework.Game.Activity;
             if (activity == null)
             {
                 OpenUrlOnAndroid(url);
@@ -433,7 +515,7 @@ internal static class UnofficialModUpdateMenuPatch
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to show URL confirmation: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to show URL confirmation: {ex.Message}");
             OpenUrlOnAndroid(url);
         }
     }
@@ -446,11 +528,11 @@ internal static class UnofficialModUpdateMenuPatch
             var intent = new Intent(Intent.ActionView, uri);
             intent.AddFlags(ActivityFlags.NewTask);
             Application.Context.StartActivity(intent);
-            Log.Info(Tag, $"Opened URL: {url}");
+            global::Android.Util.Log.Info(Tag, $"Opened URL: {url}");
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to open URL '{url}': {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to open URL '{url}': {ex.Message}");
         }
     }
 

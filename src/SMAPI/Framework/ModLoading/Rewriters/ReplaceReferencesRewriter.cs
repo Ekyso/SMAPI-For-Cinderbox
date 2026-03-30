@@ -61,7 +61,6 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <summary>The new members to reference, indexed by the old member's full name.</summary>
     private readonly Dictionary<string, MemberInfo> MemberMap = new();
 
-
     /*********
     ** Public methods
     *********/
@@ -79,9 +78,15 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     {
         // validate parameters
         if (string.IsNullOrWhiteSpace(fromFullName))
-            throw new ArgumentException("Can't replace a type given an empty name.", nameof(fromFullName));
+            throw new ArgumentException(
+                "Can't replace a type given an empty name.",
+                nameof(fromFullName)
+            );
         if (toType is null)
-            throw new ArgumentException("Can't replace a type given a null target type.", nameof(toType));
+            throw new ArgumentException(
+                "Can't replace a type given a null target type.",
+                nameof(toType)
+            );
 
         // add mapping
         if (!this.TypeMap.TryAdd(fromFullName, toType))
@@ -98,11 +103,20 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     {
         // validate parameters
         if (string.IsNullOrWhiteSpace(fromFullName))
-            throw new ArgumentException("Can't replace a field given an empty name.", nameof(fromFullName));
+            throw new ArgumentException(
+                "Can't replace a field given an empty name.",
+                nameof(fromFullName)
+            );
         if (toType is null)
-            throw new ArgumentException("Can't replace a field given a null target type.", nameof(toType));
+            throw new ArgumentException(
+                "Can't replace a field given a null target type.",
+                nameof(toType)
+            );
         if (string.IsNullOrWhiteSpace(toName))
-            throw new ArgumentException("Can't replace a field given an empty target name.", nameof(toName));
+            throw new ArgumentException(
+                "Can't replace a field given an empty target name.",
+                nameof(toName)
+            );
 
         // get field
         FieldInfo? toField;
@@ -112,10 +126,15 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Required field {toType.FullName}::{toName} could not be loaded.", ex);
+            throw new InvalidOperationException(
+                $"Required field {toType.FullName}::{toName} could not be loaded.",
+                ex
+            );
         }
         if (toField is null)
-            throw new InvalidOperationException($"Required field {toType.FullName}::{toName} could not be found.");
+            throw new InvalidOperationException(
+                $"Required field {toType.FullName}::{toName} could not be found."
+            );
 
         // add mapping
         return this.MapMember(fromFullName, toField, "field");
@@ -129,11 +148,20 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     {
         // validate parameters
         if (type is null)
-            throw new ArgumentException("Can't replace a field given a null target type.", nameof(type));
+            throw new ArgumentException(
+                "Can't replace a field given a null target type.",
+                nameof(type)
+            );
         if (string.IsNullOrWhiteSpace(fromName))
-            throw new ArgumentException("Can't replace a field given an empty name.", nameof(fromName));
+            throw new ArgumentException(
+                "Can't replace a field given an empty name.",
+                nameof(fromName)
+            );
         if (string.IsNullOrWhiteSpace(toName))
-            throw new ArgumentException("Can't replace a field given an empty target name.", nameof(toName));
+            throw new ArgumentException(
+                "Can't replace a field given an empty target name.",
+                nameof(toName)
+            );
 
         // get field
         FieldInfo? toField;
@@ -143,13 +171,19 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Required field {type.FullName}::{toName} could not be loaded.", ex);
+            throw new InvalidOperationException(
+                $"Required field {type.FullName}::{toName} could not be loaded.",
+                ex
+            );
         }
         if (toField is null)
-            throw new InvalidOperationException($"Required field {type.FullName}::{toName} could not be found.");
+            throw new InvalidOperationException(
+                $"Required field {type.FullName}::{toName} could not be found."
+            );
 
         // add mapping
-        string fromFullName = $"{this.FormatCecilType(toField.FieldType)} {this.FormatCecilType(type)}::{fromName}";
+        string fromFullName =
+            $"{this.FormatCecilType(toField.FieldType)} {this.FormatCecilType(type)}::{fromName}";
         return this.MapMember(fromFullName, toField, "field");
     }
 
@@ -157,15 +191,28 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <param name="fromFullName">The full field name, like <c>Microsoft.Xna.Framework.Vector2 StardewValley.Character::Tile</c>.</param>
     /// <param name="toType">The new type which will have the field.</param>
     /// <param name="toName">The new field name to reference.</param>
-    public ReplaceReferencesRewriter MapFieldToProperty(string fromFullName, Type toType, string toName)
+    public ReplaceReferencesRewriter MapFieldToProperty(
+        string fromFullName,
+        Type toType,
+        string toName
+    )
     {
         // validate parameters
         if (string.IsNullOrWhiteSpace(fromFullName))
-            throw new ArgumentException("Can't replace a field given an empty name.", nameof(fromFullName));
+            throw new ArgumentException(
+                "Can't replace a field given an empty name.",
+                nameof(fromFullName)
+            );
         if (toType is null)
-            throw new ArgumentException("Can't replace a field given a null target type.", nameof(toType));
+            throw new ArgumentException(
+                "Can't replace a field given a null target type.",
+                nameof(toType)
+            );
         if (string.IsNullOrWhiteSpace(toName))
-            throw new ArgumentException("Can't replace a field given an empty target name.", nameof(toType));
+            throw new ArgumentException(
+                "Can't replace a field given an empty target name.",
+                nameof(toType)
+            );
 
         // get field
         PropertyInfo? toProperty;
@@ -175,10 +222,15 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Required property {toType.FullName}::{toName} could not be loaded.", ex);
+            throw new InvalidOperationException(
+                $"Required property {toType.FullName}::{toName} could not be loaded.",
+                ex
+            );
         }
         if (toProperty is null)
-            throw new InvalidOperationException($"Required property {toType.FullName}::{toName} could not be found.");
+            throw new InvalidOperationException(
+                $"Required property {toType.FullName}::{toName} could not be found."
+            );
 
         // add mapping
         return this.MapMember(fromFullName, toProperty, "field-to-property");
@@ -189,15 +241,29 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <param name="toType">The new type which will have the method.</param>
     /// <param name="toName">The new method name to reference.</param>
     /// <param name="parameterTypes">The method's parameter types to disambiguate between overloads, if needed.</param>
-    public ReplaceReferencesRewriter MapMethod(string fromFullName, Type toType, string toName, Type[]? parameterTypes = null)
+    public ReplaceReferencesRewriter MapMethod(
+        string fromFullName,
+        Type toType,
+        string toName,
+        Type[]? parameterTypes = null
+    )
     {
         // validate parameters
         if (string.IsNullOrWhiteSpace(fromFullName))
-            throw new ArgumentException("Can't replace a field given an empty name.", nameof(fromFullName));
+            throw new ArgumentException(
+                "Can't replace a field given an empty name.",
+                nameof(fromFullName)
+            );
         if (toType is null)
-            throw new ArgumentException("Can't replace a field given a null target type.", nameof(toType));
+            throw new ArgumentException(
+                "Can't replace a field given a null target type.",
+                nameof(toType)
+            );
         if (string.IsNullOrWhiteSpace(toName))
-            throw new ArgumentException("Can't replace a field given an empty target name.", nameof(toType));
+            throw new ArgumentException(
+                "Can't replace a field given an empty target name.",
+                nameof(toType)
+            );
 
         // get method
         MethodInfo? method;
@@ -209,10 +275,15 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Required method {toType.FullName}::{toName} could not be loaded.", ex);
+            throw new InvalidOperationException(
+                $"Required method {toType.FullName}::{toName} could not be loaded.",
+                ex
+            );
         }
         if (method is null)
-            throw new InvalidOperationException($"Required method {toType.FullName}::{toName} could not be found.");
+            throw new InvalidOperationException(
+                $"Required method {toType.FullName}::{toName} could not be found."
+            );
 
         // add mapping
         return this.MapMember(fromFullName, method, "method");
@@ -222,7 +293,9 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <typeparam name="TFromType">The type to which references should be rewritten.</typeparam>
     /// <typeparam name="TFacade">The facade type to which to point matching references.</typeparam>
     /// <param name="mapDefaultConstructor">If the facade has a public constructor with no parameters, whether to rewrite references to empty constructors to use that one. (This is needed because .NET has no way to distinguish between an implicit and explicit constructor.)</param>
-    public ReplaceReferencesRewriter MapFacade<TFromType, TFacade>(bool mapDefaultConstructor = false)
+    public ReplaceReferencesRewriter MapFacade<TFromType, TFacade>(
+        bool mapDefaultConstructor = false
+    )
         where TFacade : TFromType, IRewriteFacade
     {
         if (typeof(IRewriteFacade).IsAssignableFrom(typeof(TFromType)))
@@ -235,53 +308,88 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <param name="fromTypeName">The full name of the type to which references should be rewritten.</param>
     /// <param name="toType">The facade type to which to point matching references.</param>
     /// <param name="mapDefaultConstructor">If the facade has a public constructor with no parameters, whether to rewrite references to empty constructors to use that one. (This is needed because .NET has no way to distinguish between an implicit and explicit constructor.)</param>
-    public ReplaceReferencesRewriter MapFacade(string fromTypeName, Type toType, bool mapDefaultConstructor = false)
+    public ReplaceReferencesRewriter MapFacade(
+        string fromTypeName,
+        Type toType,
+        bool mapDefaultConstructor = false
+    )
     {
         // properties
-        foreach (PropertyInfo property in toType.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+        foreach (
+            PropertyInfo property in toType.GetProperties(
+                BindingFlags.Public
+                    | BindingFlags.Instance
+                    | BindingFlags.Static
+                    | BindingFlags.DeclaredOnly
+            )
+        )
         {
             string propertyType = this.FormatCecilType(property.PropertyType);
 
             // add getter
             MethodInfo? get = property.GetMethod;
             if (get is not null)
-                this.MapMember($"{propertyType} {fromTypeName}::get_{property.Name}()", get, "method");
+                this.MapMember(
+                    $"{propertyType} {fromTypeName}::get_{property.Name}()",
+                    get,
+                    "method"
+                );
 
             // add setter
             MethodInfo? set = property.SetMethod;
             if (set is not null)
-                this.MapMember($"System.Void {fromTypeName}::set_{property.Name}({propertyType})", set, "method");
+                this.MapMember(
+                    $"System.Void {fromTypeName}::set_{property.Name}({propertyType})",
+                    set,
+                    "method"
+                );
 
             // add field => property
-            this.MapMember($"{propertyType} {fromTypeName}::{property.Name}", property, "field-to-property");
+            this.MapMember(
+                $"{propertyType} {fromTypeName}::{property.Name}",
+                property,
+                "field-to-property"
+            );
         }
 
         // methods
-        foreach (MethodInfo method in toType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly))
+        foreach (
+            MethodInfo method in toType.GetMethods(
+                BindingFlags.Public
+                    | BindingFlags.Instance
+                    | BindingFlags.Static
+                    | BindingFlags.DeclaredOnly
+            )
+        )
         {
             if (method.Name.StartsWith("get_") || method.Name.StartsWith("set_"))
                 continue; // handled via properties above
 
             // map method
             {
-                string fromFullName = $"{this.FormatCecilType(method.ReturnType)} {fromTypeName}::{method.Name}({this.FormatCecilParameterList(method.GetParameters())})";
+                string fromFullName =
+                    $"{this.FormatCecilType(method.ReturnType)} {fromTypeName}::{method.Name}({this.FormatCecilParameterList(method.GetParameters())})";
                 this.MapMember(fromFullName, method, "method");
             }
 
             // map constructor to static methods
             if (method is { IsStatic: true, Name: "Constructor" })
             {
-                string fromFullName = $"System.Void {fromTypeName}::.ctor({this.FormatCecilParameterList(method.GetParameters())})";
+                string fromFullName =
+                    $"System.Void {fromTypeName}::.ctor({this.FormatCecilParameterList(method.GetParameters())})";
                 this.MapMember(fromFullName, method, "method");
             }
         }
 
         // constructors
-        ConstructorInfo[] constructors = toType.GetConstructors(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        ConstructorInfo[] constructors = toType.GetConstructors(
+            BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly
+        );
         foreach (ConstructorInfo constructor in constructors)
         {
             ParameterInfo[] parameters = constructor.GetParameters();
-            string fromFullName = $"System.Void {fromTypeName}::.ctor({this.FormatCecilParameterList(parameters)})";
+            string fromFullName =
+                $"System.Void {fromTypeName}::.ctor({this.FormatCecilParameterList(parameters)})";
 
             if (!mapDefaultConstructor && parameters.Length == 0)
                 continue;
@@ -292,11 +400,28 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
         return this;
     }
 
+    /// <summary>Conditionally apply additional mappings.</summary>
+    /// <param name="condition">Whether to apply the mappings.</param>
+    /// <param name="configure">The mappings to apply if the condition is true.</param>
+    public ReplaceReferencesRewriter When(
+        bool condition,
+        Action<ReplaceReferencesRewriter> configure
+    )
+    {
+        if (condition)
+            configure(this);
+        return this;
+    }
+
     /****
     ** Handlers
     ****/
     /// <inheritdoc />
-    public override bool Handle(ModuleDefinition module, TypeReference type, Action<TypeReference> replaceWith)
+    public override bool Handle(
+        ModuleDefinition module,
+        TypeReference type,
+        Action<TypeReference> replaceWith
+    )
     {
         if (this.TypeMap.TryGetValue(type.FullName, out Type? newType))
         {
@@ -328,7 +453,12 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             // "Netcode.NetFieldBase`2" (without type args) by using `GetElementType().FullName` instead.
             if (fromMember.DeclaringType is not GenericInstanceType)
                 return false;
-            if (!this.MemberMap.TryGetValue($"{fromMember.DeclaringType.GetElementType().FullName}::{fromMember.Name}", out mappedToMethod))
+            if (
+                !this.MemberMap.TryGetValue(
+                    $"{fromMember.DeclaringType.GetElementType().FullName}::{fromMember.Name}",
+                    out mappedToMethod
+                )
+            )
                 return false;
         }
 
@@ -347,16 +477,23 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             // method
             case MethodInfo toMethod:
                 // resolve generic method to a specific implementation
-                if (toMethod.DeclaringType?.IsGenericTypeDefinition is true && fromMember.DeclaringType is GenericInstanceType generic)
+                if (
+                    toMethod.DeclaringType?.IsGenericTypeDefinition is true
+                    && fromMember.DeclaringType is GenericInstanceType generic
+                )
                 {
-                    Type?[] arguments = generic.GenericArguments.Select(RewriteHelper.GetCSharpType).ToArray();
+                    Type?[] arguments = generic
+                        .GenericArguments.Select(RewriteHelper.GetCSharpType)
+                        .ToArray();
                     foreach (Type? argument in arguments)
                     {
                         if (argument is null)
                             return false;
                     }
 
-                    MethodInfo? newMethod = toMethod.DeclaringType.MakeGenericType(arguments!)?.GetMethod(toMethod.Name);
+                    MethodInfo? newMethod = toMethod
+                        .DeclaringType.MakeGenericType(arguments!)
+                        ?.GetMethod(toMethod.Name);
                     if (newMethod is null)
                         return false;
 
@@ -383,7 +520,10 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
                     MethodInfo? toPropMethod = null;
                     if (instruction.OpCode == OpCodes.Ldfld || instruction.OpCode == OpCodes.Ldsfld)
                         toPropMethod = toProperty.GetMethod;
-                    else if (instruction.OpCode == OpCodes.Stfld || instruction.OpCode == OpCodes.Stsfld)
+                    else if (
+                        instruction.OpCode == OpCodes.Stfld
+                        || instruction.OpCode == OpCodes.Stsfld
+                    )
                         toPropMethod = toProperty.SetMethod;
 
                     if (toPropMethod is not null)
@@ -399,7 +539,6 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
         return false;
     }
 
-
     /*********
     ** Private methods
     *********/
@@ -407,17 +546,28 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <param name="fromFullName">The full member name, like <c>Microsoft.Xna.Framework.Vector2 StardewValley.Character::getTileLocation()</c>.</param>
     /// <param name="toMember">The new member to reference.</param>
     /// <param name="typeLabel">A human-readable label for the reference type, like 'field' or 'method'.</param>
-    private ReplaceReferencesRewriter MapMember(string fromFullName, MemberInfo toMember, string typeLabel)
+    private ReplaceReferencesRewriter MapMember(
+        string fromFullName,
+        MemberInfo toMember,
+        string typeLabel
+    )
     {
         // validate parameters
         if (string.IsNullOrWhiteSpace(fromFullName))
-            throw new ArgumentException($"Can't replace a {typeLabel} given an empty name.", nameof(fromFullName));
+            throw new ArgumentException(
+                $"Can't replace a {typeLabel} given an empty name.",
+                nameof(fromFullName)
+            );
         if (toMember is null)
-            throw new InvalidOperationException($"The replacement {typeLabel} for '{fromFullName}' can't be null.");
+            throw new InvalidOperationException(
+                $"The replacement {typeLabel} for '{fromFullName}' can't be null."
+            );
 
         // add mapping
         if (!this.MemberMap.TryAdd(fromFullName, toMember))
-            throw new InvalidOperationException($"The '{fromFullName}' {typeLabel} is already mapped.");
+            throw new InvalidOperationException(
+                $"The '{fromFullName}' {typeLabel} is already mapped."
+            );
 
         return this;
     }

@@ -28,7 +28,6 @@ internal class Program
     [ThreadStatic]
     private static bool IsResolving;
 
-
     /*********
     ** Public methods
     *********/
@@ -53,9 +52,13 @@ internal class Program
         catch (BadImageFormatException ex) when (ex.FileName == EarlyConstants.GameAssemblyName)
         {
 #if SMAPI_FOR_ANDROID
-            System.Diagnostics.Debug.WriteLine($"SMAPI failed to initialize because your game's {ex.FileName}.exe seems to be invalid.\nThis may be a pirated version which modified the executable in an incompatible way; if so, you can try a different download or buy a legitimate version.\n\nTechnical details:\n{ex}");
+            System.Diagnostics.Debug.WriteLine(
+                $"SMAPI failed to initialize because your game's {ex.FileName}.exe seems to be invalid.\nThis may be a pirated version which modified the executable in an incompatible way; if so, you can try a different download or buy a legitimate version.\n\nTechnical details:\n{ex}"
+            );
 #else
-            Console.WriteLine($"SMAPI failed to initialize because your game's {ex.FileName}.exe seems to be invalid.\nThis may be a pirated version which modified the executable in an incompatible way; if so, you can try a different download or buy a legitimate version.\n\nTechnical details:\n{ex}");
+            Console.WriteLine(
+                $"SMAPI failed to initialize because your game's {ex.FileName}.exe seems to be invalid.\nThis may be a pirated version which modified the executable in an incompatible way; if so, you can try a different download or buy a legitimate version.\n\nTechnical details:\n{ex}"
+            );
 #endif
         }
         catch (Exception ex)
@@ -68,7 +71,6 @@ internal class Program
 #endif
         }
     }
-
 
     /*********
     ** Private methods
@@ -118,6 +120,19 @@ internal class Program
                     }
                 }
             }
+
+#if SMAPI_FOR_ANDROID
+            // SMAPI is compiled against desktop DLL ("Stardew Valley", with space).
+            // On mobile, the DLL is "StardewValley" (no space) - map mobile path to the
+            // desktop assembly name so SMAPI's resolver can find it.
+            if (Mobile.AndroidPaths.IsMobile)
+            {
+                if (
+                    Program.AssemblyPathsByName.TryGetValue("StardewValley", out string? mobilePath)
+                )
+                    Program.AssemblyPathsByName["Stardew Valley"] = mobilePath;
+            }
+#endif
         }
 
         // resolve
@@ -126,8 +141,38 @@ internal class Program
             AssemblyName requestedName = new AssemblyName(e.Name);
             string? searchName = requestedName.Name;
 
+#if SMAPI_FOR_ANDROID
+            // Handle assembly name mapping at resolve time (not just cache-init time)
+            // since AndroidPaths.IsMobile may not be set when cache was first built.
+            if (
+                searchName == "Stardew Valley"
+                && !Program.AssemblyPathsByName.ContainsKey("Stardew Valley")
+                && Program.AssemblyPathsByName.TryGetValue(
+                    "StardewValley",
+                    out string? mobileFallback
+                )
+            )
+            {
+                Program.AssemblyPathsByName["Stardew Valley"] = mobileFallback;
+            }
+            else if (
+                searchName == "StardewValley"
+                && !Program.AssemblyPathsByName.ContainsKey("StardewValley")
+                && Program.AssemblyPathsByName.TryGetValue(
+                    "Stardew Valley",
+                    out string? desktopFallback
+                )
+            )
+            {
+                Program.AssemblyPathsByName["StardewValley"] = desktopFallback;
+            }
+#endif
+
             // try to load from cached paths
-            if (searchName != null && Program.AssemblyPathsByName.TryGetValue(searchName, out string? assemblyPath))
+            if (
+                searchName != null
+                && Program.AssemblyPathsByName.TryGetValue(searchName, out string? assemblyPath)
+            )
                 return Assembly.LoadFrom(assemblyPath);
 
             // handle version mismatches for .NET runtime assemblies
@@ -136,7 +181,13 @@ internal class Program
                 foreach (Assembly loadedAssembly in AppDomain.CurrentDomain.GetAssemblies())
                 {
                     AssemblyName loadedName = loadedAssembly.GetName();
-                    if (string.Equals(loadedName.Name, searchName, StringComparison.OrdinalIgnoreCase))
+                    if (
+                        string.Equals(
+                            loadedName.Name,
+                            searchName,
+                            StringComparison.OrdinalIgnoreCase
+                        )
+                    )
                         return loadedAssembly;
                 }
 
@@ -145,7 +196,9 @@ internal class Program
                 {
                     return Assembly.Load(new AssemblyName(searchName));
                 }
-                catch { /* not a loadable assembly */ }
+                catch
+                { /* not a loadable assembly */
+                }
             }
 
             return null;
@@ -167,13 +220,22 @@ internal class Program
     {
         try
         {
-            _ = Type.GetType($"StardewValley.Game1, {EarlyConstants.GameAssemblyName}", throwOnError: true);
+            _ = Type.GetType(
+                $"StardewValley.Game1, {EarlyConstants.GameAssemblyName}",
+                throwOnError: true
+            );
         }
         catch (Exception ex)
         {
             // file doesn't exist
-            if (!File.Exists(Path.Combine(EarlyConstants.GamePath, $"{EarlyConstants.GameAssemblyName}.exe")))
-                Program.PrintErrorAndExit("Oops! SMAPI can't find the game. Make sure you're running StardewModdingAPI.exe in your game folder.");
+            if (
+                !File.Exists(
+                    Path.Combine(EarlyConstants.GamePath, $"{EarlyConstants.GameAssemblyName}.exe")
+                )
+            )
+                Program.PrintErrorAndExit(
+                    "Oops! SMAPI can't find the game. Make sure you're running StardewModdingAPI.exe in your game folder."
+                );
 
             // can't load file
             Program.PrintErrorAndExit(
@@ -188,23 +250,36 @@ internal class Program
     {
         // min version
         int? minBuild = Constants.MinimumGameBuild;
-        if (Constants.GameVersion.IsOlderThan(Constants.MinimumGameVersion) || (minBuild.HasValue && Game1.versionBuildNumber < minBuild))
+        if (
+            Constants.GameVersion.IsOlderThan(Constants.MinimumGameVersion)
+            || (minBuild.HasValue && Game1.versionBuildNumber < minBuild)
+        )
         {
-            ISemanticVersion? suggestedApiVersion = Constants.GetCompatibleApiVersion(Constants.GameVersion);
+            ISemanticVersion? suggestedApiVersion = Constants.GetCompatibleApiVersion(
+                Constants.GameVersion
+            );
 
-            string errorPhrase = minBuild.HasValue && Constants.GameVersion.CompareTo(Constants.MinimumGameVersion) == 0
-                ? $"You're running Stardew Valley {Constants.GameVersion} build {Game1.versionBuildNumber}, but the oldest supported version is build {minBuild}."
-                : $"You're running Stardew Valley {Constants.GameVersion}, but the oldest supported version is {Constants.MinimumGameVersion}.";
+            string errorPhrase =
+                minBuild.HasValue
+                && Constants.GameVersion.CompareTo(Constants.MinimumGameVersion) == 0
+                    ? $"You're running Stardew Valley {Constants.GameVersion} build {Game1.versionBuildNumber}, but the oldest supported version is build {minBuild}."
+                    : $"You're running Stardew Valley {Constants.GameVersion}, but the oldest supported version is {Constants.MinimumGameVersion}.";
 
-            Program.PrintErrorAndExit(suggestedApiVersion != null
-                ? $"Oops! {errorPhrase} You can install SMAPI {suggestedApiVersion} instead to fix this error, or update your game to the latest version."
-                : $"Oops! {errorPhrase} Please update your game before using SMAPI."
+            Program.PrintErrorAndExit(
+                suggestedApiVersion != null
+                    ? $"Oops! {errorPhrase} You can install SMAPI {suggestedApiVersion} instead to fix this error, or update your game to the latest version."
+                    : $"Oops! {errorPhrase} Please update your game before using SMAPI."
             );
         }
 
         // max version
-        if (Constants.MaximumGameVersion != null && Constants.GameVersion.IsNewerThan(Constants.MaximumGameVersion))
-            Program.PrintErrorAndExit($"Oops! You're running Stardew Valley {Constants.GameVersion}, but this version of SMAPI is only compatible up to Stardew Valley {Constants.MaximumGameVersion}. Please check for a newer version of SMAPI: https://smapi.io.");
+        if (
+            Constants.MaximumGameVersion != null
+            && Constants.GameVersion.IsNewerThan(Constants.MaximumGameVersion)
+        )
+            Program.PrintErrorAndExit(
+                $"Oops! You're running Stardew Valley {Constants.GameVersion}, but this version of SMAPI is only compatible up to Stardew Valley {Constants.MaximumGameVersion}. Please check for a newer version of SMAPI: https://smapi.io."
+            );
     }
 
     /// <summary>Assert that the versions of all SMAPI components are correct.</summary>
@@ -212,7 +287,11 @@ internal class Program
     private static void AssertSmapiVersions()
     {
         // get SMAPI version without prerelease suffix (since we can't get that from the assembly versions)
-        ISemanticVersion smapiVersion = new SemanticVersion(Constants.ApiVersion.MajorVersion, Constants.ApiVersion.MinorVersion, Constants.ApiVersion.PatchVersion);
+        ISemanticVersion smapiVersion = new SemanticVersion(
+            Constants.ApiVersion.MajorVersion,
+            Constants.ApiVersion.MinorVersion,
+            Constants.ApiVersion.PatchVersion
+        );
 
         // compare with assembly versions
         foreach (var type in new[] { typeof(IManifest), typeof(Manifest) })
@@ -220,7 +299,9 @@ internal class Program
             AssemblyName assemblyName = type.Assembly.GetName();
             ISemanticVersion assemblyVersion = new SemanticVersion(assemblyName.Version!);
             if (!assemblyVersion.Equals(smapiVersion))
-                Program.PrintErrorAndExit($"Oops! The 'smapi-internal/{assemblyName.Name}.dll' file is version {assemblyVersion} instead of the required {Constants.ApiVersion}. SMAPI doesn't seem to be installed correctly.");
+                Program.PrintErrorAndExit(
+                    $"Oops! The 'smapi-internal/{assemblyName.Name}.dll' file is version {assemblyVersion} instead of the required {Constants.ApiVersion}. SMAPI doesn't seem to be installed correctly."
+                );
         }
     }
 
@@ -234,11 +315,16 @@ internal class Program
         string sourcePath = Path.Combine(Constants.GamePath, "Stardew Valley.deps.json");
         string targetPath = Path.Combine(Constants.GamePath, "StardewModdingAPI.deps.json");
 
-        if (!File.Exists(targetPath) || FileUtilities.GetFileHash(sourcePath) != FileUtilities.GetFileHash(targetPath))
+        if (
+            !File.Exists(targetPath)
+            || FileUtilities.GetFileHash(sourcePath) != FileUtilities.GetFileHash(targetPath)
+        )
         {
             File.Copy(sourcePath, targetPath, overwrite: true);
 
-            Console.WriteLine("A new game version was installed, so SMAPI needs to update its settings.");
+            Console.WriteLine(
+                "A new game version was installed, so SMAPI needs to update its settings."
+            );
 
             Console.ForegroundColor = ConsoleColor.DarkGreen;
             Console.WriteLine("Please exit this window and re-launch SMAPI to play.");
@@ -256,7 +342,9 @@ internal class Program
     private static void Start(string[] args)
     {
         // get flags
-        bool writeToConsole = !args.Contains("--no-terminal") && Environment.GetEnvironmentVariable("SMAPI_NO_TERMINAL") == null;
+        bool writeToConsole =
+            !args.Contains("--no-terminal")
+            && Environment.GetEnvironmentVariable("SMAPI_NO_TERMINAL") == null;
 
         // get mods path
         bool? developerMode = null;
@@ -280,7 +368,9 @@ internal class Program
                 rawModsPath = Environment.GetEnvironmentVariable("SMAPI_MODS_PATH");
             if (developerMode is null)
             {
-                string? rawDeveloperMode = Environment.GetEnvironmentVariable("SMAPI_DEVELOPER_MODE");
+                string? rawDeveloperMode = Environment.GetEnvironmentVariable(
+                    "SMAPI_DEVELOPER_MODE"
+                );
                 if (rawDeveloperMode != null)
                     developerMode = bool.Parse(rawDeveloperMode);
             }

@@ -48,7 +48,6 @@ internal class CoreAssetPropagator
     /// <summary>A cache of world data fetched for the current tick.</summary>
     private readonly TickCacheDictionary<string> WorldCache = new();
 
-
     /*********
     ** Public methods
     *********/
@@ -59,7 +58,14 @@ internal class CoreAssetPropagator
     /// <param name="multiplayer">The multiplayer instance whose map cache to update.</param>
     /// <param name="reflection">Simplifies access to private code.</param>
     /// <param name="parseAssetName">Parse a raw asset name.</param>
-    public CoreAssetPropagator(LocalizedContentManager mainContent, GameContentManagerForAssetPropagation disposableContent, IMonitor monitor, Multiplayer multiplayer, Reflector reflection, Func<string, IAssetName> parseAssetName)
+    public CoreAssetPropagator(
+        LocalizedContentManager mainContent,
+        GameContentManagerForAssetPropagation disposableContent,
+        IMonitor monitor,
+        Multiplayer multiplayer,
+        Reflector reflection,
+        Func<string, IAssetName> parseAssetName
+    )
     {
         this.MainContentManager = mainContent;
         this.DisposableContentManager = disposableContent;
@@ -75,7 +81,13 @@ internal class CoreAssetPropagator
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
     /// <param name="propagatedAssets">A lookup of asset names to whether they've been propagated.</param>
     /// <param name="changedWarpRoutes">Whether the NPC pathfinding warp route cache was reloaded.</param>
-    public void Propagate(IList<IContentManager> contentManagers, IDictionary<IAssetName, Type> assets, bool ignoreWorld, out Dictionary<IAssetName, bool> propagatedAssets, out bool changedWarpRoutes)
+    public void Propagate(
+        IList<IContentManager> contentManagers,
+        IDictionary<IAssetName, Type> assets,
+        bool ignoreWorld,
+        out Dictionary<IAssetName, bool> propagatedAssets,
+        out bool changedWarpRoutes
+    )
     {
         propagatedAssets = new Dictionary<IAssetName, bool>(assets.Count);
 
@@ -95,21 +107,27 @@ internal class CoreAssetPropagator
                     // image
                     if (imageType.IsAssignableFrom(assetType))
                         changed = this.PropagateTexture(assetName, contentManagers, ignoreWorld);
-
                     // map
                     else if (assetType == mapType)
                     {
-                        changed = this.PropagateMap(assetName, ref spouseRoomMapPathCache, ignoreWorld, out bool curChangedMapRoutes);
+                        changed = this.PropagateMap(
+                            assetName,
+                            ref spouseRoomMapPathCache,
+                            ignoreWorld,
+                            out bool curChangedMapRoutes
+                        );
                         changedWarpRoutes |= curChangedMapRoutes;
                     }
-
                     // any other type
                     else
                         changed = this.PropagateOther(assetName, ignoreWorld);
                 }
                 catch (Exception ex)
                 {
-                    this.Monitor.Log($"An error occurred while propagating changes to asset '{assetName.Name}'. Error details:\n{ex.GetLogSummary()}", LogLevel.Error);
+                    this.Monitor.Log(
+                        $"An error occurred while propagating changes to asset '{assetName.Name}'. Error details:\n{ex.GetLogSummary()}",
+                        LogLevel.Error
+                    );
                 }
 
                 propagatedAssets[assetName] = changed;
@@ -121,7 +139,6 @@ internal class CoreAssetPropagator
             WarpPathfindingCache.PopulateCache();
     }
 
-
     /*********
     ** Private methods
     *********/
@@ -131,7 +148,12 @@ internal class CoreAssetPropagator
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
     /// <param name="changedWarpRoutes">Whether the locations reachable by warps from this location changed as part of this propagation.</param>
     /// <returns>Returns whether any assets were updated.</returns>
-    private bool PropagateMap(IAssetName assetName, ref Dictionary<FarmHouse, string?>? spouseRoomMapPathCache, bool ignoreWorld, out bool changedWarpRoutes)
+    private bool PropagateMap(
+        IAssetName assetName,
+        ref Dictionary<FarmHouse, string?>? spouseRoomMapPathCache,
+        bool ignoreWorld,
+        out bool changedWarpRoutes
+    )
     {
         bool changed = false;
         changedWarpRoutes = false;
@@ -145,7 +167,6 @@ internal class CoreAssetPropagator
                 bool shouldUpdateMap =
                     // edited this map
                     this.IsSameBaseName(assetName, location.mapPath.Value)
-
                     // edited spouse room for this farmhouse
                     || (
                         location is FarmHouse farmhouse
@@ -177,7 +198,10 @@ internal class CoreAssetPropagator
                     this.UpdateMap(info);
                     var newWarps = GetWarpSet(location);
 
-                    changedWarpRoutes = changedWarpRoutes || oldWarps.Count != newWarps.Count || oldWarps.Any(p => !newWarps.Contains(p));
+                    changedWarpRoutes =
+                        changedWarpRoutes
+                        || oldWarps.Count != newWarps.Count
+                        || oldWarps.Any(p => !newWarps.Contains(p));
                     changed = true;
                 }
             }
@@ -191,7 +215,11 @@ internal class CoreAssetPropagator
     /// <param name="contentManagers">The content managers whose assets to update.</param>
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
     /// <returns>Returns whether any assets were updated.</returns>
-    private bool PropagateTexture(IAssetName assetName, IList<IContentManager> contentManagers, bool ignoreWorld)
+    private bool PropagateTexture(
+        IAssetName assetName,
+        IList<IContentManager> contentManagers,
+        bool ignoreWorld
+    )
     {
         bool changed = false;
 
@@ -199,7 +227,8 @@ internal class CoreAssetPropagator
         // This method replaces the textures that would be loaded if you called `contentManager.Load<Texture2D>(assetName)`,
         // which internally maps to `contentManager.LoadLocalized<Texture2D>(assetName, currentLanguage)` regardless of
         // the asset name's language. If the asset name includes a locale, `LoadLocalized` handles that internally.
-        LocalizedContentManager.LanguageCode currentLanguage = LocalizedContentManager.CurrentLanguageCode;
+        LocalizedContentManager.LanguageCode currentLanguage =
+            LocalizedContentManager.CurrentLanguageCode;
 
         // update textures in-place (0 = localized asset name, 1 = base asset name)
         for (int i = 0; i < 2; i++)
@@ -215,17 +244,22 @@ internal class CoreAssetPropagator
             // `asset.fr-FR` too. We need to check every content manager for in-place texture edits though, so we
             // should avoid iterating their assets if possible. So here we just check for the current localized name
             // and base name, which should cover normal cases.
-            IAssetName name = forLocalizedAsset
-                ? assetName
-                : assetName.GetBaseAssetName();
+            IAssetName name = forLocalizedAsset ? assetName : assetName.GetBaseAssetName();
 
             // get new texture to copy
             Lazy<Texture2D?> newTexture = new(() =>
             {
                 if (this.DisposableContentManager.DoesAssetExist<Texture2D>(name))
-                    return this.DisposableContentManager.LoadLocalized<Texture2D>(name, currentLanguage, useCache: false);
+                    return this.DisposableContentManager.LoadLocalized<Texture2D>(
+                        name,
+                        currentLanguage,
+                        useCache: false
+                    );
 
-                this.Monitor.Log($"Skipped reload for '{name.Name}' because the underlying asset no longer exists.", LogLevel.Warn);
+                this.Monitor.Log(
+                    $"Skipped reload for '{name.Name}' because the underlying asset no longer exists.",
+                    LogLevel.Warn
+                );
                 return null;
             });
 
@@ -237,7 +271,11 @@ internal class CoreAssetPropagator
                     if (newTexture.Value is null)
                         break;
 
-                    Texture2D texture = contentManager.LoadLocalized<Texture2D>(name, currentLanguage, useCache: true);
+                    Texture2D texture = contentManager.LoadLocalized<Texture2D>(
+                        name,
+                        currentLanguage,
+                        useCache: true
+                    );
                     texture.CopyFromTexture(newTexture.Value);
                     changed = true;
                 }
@@ -273,7 +311,10 @@ internal class CoreAssetPropagator
                 default:
                     if (!ignoreWorld)
                     {
-                        if (assetName.IsDirectlyUnderPath("Buildings") && assetName.BaseName.EndsWith("_PaintMask"))
+                        if (
+                            assetName.IsDirectlyUnderPath("Buildings")
+                            && assetName.BaseName.EndsWith("_PaintMask")
+                        )
                             return this.UpdateBuildingPaintMask(assetName);
                     }
 
@@ -288,7 +329,11 @@ internal class CoreAssetPropagator
     /// <param name="assetName">The asset name that changed.</param>
     /// <param name="ignoreWorld">Whether the in-game world is fully unloaded (e.g. on the title screen), so there's no need to propagate changes into the world.</param>
     /// <returns>Returns whether any assets were updated.</returns>
-    [SuppressMessage("ReSharper", "StringLiteralTypo", Justification = "These deliberately match the asset names.")]
+    [SuppressMessage(
+        "ReSharper",
+        "StringLiteralTypo",
+        Justification = "These deliberately match the asset names."
+    )]
     private bool PropagateOther(IAssetName assetName, bool ignoreWorld)
     {
         var content = this.MainContentManager;
@@ -334,7 +379,8 @@ internal class CoreAssetPropagator
                     Utility.ForEachLocation(location =>
                     {
                         if (Context.IsMainPlayer || location.IsTemporary)
-                            this.Reflection.GetField<bool>(location, "_mapSeatsDirty").SetValue(true);
+                            this.Reflection.GetField<bool>(location, "_mapSeatsDirty")
+                                .SetValue(true);
 
                         return true;
                     });
@@ -493,7 +539,6 @@ internal class CoreAssetPropagator
         }
     }
 
-
     /*********
     ** Private methods
     *********/
@@ -506,7 +551,9 @@ internal class CoreAssetPropagator
     private bool UpdateBuildingPaintMask(IAssetName assetName)
     {
         // remove from paint mask cache
-        bool removedFromCache = BuildingPainter.paintMaskLookup.Remove(assetName.BaseName) | BuildingPainter.paintMaskLookup.Remove(assetName.BaseName.Replace('/', '\\'));
+        bool removedFromCache =
+            BuildingPainter.paintMaskLookup.Remove(assetName.BaseName)
+            | BuildingPainter.paintMaskLookup.Remove(assetName.BaseName.Replace('/', '\\'));
 
         // reload building textures
         bool anyReloaded = false;
@@ -514,7 +561,10 @@ internal class CoreAssetPropagator
         {
             foreach (Building building in location.buildings)
             {
-                if (building.paintedTexture != null && assetName.IsEquivalentTo(building.textureName() + "_PaintMask"))
+                if (
+                    building.paintedTexture != null
+                    && assetName.IsEquivalentTo(building.textureName() + "_PaintMask")
+                )
                 {
                     anyReloaded = true;
                     building.resetTexture();
@@ -540,7 +590,10 @@ internal class CoreAssetPropagator
         // reset other player
         foreach (Farmer player in Game1.getOnlineFarmers())
         {
-            if (!object.ReferenceEquals(player, Game1.player) && this.IsSameBaseName(assetName, player.getTexture()))
+            if (
+                !object.ReferenceEquals(player, Game1.player)
+                && this.IsSameBaseName(assetName, player.getTexture())
+            )
                 player.FarmerRenderer.MarkSpriteDirty();
         }
     }
@@ -583,7 +636,9 @@ internal class CoreAssetPropagator
     {
         // get NPCs
         string name = Path.GetFileName(assetName.BaseName);
-        NPC[] villagers = this.GetCharacters().Where(npc => npc.Name == name && npc.IsVillager).ToArray();
+        NPC[] villagers = this.GetCharacters()
+            .Where(npc => npc.Name == name && npc.IsVillager)
+            .ToArray();
         if (!villagers.Any())
             return false;
 
@@ -594,7 +649,8 @@ internal class CoreAssetPropagator
         foreach (NPC villager in villagers)
         {
             bool shouldSayMarriageDialogue = villager.shouldSayMarriageDialogue.Value;
-            MarriageDialogueReference[] marriageDialogue = villager.currentMarriageDialogue.ToArray();
+            MarriageDialogueReference[] marriageDialogue =
+                villager.currentMarriageDialogue.ToArray();
 
             villager.resetSeasonalDialogue(); // doesn't only affect seasonal dialogue
             villager.resetCurrentDialogue();
@@ -623,7 +679,9 @@ internal class CoreAssetPropagator
     {
         // get NPCs
         string name = Path.GetFileName(assetName.BaseName);
-        NPC[] villagers = this.GetCharacters().Where(npc => npc.Name == name && npc.IsVillager).ToArray();
+        NPC[] villagers = this.GetCharacters()
+            .Where(npc => npc.Name == name && npc.IsVillager)
+            .ToArray();
         if (!villagers.Any())
             return false;
 
@@ -631,14 +689,19 @@ internal class CoreAssetPropagator
         foreach (NPC villager in villagers)
         {
             // reload schedule
-            this.Reflection.GetField<bool>(villager, "_hasLoadedMasterScheduleData").SetValue(false);
-            this.Reflection.GetField<Dictionary<string, string>?>(villager, "_masterScheduleData").SetValue(null);
+            this.Reflection.GetField<bool>(villager, "_hasLoadedMasterScheduleData")
+                .SetValue(false);
+            this.Reflection.GetField<Dictionary<string, string>?>(villager, "_masterScheduleData")
+                .SetValue(null);
             villager.TryLoadSchedule();
 
             // switch to new schedule if needed
             if (villager.Schedule != null)
             {
-                int lastScheduleTime = villager.Schedule.Keys.Where(p => p <= Game1.timeOfDay).OrderByDescending(p => p).FirstOrDefault();
+                int lastScheduleTime = villager
+                    .Schedule.Keys.Where(p => p <= Game1.timeOfDay)
+                    .OrderByDescending(p => p)
+                    .FirstOrDefault();
                 if (lastScheduleTime != 0)
                 {
                     villager.queuedSchedulePaths.Clear();
@@ -659,7 +722,9 @@ internal class CoreAssetPropagator
         Game1.samBandName = content.LoadString("Strings/StringsFromCSFiles:Game1.cs.2156");
         Game1.elliottBookName = content.LoadString("Strings/StringsFromCSFiles:Game1.cs.2157");
 
-        string[] dayNames = this.Reflection.GetField<string[]>(typeof(Game1), "_shortDayDisplayName").GetValue();
+        string[] dayNames = this
+            .Reflection.GetField<string[]>(typeof(Game1), "_shortDayDisplayName")
+            .GetValue();
         dayNames[0] = content.LoadString("Strings/StringsFromCSFiles:Game1.cs.3042");
         dayNames[1] = content.LoadString("Strings/StringsFromCSFiles:Game1.cs.3043");
         dayNames[2] = content.LoadString("Strings/StringsFromCSFiles:Game1.cs.3044");
@@ -781,7 +846,8 @@ internal class CoreAssetPropagator
     {
         return this.WorldCache.GetOrSet(
             $"{nameof(this.GetLocations)}_{buildingInteriors}",
-            () => this.GetLocationsWithInfo(buildingInteriors).Select(info => info.Location).ToArray()
+            () =>
+                this.GetLocationsWithInfo(buildingInteriors).Select(info => info.Location).ToArray()
         );
     }
 
@@ -796,7 +862,9 @@ internal class CoreAssetPropagator
                 List<LocationInfo> locations = [];
 
                 // get root locations
-                foreach (GameLocation location in Game1.locations)
+                foreach (
+                    GameLocation location in StardewModdingAPI.Framework.CrossPlatform.GameAccessors.GetLocations()
+                )
                     locations.Add(new LocationInfo(location, null));
                 if (SaveGame.loaded?.locations != null)
                 {
@@ -819,13 +887,17 @@ internal class CoreAssetPropagator
                 }
 
                 return locations;
-            });
+            }
+        );
     }
 
     /// <summary>Get the asset name for a farmhouse's spouse room, if it's currently displaying one.</summary>
     /// <param name="farmhouse">The farmhouse whose spouse room to get.</param>
     /// <param name="cache">A cache of spouse room map path lookups by farmhouse or cabin instance. This is created if it's null.</param>
-    private string? GetDisplayedSpouseRoomPath(FarmHouse farmhouse, ref Dictionary<FarmHouse, string?>? cache)
+    private string? GetDisplayedSpouseRoomPath(
+        FarmHouse farmhouse,
+        ref Dictionary<FarmHouse, string?>? cache
+    )
     {
         // from cache
         if (cache is null)
@@ -835,16 +907,21 @@ internal class CoreAssetPropagator
 
         // no spouse room shown
         Farmer? owner = farmhouse.owner;
-        if (owner?.spouse is null || !this.Reflection.GetField<bool>(farmhouse, "displayingSpouseRoom").GetValue())
+        if (
+            owner?.spouse is null
+            || !this.Reflection.GetField<bool>(farmhouse, "displayingSpouseRoom").GetValue()
+        )
         {
             cache[farmhouse] = null;
             return null;
         }
 
         // else get map path
-        string mapPath = NPC.TryGetData(owner.spouse, out CharacterData? spouseData) && spouseData?.SpouseRoom?.MapAsset is { } mapName
-            ? $"Maps/{mapName}"
-            : "Maps/spouseRooms";
+        string mapPath =
+            NPC.TryGetData(owner.spouse, out CharacterData? spouseData)
+            && spouseData?.SpouseRoom?.MapAsset is { } mapName
+                ? $"Maps/{mapName}"
+                : "Maps/spouseRooms";
         cache[farmhouse] = mapPath;
         return mapPath;
     }
@@ -852,7 +929,10 @@ internal class CoreAssetPropagator
     /// <summary>Get whether two asset names are equivalent if you ignore the locale code.</summary>
     /// <param name="left">The first value to compare.</param>
     /// <param name="right">The second value to compare.</param>
-    private bool IsSameBaseName([NotNullWhen(true)] IAssetName? left, [NotNullWhen(true)] string? right)
+    private bool IsSameBaseName(
+        [NotNullWhen(true)] IAssetName? left,
+        [NotNullWhen(true)] string? right
+    )
     {
         if (left is null || right is null)
             return false;
@@ -864,7 +944,10 @@ internal class CoreAssetPropagator
     /// <summary>Get whether two asset names are equivalent if you ignore the locale code.</summary>
     /// <param name="left">The first value to compare.</param>
     /// <param name="right">The second value to compare.</param>
-    private bool IsSameBaseName([NotNullWhen(true)] IAssetName? left, [NotNullWhen(true)] IAssetName? right)
+    private bool IsSameBaseName(
+        [NotNullWhen(true)] IAssetName? left,
+        [NotNullWhen(true)] IAssetName? right
+    )
     {
         if (left is null || right is null)
             return false;

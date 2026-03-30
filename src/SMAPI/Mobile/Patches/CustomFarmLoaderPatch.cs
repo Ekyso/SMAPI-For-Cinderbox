@@ -21,7 +21,7 @@ internal static class CustomFarmLoaderPatch
     private static void LogInfo(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Info(Tag, message);
+        global::Android.Util.Log.Info(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] {message}");
 #endif
@@ -30,7 +30,7 @@ internal static class CustomFarmLoaderPatch
     private static void LogError(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Error(Tag, message);
+        global::Android.Util.Log.Error(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] ERROR: {message}");
 #endif
@@ -66,9 +66,15 @@ internal static class CustomFarmLoaderPatch
             );
             if (readFarmTypeQuickly != null)
             {
-                harmony.Patch(readFarmTypeQuickly, prefix: new HarmonyMethod(
-                    typeof(CustomFarmLoaderPatch).GetMethod(nameof(ReadFarmTypeQuickly_Prefix),
-                        BindingFlags.Public | BindingFlags.Static)));
+                harmony.Patch(
+                    readFarmTypeQuickly,
+                    prefix: new HarmonyMethod(
+                        typeof(CustomFarmLoaderPatch).GetMethod(
+                            nameof(ReadFarmTypeQuickly_Prefix),
+                            BindingFlags.Public | BindingFlags.Static
+                        )
+                    )
+                );
                 LogInfo("Patched readFarmTypeQuickly");
             }
             else
@@ -85,9 +91,15 @@ internal static class CustomFarmLoaderPatch
             );
             if (readFarmType != null)
             {
-                harmony.Patch(readFarmType, prefix: new HarmonyMethod(
-                    typeof(CustomFarmLoaderPatch).GetMethod(nameof(ReadFarmType_Prefix),
-                        BindingFlags.Public | BindingFlags.Static)));
+                harmony.Patch(
+                    readFarmType,
+                    prefix: new HarmonyMethod(
+                        typeof(CustomFarmLoaderPatch).GetMethod(
+                            nameof(ReadFarmType_Prefix),
+                            BindingFlags.Public | BindingFlags.Static
+                        )
+                    )
+                );
                 LogInfo("Patched readFarmType");
             }
             else
@@ -104,9 +116,15 @@ internal static class CustomFarmLoaderPatch
             );
             if (loadInitialCache != null)
             {
-                harmony.Patch(loadInitialCache, prefix: new HarmonyMethod(
-                    typeof(CustomFarmLoaderPatch).GetMethod(nameof(LoadInitialCache_Prefix),
-                        BindingFlags.Public | BindingFlags.Static)));
+                harmony.Patch(
+                    loadInitialCache,
+                    prefix: new HarmonyMethod(
+                        typeof(CustomFarmLoaderPatch).GetMethod(
+                            nameof(LoadInitialCache_Prefix),
+                            BindingFlags.Public | BindingFlags.Static
+                        )
+                    )
+                );
                 LogInfo("Patched LoadInitialCache");
             }
             else
@@ -207,12 +225,18 @@ internal static class CustomFarmLoaderPatch
             if (farmTypeCacheType == null)
                 return true; // fallback to original
 
-            var cacheField = farmTypeCacheType.GetField("Cache",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            var helperField = farmTypeCacheType.GetField("Helper",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            var monitorField = farmTypeCacheType.GetField("Monitor",
-                BindingFlags.NonPublic | BindingFlags.Static);
+            var cacheField = farmTypeCacheType.GetField(
+                "Cache",
+                BindingFlags.NonPublic | BindingFlags.Static
+            );
+            var helperField = farmTypeCacheType.GetField(
+                "Helper",
+                BindingFlags.NonPublic | BindingFlags.Static
+            );
+            var monitorField = farmTypeCacheType.GetField(
+                "Monitor",
+                BindingFlags.NonPublic | BindingFlags.Static
+            );
 
             if (cacheField == null || helperField == null || monitorField == null)
                 return true; // fallback to original
@@ -222,8 +246,10 @@ internal static class CustomFarmLoaderPatch
             if (helper == null || monitor == null)
                 return true;
 
-            var cache = helper.Data.ReadJsonFile<System.Collections.Generic.Dictionary<string, string>>(
-                "FarmTypeCache.json");
+            var cache = helper.Data.ReadJsonFile<System.Collections.Generic.Dictionary<
+                string,
+                string
+            >>("FarmTypeCache.json");
             bool isNewCache = cache == null;
             cache ??= new System.Collections.Generic.Dictionary<string, string>();
             cacheField.SetValue(null, cache);
@@ -233,13 +259,19 @@ internal static class CustomFarmLoaderPatch
                 return false;
 
             var saveDirs = Directory.GetDirectories(savesDir);
-            monitor.Log("Generating FarmTypeCache, this might take a while initially",
-                isNewCache ? LogLevel.Warn : LogLevel.Trace);
+            monitor.Log(
+                "Generating FarmTypeCache, this might take a while initially",
+                isNewCache ? LogLevel.Warn : LogLevel.Trace
+            );
 
-            var readQuickly = farmTypeCacheType.GetMethod("readFarmTypeQuickly",
-                BindingFlags.NonPublic | BindingFlags.Static);
-            var readFull = farmTypeCacheType.GetMethod("readFarmType",
-                BindingFlags.NonPublic | BindingFlags.Static);
+            var readQuickly = farmTypeCacheType.GetMethod(
+                "readFarmTypeQuickly",
+                BindingFlags.NonPublic | BindingFlags.Static
+            );
+            var readFull = farmTypeCacheType.GetMethod(
+                "readFarmType",
+                BindingFlags.NonPublic | BindingFlags.Static
+            );
 
             int count = 0;
             foreach (var saveDir in saveDirs)

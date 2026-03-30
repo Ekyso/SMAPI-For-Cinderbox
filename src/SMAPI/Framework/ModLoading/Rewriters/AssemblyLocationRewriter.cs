@@ -21,9 +21,7 @@ internal class AssemblyLocationRewriter : BaseInstructionHandler
     *********/
     /// <summary>Construct an instance.</summary>
     public AssemblyLocationRewriter()
-        : base(defaultPhrase: "Assembly.Location (Android fix)")
-    {
-    }
+        : base(defaultPhrase: "Assembly.Location (Android fix)") { }
 
     /// <inheritdoc />
     public override bool Handle(ModuleDefinition module, ILProcessor cil, Instruction instruction)
@@ -57,8 +55,8 @@ internal class AssemblyLocationRewriter : BaseInstructionHandler
             return false;
 
         return methodRef.DeclaringType?.FullName == "System.Reflection.Assembly"
-               && methodRef.Name == "get_Location"
-               && methodRef.Parameters.Count == 0;
+            && methodRef.Name == "get_Location"
+            && methodRef.Parameters.Count == 0;
     }
 
     /// <summary>Get a reference to the helper method.</summary>
@@ -94,18 +92,18 @@ internal class AssemblyLocationRewriter : BaseInstructionHandler
 /// <summary>Provides Assembly.Location functionality on Android where the property returns empty for bundled assemblies.</summary>
 public static class AssemblyLocationHelper
 {
-    /// <summary>The path to the desktop DLLs folder on Android.</summary>
-    private static string? DesktopDllsPath;
+    /// <summary>The path to the game DLLs folder on Android (desktop or mobile).</summary>
+    private static string? GameDllsPath;
 
     /// <summary>The path to the mods folder on Android.</summary>
     private static string? ModsPath;
 
     /// <summary>Initialize the helper with the paths where assemblies can be found.</summary>
-    /// <param name="desktopDllsPath">Path to the desktop DLLs folder (for game assemblies).</param>
+    /// <param name="gameDllsPath">Path to the game DLLs folder.</param>
     /// <param name="modsPath">Path to the mods folder (for mod assemblies).</param>
-    public static void Initialize(string desktopDllsPath, string modsPath)
+    public static void Initialize(string gameDllsPath, string modsPath)
     {
-        DesktopDllsPath = desktopDllsPath;
+        GameDllsPath = gameDllsPath;
         ModsPath = modsPath;
     }
 
@@ -129,9 +127,9 @@ public static class AssemblyLocationHelper
         var dllName = assemblyName + ".dll";
 
         // check desktop DLLs path
-        if (!string.IsNullOrEmpty(DesktopDllsPath))
+        if (!string.IsNullOrEmpty(GameDllsPath))
         {
-            var gamePath = System.IO.Path.Combine(DesktopDllsPath, dllName);
+            var gamePath = System.IO.Path.Combine(GameDllsPath, dllName);
             if (System.IO.File.Exists(gamePath))
                 return gamePath;
         }
@@ -145,9 +143,7 @@ public static class AssemblyLocationHelper
                 if (match != null)
                     return match;
             }
-            catch
-            {
-            }
+            catch { }
         }
 
         // fallback
@@ -173,9 +169,7 @@ public static class AssemblyLocationHelper
                     return result;
             }
         }
-        catch
-        {
-        }
+        catch { }
 
         return null;
     }

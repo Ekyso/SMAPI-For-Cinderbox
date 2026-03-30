@@ -30,7 +30,8 @@ internal static class ParallelAudioLoadPatch
     private static readonly Dictionary<string, SoundEffect> _sfxCache = new(StringComparer.Ordinal);
 
     /// <summary>IMA4 buffer size and PCM equivalent for cached SoundEffects, keyed by file path.</summary>
-    private static readonly Dictionary<string, (long Ima4Bytes, long PcmEquivBytes)> _sfxIma4Meta = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, (long Ima4Bytes, long PcmEquivBytes)> _sfxIma4Meta =
+        new(StringComparer.Ordinal);
 
     private static readonly byte[] Ima4CacheMagic = { 0x49, 0x4D, 0x41, 0x34 }; // "IMA4"
     private const byte Ima4CacheVersion = 1;
@@ -40,6 +41,7 @@ internal static class ParallelAudioLoadPatch
     /// <param name="harmony">The Harmony instance.</param>
     public static void Apply(Harmony harmony)
     {
+#if !SMAPI_FOR_ANDROID
         harmony.Patch(
             original: AccessTools.Method(
                 typeof(AudioCueModificationManager),
@@ -50,8 +52,10 @@ internal static class ParallelAudioLoadPatch
                 nameof(ApplyAllCueModifications_Prefix)
             )
         );
+#endif
     }
 
+#if !SMAPI_FOR_ANDROID
     /// <summary>Replaces sequential cue modification with parallel OGG decoding and sequential SoundEffect creation.</summary>
     private static bool ApplyAllCueModifications_Prefix(AudioCueModificationManager __instance)
     {
@@ -79,7 +83,8 @@ internal static class ParallelAudioLoadPatch
                 foreach (var filePath in data.FilePaths)
                 {
                     string path = __instance.GetFilePath(filePath);
-                    bool isOgg = Path.GetExtension(path).Equals(".ogg", StringComparison.OrdinalIgnoreCase);
+                    bool isOgg = Path.GetExtension(path)
+                        .Equals(".ogg", StringComparison.OrdinalIgnoreCase);
 
                     if (isOgg && !data.StreamedVorbis)
                         oggPathsNonStreamed.Add(path);
@@ -87,7 +92,10 @@ internal static class ParallelAudioLoadPatch
             }
 
             bool useIma4 = false;
-            try { useIma4 = OpenALSoundController.Instance.SupportsIma4; }
+            try
+            {
+                useIma4 = OpenALSoundController.Instance.SupportsIma4;
+            }
             catch { }
 
             var oggPathsToProcess = new HashSet<string>(StringComparer.Ordinal);
@@ -97,7 +105,9 @@ internal static class ParallelAudioLoadPatch
                     oggPathsToProcess.Add(path);
             }
 
-            var decodedAudio = new ConcurrentDictionary<string, DecodedAudio?>(StringComparer.Ordinal);
+            var decodedAudio = new ConcurrentDictionary<string, DecodedAudio?>(
+                StringComparer.Ordinal
+            );
 
             if (oggPathsToProcess.Count > 0)
             {
@@ -105,10 +115,7 @@ internal static class ParallelAudioLoadPatch
 
                 Parallel.ForEach(
                     oggPathsToProcess,
-                    new ParallelOptions
-                    {
-                        MaxDegreeOfParallelism = parallelism,
-                    },
+                    new ParallelOptions { MaxDegreeOfParallelism = parallelism },
                     path =>
                     {
                         decodedAudio[path] = DecodeOggAudio(path, useIma4);
@@ -155,7 +162,12 @@ internal static class ParallelAudioLoadPatch
                             try
                             {
                                 SoundEffect sfx;
-                                if (vorbis && !data.StreamedVorbis && _sfxCache.TryGetValue(path, out var cachedSfx) && !cachedSfx.IsDisposed)
+                                if (
+                                    vorbis
+                                    && !data.StreamedVorbis
+                                    && _sfxCache.TryGetValue(path, out var cachedSfx)
+                                    && !cachedSfx.IsDisposed
+                                )
                                 {
                                     sfx = cachedSfx;
                                 }
@@ -170,12 +182,25 @@ internal static class ParallelAudioLoadPatch
                                 )
                                 {
                                     if (audio.IsIma4)
-                                        sfx = new SoundEffect(audio.Buffer, audio.SampleRate, audio.Channels, audio.BlockAlignment, audio.TotalPcmSamples);
+                                        sfx = new SoundEffect(
+                                            audio.Buffer,
+                                            audio.SampleRate,
+                                            audio.Channels,
+                                            audio.BlockAlignment,
+                                            audio.TotalPcmSamples
+                                        );
                                     else
-                                        sfx = new SoundEffect(audio.Buffer, audio.SampleRate, audio.Channels);
+                                        sfx = new SoundEffect(
+                                            audio.Buffer,
+                                            audio.SampleRate,
+                                            audio.Channels
+                                        );
                                     _sfxCache[path] = sfx;
                                     if (audio.IsIma4)
-                                        _sfxIma4Meta[path] = (audio.Buffer.Length, (long)audio.TotalPcmSamples * (int)audio.Channels * 2);
+                                        _sfxIma4Meta[path] = (
+                                            audio.Buffer.Length,
+                                            (long)audio.TotalPcmSamples * (int)audio.Channels * 2
+                                        );
                                 }
                                 else
                                 {
@@ -237,11 +262,16 @@ internal static class ParallelAudioLoadPatch
             GC.WaitForPendingFinalizers();
 
             totalSw.Stop();
-            Game1.log.Info($"{tag}: ApplyAllCueModifications completed in {totalSw.ElapsedMilliseconds}ms");
+            Game1.log.Info(
+                $"{tag}: ApplyAllCueModifications completed in {totalSw.ElapsedMilliseconds}ms"
+            );
         }
         catch (Exception ex)
         {
-            Game1.log.Error($"{tag}: Parallel audio loading failed after {totalSw.ElapsedMilliseconds}ms, falling back to sequential", ex);
+            Game1.log.Error(
+                $"{tag}: Parallel audio loading failed after {totalSw.ElapsedMilliseconds}ms, falling back to sequential",
+                ex
+            );
             return true; // fall through to original sequential method
         }
 
@@ -250,8 +280,14 @@ internal static class ParallelAudioLoadPatch
 
     /// <summary>Decoded/encoded audio data ready for SoundEffect creation.</summary>
     private record DecodedAudio(
-        byte[] Buffer, int SampleRate, AudioChannels Channels,
-        bool IsIma4, int BlockAlignment, int TotalPcmSamples, bool WasCacheHit);
+        byte[] Buffer,
+        int SampleRate,
+        AudioChannels Channels,
+        bool IsIma4,
+        int BlockAlignment,
+        int TotalPcmSamples,
+        bool WasCacheHit
+    );
 
     /// <summary>Decode an OGG file to PCM or IMA4 audio data, using disk cache when available.</summary>
     private static DecodedAudio? DecodeOggAudio(string absolutePath, bool useIma4)
@@ -291,14 +327,44 @@ internal static class ParallelAudioLoadPatch
             int totalPcmSamplesPerChannel = samplesRead / channelCount;
 
             if (!useIma4)
-                return new DecodedAudio(pcmBuffer, sampleRate, channels, false, 0, totalPcmSamplesPerChannel, false);
+                return new DecodedAudio(
+                    pcmBuffer,
+                    sampleRate,
+                    channels,
+                    false,
+                    0,
+                    totalPcmSamplesPerChannel,
+                    false
+                );
 
-            int blockAlignment = channelCount == 2 ? Ima4BlockAlignmentStereo : Ima4BlockAlignmentMono;
-            byte[] ima4Buffer = AudioLoader.ConvertPcmToIma4(pcmBuffer, 0, pcmBuffer.Length, channelCount, blockAlignment);
+            int blockAlignment =
+                channelCount == 2 ? Ima4BlockAlignmentStereo : Ima4BlockAlignmentMono;
+            byte[] ima4Buffer = AudioLoader.ConvertPcmToIma4(
+                pcmBuffer,
+                0,
+                pcmBuffer.Length,
+                channelCount,
+                blockAlignment
+            );
 
-            TryWriteIma4Cache(absolutePath, ima4Buffer, channelCount, blockAlignment, sampleRate, totalPcmSamplesPerChannel);
+            TryWriteIma4Cache(
+                absolutePath,
+                ima4Buffer,
+                channelCount,
+                blockAlignment,
+                sampleRate,
+                totalPcmSamplesPerChannel
+            );
 
-            return new DecodedAudio(ima4Buffer, sampleRate, channels, true, blockAlignment, totalPcmSamplesPerChannel, false);
+            return new DecodedAudio(
+                ima4Buffer,
+                sampleRate,
+                channels,
+                true,
+                blockAlignment,
+                totalPcmSamplesPerChannel,
+                false
+            );
         }
         catch
         {
@@ -324,8 +390,12 @@ internal static class ParallelAudioLoadPatch
             if (cacheData.Length < Ima4CacheHeaderSize)
                 return null;
 
-            if (cacheData[0] != Ima4CacheMagic[0] || cacheData[1] != Ima4CacheMagic[1] ||
-                cacheData[2] != Ima4CacheMagic[2] || cacheData[3] != Ima4CacheMagic[3])
+            if (
+                cacheData[0] != Ima4CacheMagic[0]
+                || cacheData[1] != Ima4CacheMagic[1]
+                || cacheData[2] != Ima4CacheMagic[2]
+                || cacheData[3] != Ima4CacheMagic[3]
+            )
                 return null;
 
             if (cacheData[4] != Ima4CacheVersion)
@@ -351,7 +421,15 @@ internal static class ParallelAudioLoadPatch
             Buffer.BlockCopy(cacheData, Ima4CacheHeaderSize, ima4Buffer, 0, ima4DataLength);
 
             var audioChannels = channels == 2 ? AudioChannels.Stereo : AudioChannels.Mono;
-            return new DecodedAudio(ima4Buffer, sampleRate, audioChannels, true, blockAlignment, totalPcmSamples, true);
+            return new DecodedAudio(
+                ima4Buffer,
+                sampleRate,
+                audioChannels,
+                true,
+                blockAlignment,
+                totalPcmSamples,
+                true
+            );
         }
         catch
         {
@@ -363,7 +441,14 @@ internal static class ParallelAudioLoadPatch
     /// Write IMA4 encoded data to a disk cache file. Atomic write via temp file + rename.
     /// Silently fails if the directory is read-only or any other error occurs.
     /// </summary>
-    private static void TryWriteIma4Cache(string oggPath, byte[] ima4Buffer, int channels, int blockAlignment, int sampleRate, int totalPcmSamples)
+    private static void TryWriteIma4Cache(
+        string oggPath,
+        byte[] ima4Buffer,
+        int channels,
+        int blockAlignment,
+        int sampleRate,
+        int totalPcmSamples
+    )
     {
         try
         {
@@ -384,7 +469,9 @@ internal static class ParallelAudioLoadPatch
             BitConverter.TryWriteBytes(header.AsSpan(16), ima4Buffer.Length);
             BitConverter.TryWriteBytes(header.AsSpan(20), oggLastModifiedTicks);
 
-            using (var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (
+                var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None)
+            )
             {
                 fs.Write(header, 0, header.Length);
                 fs.Write(ima4Buffer, 0, ima4Buffer.Length);
@@ -397,5 +484,6 @@ internal static class ParallelAudioLoadPatch
             Game1.log.Warn($"IMA4 cache write failed for {oggPath}: {ex.Message}");
         }
     }
+#endif
 }
 #endif

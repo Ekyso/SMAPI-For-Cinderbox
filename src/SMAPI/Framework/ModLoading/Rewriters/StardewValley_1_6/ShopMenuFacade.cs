@@ -21,57 +21,86 @@ public class ShopMenuFacade : ShopMenu, IRewriteFacade
         set => base.ShopId = value;
     }
 
-
     /*********
     ** Public methods
     *********/
-    /// <remarks>Changed in 1.6.0.</remarks>
-    public static ShopMenu Constructor(Dictionary<ISalable, int[]> itemPriceAndStock, int currency = 0, string? who = null, Func<ISalable, Farmer, int, bool>? on_purchase = null, Func<ISalable, bool>? on_sell = null, string? context = null)
+    /// <remarks>Changed in 1.6.0. Uses Dict overload which has same params on both platforms.</remarks>
+    public static ShopMenu Constructor(
+        Dictionary<ISalable, int[]> itemPriceAndStock,
+        int currency = 0,
+        string? who = null,
+        Func<ISalable, Farmer, int, bool>? on_purchase = null,
+        Func<ISalable, bool>? on_sell = null,
+        string? context = null
+    )
     {
-        return new ShopMenu(ShopMenuFacade.GetShopId(context), ShopMenuFacade.ToItemStockInformation(itemPriceAndStock), currency, who, ToOnPurchaseDelegate(on_purchase), on_sell, playOpenSound: true);
+        return new ShopMenu(
+            ShopMenuFacade.GetShopId(context),
+            ShopMenuFacade.ToItemStockInformation(itemPriceAndStock),
+            currency,
+            who,
+            ToOnPurchaseDelegate(on_purchase),
+            on_sell
+        );
     }
 
-    /// <remarks>Changed in 1.6.0.</remarks>
-    public static ShopMenu Constructor(List<ISalable> itemsForSale, int currency = 0, string? who = null, Func<ISalable, Farmer, int, bool>? on_purchase = null, Func<ISalable, bool>? on_sell = null, string? context = null)
+    /// <remarks>Changed in 1.6.9. ShopData overload has same signature on both platforms.</remarks>
+    public static ShopMenu Constructor(
+        string shopId,
+        ShopData shopData,
+        ShopOwnerData ownerData,
+        NPC? owner = null,
+        Func<ISalable, Farmer, int, bool>? onPurchase = null,
+        Func<ISalable, bool>? onSell = null,
+        bool playOpenSound = true
+    )
     {
-        return new ShopMenu(ShopMenuFacade.GetShopId(context), itemsForSale, currency, who, ToOnPurchaseDelegate(on_purchase), on_sell, playOpenSound: true);
+        return new ShopMenu(
+            shopId,
+            shopData,
+            ownerData,
+            owner,
+            ToOnPurchaseDelegate(onPurchase),
+            onSell,
+            playOpenSound
+        );
     }
 
-    /// <remarks>Changed in 1.6.9.</remarks>
-    public static ShopMenu Constructor(string shopId, ShopData shopData, ShopOwnerData ownerData, NPC? owner = null, Func<ISalable, Farmer, int, bool>? onPurchase = null, Func<ISalable, bool>? onSell = null, bool playOpenSound = true)
+    /// <remarks>Changed in 1.6.9. Dict overload has same params on both platforms (mobile adds optional context).</remarks>
+    public static ShopMenu Constructor(
+        string shopId,
+        Dictionary<ISalable, ItemStockInformation> itemPriceAndStock,
+        int currency = 0,
+        string? who = null,
+        Func<ISalable, Farmer, int, bool>? on_purchase = null,
+        Func<ISalable, bool>? on_sell = null,
+        bool playOpenSound = true
+    )
     {
-        return new ShopMenu(shopId, shopData, ownerData, owner, ToOnPurchaseDelegate(onPurchase), onSell, playOpenSound: true);
-    }
-
-    /// <remarks>Changed in 1.6.9.</remarks>
-    public static ShopMenu Constructor(string shopId, Dictionary<ISalable, ItemStockInformation> itemPriceAndStock, int currency = 0, string? who = null, Func<ISalable, Farmer, int, bool>? on_purchase = null, Func<ISalable, bool>? on_sell = null, bool playOpenSound = true)
-    {
-        return new ShopMenu(shopId, itemPriceAndStock, currency, who, ToOnPurchaseDelegate(on_purchase), on_sell, playOpenSound);
-    }
-
-    /// <remarks>Changed in 1.6.9.</remarks>
-    public static ShopMenu Constructor(string shopId, List<ISalable> itemsForSale, int currency = 0, string? who = null, Func<ISalable, Farmer, int, bool>? on_purchase = null, Func<ISalable, bool>? on_sell = null, bool playOpenSound = true)
-    {
-        return new ShopMenu(shopId, itemsForSale, currency, who, ToOnPurchaseDelegate(on_purchase), on_sell, playOpenSound);
+        return new ShopMenu(
+            shopId,
+            itemPriceAndStock,
+            currency,
+            who,
+            ToOnPurchaseDelegate(on_purchase),
+            on_sell,
+            playOpenSound
+        );
     }
 
     /*********
-    ** Private methods
+    ** Internal helpers (shared with desktop facade)
     *********/
-    private ShopMenuFacade()
-        : base(null, null, null)
-    {
-        RewriteHelper.ThrowFakeConstructorCalled();
-    }
-
-    private static string GetShopId(string? context)
+    internal static string GetShopId(string? context)
     {
         return string.IsNullOrWhiteSpace(context)
             ? "legacy_mod_code_" + Guid.NewGuid().ToString("N")
             : context;
     }
 
-    private static Dictionary<ISalable, ItemStockInformation> ToItemStockInformation(Dictionary<ISalable, int[]>? itemPriceAndStock)
+    internal static Dictionary<ISalable, ItemStockInformation> ToItemStockInformation(
+        Dictionary<ISalable, int[]>? itemPriceAndStock
+    )
     {
         Dictionary<ISalable, ItemStockInformation> stock = new();
 
@@ -85,12 +114,22 @@ public class ShopMenuFacade : ShopMenu, IRewriteFacade
     }
 
     /// <summary>Convert a pre-1.6.9 <see cref="ShopMenu.onPurchase"/> callback into its new delegate type.</summary>
-    /// <param name="onPurchase">The callback to convert.</param>
     [return: NotNullIfNotNull(nameof(onPurchase))]
-    private static ShopMenu.OnPurchaseDelegate? ToOnPurchaseDelegate(Func<ISalable, Farmer, int, bool>? onPurchase)
+    internal static ShopMenu.OnPurchaseDelegate? ToOnPurchaseDelegate(
+        Func<ISalable, Farmer, int, bool>? onPurchase
+    )
     {
         return onPurchase != null
             ? (item, who, countTaken, _) => onPurchase(item, who, countTaken)
             : null;
+    }
+
+    /*********
+    ** Private methods
+    *********/
+    private ShopMenuFacade()
+        : base(null, null, null)
+    {
+        RewriteHelper.ThrowFakeConstructorCalled();
     }
 }

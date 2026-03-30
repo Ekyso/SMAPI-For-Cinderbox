@@ -17,12 +17,12 @@ internal static class ModDataSafeAccessPatch
 
     private static void LogInfo(string message)
     {
-        Log.Info(Tag, message);
+        global::Android.Util.Log.Info(Tag, message);
     }
 
     private static void LogError(string message)
     {
-        Log.Error(Tag, message);
+        global::Android.Util.Log.Error(Tag, message);
     }
 
     public static void Apply(Harmony harmony)
@@ -40,7 +40,9 @@ internal static class ModDataSafeAccessPatch
             if (getItem.DeclaringType != typeof(ModDataDictionary))
             {
                 var declaringType = getItem.DeclaringType;
-                LogInfo($"get_Item declared on {declaringType?.Name}, resolving from declaring type");
+                LogInfo(
+                    $"get_Item declared on {declaringType?.Name}, resolving from declaring type"
+                );
                 getItem = declaringType!.GetMethod("get_Item", new[] { typeof(string) });
                 if (getItem == null)
                 {

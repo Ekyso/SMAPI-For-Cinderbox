@@ -39,45 +39,61 @@ internal static class DailyScreenshotPatch
 
             if (assembly == null)
             {
-                Log.Info(Tag, "DailyScreenshot not found, skipping patches");
+                global::Android.Util.Log.Info(Tag, "DailyScreenshot not found, skipping patches");
                 return;
             }
 
             var modEntryType = assembly.GetType("DailyScreenshot.ModEntry");
             if (modEntryType == null)
             {
-                Log.Error(Tag, "ModEntry type not found");
+                global::Android.Util.Log.Error(Tag, "ModEntry type not found");
                 return;
             }
 
-            var getter = modEntryType.GetProperty("DefaultSSdirectory",
-                BindingFlags.Public | BindingFlags.Instance)?.GetGetMethod();
+            var getter = modEntryType
+                .GetProperty("DefaultSSdirectory", BindingFlags.Public | BindingFlags.Instance)
+                ?.GetGetMethod();
             if (getter != null)
             {
-                harmony.Patch(getter,
-                    postfix: new HarmonyMethod(typeof(DailyScreenshotPatch), nameof(DefaultSSdirectory_Postfix)));
-                Log.Info(Tag, "Patched DefaultSSdirectory getter");
+                harmony.Patch(
+                    getter,
+                    postfix: new HarmonyMethod(
+                        typeof(DailyScreenshotPatch),
+                        nameof(DefaultSSdirectory_Postfix)
+                    )
+                );
+                global::Android.Util.Log.Info(Tag, "Patched DefaultSSdirectory getter");
             }
             else
-                Log.Error(Tag, "DefaultSSdirectory getter not found");
+                global::Android.Util.Log.Error(Tag, "DefaultSSdirectory getter not found");
 
-            var onMenuChanged = modEntryType.GetMethod("OnMenuChanged",
-                BindingFlags.NonPublic | BindingFlags.Instance);
+            var onMenuChanged = modEntryType.GetMethod(
+                "OnMenuChanged",
+                BindingFlags.NonPublic | BindingFlags.Instance
+            );
             if (onMenuChanged != null)
             {
-                harmony.Patch(onMenuChanged,
-                    prefix: new HarmonyMethod(typeof(DailyScreenshotPatch), nameof(OnMenuChanged_Prefix)));
-                Log.Info(Tag, "Patched OnMenuChanged (Show config.json button)");
+                harmony.Patch(
+                    onMenuChanged,
+                    prefix: new HarmonyMethod(
+                        typeof(DailyScreenshotPatch),
+                        nameof(OnMenuChanged_Prefix)
+                    )
+                );
+                global::Android.Util.Log.Info(
+                    Tag,
+                    "Patched OnMenuChanged (Show config.json button)"
+                );
             }
             else
-                Log.Warn(Tag, "OnMenuChanged not found");
+                global::Android.Util.Log.Warn(Tag, "OnMenuChanged not found");
 
-            Log.Info(Tag, "All DailyScreenshot patches applied");
+            global::Android.Util.Log.Info(Tag, "All DailyScreenshot patches applied");
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to apply patches: {ex.Message}");
-            Log.Error(Tag, ex.StackTrace ?? "");
+            global::Android.Util.Log.Error(Tag, $"Failed to apply patches: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, ex.StackTrace ?? "");
         }
     }
 
@@ -100,7 +116,11 @@ internal static class DailyScreenshotPatch
     }
 
     /// <summary>Replaces OnMenuChanged to open the mod folder via Android file manager instead of Process.Start.</summary>
-    private static bool OnMenuChanged_Prefix(object __instance, object sender, MenuChangedEventArgs e)
+    private static bool OnMenuChanged_Prefix(
+        object __instance,
+        object sender,
+        MenuChangedEventArgs e
+    )
     {
         try
         {
@@ -112,16 +132,32 @@ internal static class DailyScreenshotPatch
 
             string? modDir = (__instance as IMod)?.Helper?.DirectoryPath;
 
-            optionsPage.options.Add(new OptionsElement("DailyScreenshot Mod:"));
-            optionsPage.options.Add(new OptionsButton("Show config.json", () =>
-            {
-                if (modDir != null)
-                    OpenFolderOnAndroid(modDir);
-            }));
+            var optionsList =
+                typeof(OptionsPage)
+                    .GetField(
+                        "options",
+                        System.Reflection.BindingFlags.Public
+                            | System.Reflection.BindingFlags.Instance
+                    )
+                    ?.GetValue(optionsPage) as System.Collections.Generic.List<OptionsElement>;
+            if (optionsList == null)
+                return false;
+
+            optionsList.Add(new OptionsElement("DailyScreenshot Mod:"));
+            optionsList.Add(
+                new OptionsButton(
+                    "Show config.json",
+                    () =>
+                    {
+                        if (modDir != null)
+                            OpenFolderOnAndroid(modDir);
+                    }
+                )
+            );
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"OnMenuChanged_Prefix failed: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"OnMenuChanged_Prefix failed: {ex.Message}");
         }
 
         return false;
@@ -137,13 +173,14 @@ internal static class DailyScreenshotPatch
                 var relativePath = folderPath.Substring(extRoot.Length).TrimStart('/');
                 var uri = DocumentsContract.BuildDocumentUri(
                     "com.android.externalstorage.documents",
-                    "primary:" + relativePath);
+                    "primary:" + relativePath
+                );
 
                 var intent = new Intent(Intent.ActionView);
                 intent.SetDataAndType(uri, "vnd.android.document/directory");
                 intent.AddFlags(ActivityFlags.NewTask);
                 Application.Context.StartActivity(intent);
-                Log.Info(Tag, $"Opened folder: {folderPath}");
+                global::Android.Util.Log.Info(Tag, $"Opened folder: {folderPath}");
                 return;
             }
 
@@ -154,7 +191,7 @@ internal static class DailyScreenshotPatch
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to open folder: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to open folder: {ex.Message}");
         }
     }
 }

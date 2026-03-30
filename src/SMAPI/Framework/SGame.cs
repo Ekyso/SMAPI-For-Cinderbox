@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -57,7 +58,6 @@ internal class SGame : Game1
     /// <summary>Raised after the instance finishes a draw loop.</summary>
     private readonly Action<RenderTarget2D> OnRendered;
 
-
     /*********
     ** Accessors
     *********/
@@ -91,7 +91,6 @@ internal class SGame : Game1
     [NonInstancedStatic]
     public static Func<IServiceProvider, string, LocalizedContentManager>? CreateContentManagerImpl;
 
-
     /*********
     ** Public methods
     *********/
@@ -109,7 +108,21 @@ internal class SGame : Game1
     /// <param name="onContentLoaded">Raised after the game finishes loading its initial content.</param>
     /// <param name="onLoadStageChanged">Raised invoke when the load stage changes through a method like <see cref="Game1.CleanupReturningToTitle"/>.</param>
     /// <param name="onRendered">Raised after the instance finishes a draw loop.</param>
-    public SGame(PlayerIndex playerIndex, int instanceIndex, Monitor monitor, Reflector reflection, SInputState input, SModHooks modHooks, IGameLogger gameLogger, SMultiplayer multiplayer, Action<string> exitGameImmediately, Action<SGame, GameTime, Action> onUpdating, Action onContentLoaded, Action<LoadStage> onLoadStageChanged, Action<RenderTarget2D> onRendered)
+    public SGame(
+        PlayerIndex playerIndex,
+        int instanceIndex,
+        Monitor monitor,
+        Reflector reflection,
+        SInputState input,
+        SModHooks modHooks,
+        IGameLogger gameLogger,
+        SMultiplayer multiplayer,
+        Action<string> exitGameImmediately,
+        Action<SGame, GameTime, Action> onUpdating,
+        Action onContentLoaded,
+        Action<LoadStage> onLoadStageChanged,
+        Action<RenderTarget2D> onRendered
+    )
         : base(playerIndex, instanceIndex)
     {
         // init XNA
@@ -120,7 +133,19 @@ internal class SGame : Game1
         Game1.log = gameLogger;
         Game1.multiplayer = this.InitialMultiplayer = multiplayer;
         Game1.hooks = modHooks;
+#if SMAPI_FOR_ANDROID
+        // Mobile Game1._locations is List<GameLocation> (readonly), desktop is ObservableCollection.
+        // Use reflection to set it so the same binary works with either DLL.
+        var locationsField = typeof(Game1).GetField(
+            "_locations",
+            BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+        );
+        if (locationsField?.FieldType == typeof(ObservableCollection<GameLocation>))
+            locationsField.SetValue(this, new ObservableCollection<GameLocation>());
+        // else: mobile - leave the existing List<GameLocation> in place
+#else
         this._locations = new ObservableCollection<GameLocation>();
+#endif
 
         // init SMAPI
         this.Monitor = monitor;
@@ -170,17 +195,25 @@ internal class SGame : Game1
     ** Protected methods
     *********/
     /// <inheritdoc />
-    protected internal override LocalizedContentManager CreateContentManager(IServiceProvider serviceProvider, string rootDirectory)
+    protected internal override LocalizedContentManager CreateContentManager(
+        IServiceProvider serviceProvider,
+        string rootDirectory
+    )
     {
         if (SGame.CreateContentManagerImpl == null)
-            throw new InvalidOperationException($"The {nameof(SGame)}.{nameof(SGame.CreateContentManagerImpl)} must be set.");
+            throw new InvalidOperationException(
+                $"The {nameof(SGame)}.{nameof(SGame.CreateContentManagerImpl)} must be set."
+            );
 
         return SGame.CreateContentManagerImpl(serviceProvider, rootDirectory);
     }
 
     /// <inheritdoc />
     [SuppressMessage("ReSharper", "ParameterHidesMember")]
-    protected internal override IDisplayDevice CreateDisplayDevice(ContentManager content, GraphicsDevice graphicsDevice)
+    protected internal override IDisplayDevice CreateDisplayDevice(
+        ContentManager content,
+        GraphicsDevice graphicsDevice
+    )
     {
         return new SDisplayDevice(content, graphicsDevice);
     }
@@ -188,13 +221,22 @@ internal class SGame : Game1
     /// <summary>Initialize the instance when the game starts.</summary>
     protected override void Initialize()
     {
-        base.Initialize();
+        try
+        {
+            base.Initialize();
+        }
+        catch (Exception ex)
+        {
+            Android.Util.Log.Error("SMAPI", $"Game1.Initialize() FAILED: {ex}");
+            throw;
+        }
 
         // The game resets public static fields after the class is constructed (see GameRunner.SetInstanceDefaults), so SMAPI needs to re-override them here.
         Game1.input = this.InitialInput;
         Game1.multiplayer = this.InitialMultiplayer;
         if (this.IsMainInstance)
-            TitleMenu.OnCreatedNewCharacter += () => this.OnLoadStageChanged(LoadStage.CreatedBasicInfo); // event is static and shared between screens
+            TitleMenu.OnCreatedNewCharacter += () =>
+                this.OnLoadStageChanged(LoadStage.CreatedBasicInfo); // event is static and shared between screens
 
         // The Initial* fields should no longer be used after this point, since mods may further override them after initialization.
         this.InitialInput = null;
@@ -205,7 +247,19 @@ internal class SGame : Game1
     /// <param name="loadedGame">Whether this is being called from the game's load enumerator.</param>
     public override void loadForNewGame(bool loadedGame = false)
     {
-        base.loadForNewGame(loadedGame);
+#if SMAPI_FOR_ANDROID
+        try
+        {
+#endif
+            base.loadForNewGame(loadedGame);
+#if SMAPI_FOR_ANDROID
+        }
+        catch (Exception ex)
+        {
+            global::Android.Util.Log.Error("SMAPI", $"SGame.loadForNewGame CRASHED: {ex}");
+            throw;
+        }
+#endif
 
         bool isCreating =
             (Game1.currentMinigame is Intro) // creating save with intro
@@ -223,7 +277,30 @@ internal class SGame : Game1
         if (this.IsFirstTick)
         {
             this.Input.TrueUpdate();
-            this.Watchers = new WatcherCore(this.Input, (ObservableCollection<GameLocation>)this._locations);
+#if SMAPI_FOR_ANDROID
+            // Mobile Game1._locations is List<GameLocation>, desktop is ObservableCollection.
+            // Access via reflection to avoid JIT crash from field type mismatch.
+            var locationsField = typeof(Game1).GetField(
+                "_locations",
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
+            );
+            var locationsValue = locationsField?.GetValue(this);
+            ObservableCollection<GameLocation> locationsForWatcher;
+            if (locationsValue is ObservableCollection<GameLocation> observable)
+                locationsForWatcher = observable;
+            else if (
+                locationsValue is System.Collections.Generic.IEnumerable<GameLocation> enumerable
+            )
+                locationsForWatcher = new ObservableCollection<GameLocation>(enumerable);
+            else
+                locationsForWatcher = new ObservableCollection<GameLocation>();
+            this.Watchers = new WatcherCore(this.Input, locationsForWatcher);
+#else
+            this.Watchers = new WatcherCore(
+                this.Input,
+                (ObservableCollection<GameLocation>)this._locations
+            );
+#endif
         }
 
         // update
@@ -241,7 +318,11 @@ internal class SGame : Game1
     /// <summary>The method called to draw everything to the screen.</summary>
     /// <param name="gameTime">A snapshot of the game timing state.</param>
     /// <param name="target_screen">The render target, if any.</param>
-    [SuppressMessage("ReSharper", "InconsistentNaming", Justification = "copied from game code as-is")]
+    [SuppressMessage(
+        "ReSharper",
+        "InconsistentNaming",
+        Justification = "copied from game code as-is"
+    )]
     protected override void _draw(GameTime gameTime, RenderTarget2D target_screen)
     {
         Context.IsInDrawLoop = true;
@@ -254,12 +335,17 @@ internal class SGame : Game1
         catch (Exception ex)
         {
             // log error
-            this.Monitor.Log($"An error occurred in the game's draw loop: {ex.GetLogSummary()}", LogLevel.Error);
+            this.Monitor.Log(
+                $"An error occurred in the game's draw loop: {ex.GetLogSummary()}",
+                LogLevel.Error
+            );
 
             // exit if irrecoverable
             if (!this.DrawCrashTimer.Decrement())
             {
-                this.ExitGameImmediately("The game crashed when drawing, and SMAPI was unable to recover the game.");
+                this.ExitGameImmediately(
+                    "The game crashed when drawing, and SMAPI was unable to recover the game."
+                );
                 return;
             }
 
@@ -278,7 +364,10 @@ internal class SGame : Game1
             }
             catch (Exception innerEx)
             {
-                this.Monitor.Log($"Could not recover game draw state: {innerEx.GetLogSummary()}", LogLevel.Error);
+                this.Monitor.Log(
+                    $"Could not recover game draw state: {innerEx.GetLogSummary()}",
+                    LogLevel.Error
+                );
             }
         }
         Context.IsInDrawLoop = false;

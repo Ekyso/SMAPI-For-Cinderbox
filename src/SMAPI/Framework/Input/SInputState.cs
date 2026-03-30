@@ -294,13 +294,17 @@ internal sealed class SInputState : InputState
             (int)((Game1.viewport.X + screenPixels.X) / Game1.tileSize),
             (int)((Game1.viewport.Y + screenPixels.Y) / Game1.tileSize)
         );
-        Vector2 grabTile =
-            (
-                Game1.mouseCursorTransparency > 0
-                && Utility.tileWithinRadiusOfPlayer((int)tile.X, (int)tile.Y, 1, Game1.player)
-            ) // derived from Game1.pressActionButton
-                ? tile
-                : Game1.player.GetGrabTile();
+        Vector2 grabTile = tile;
+        if (Game1.player != null)
+        {
+            grabTile =
+                (
+                    Game1.mouseCursorTransparency > 0
+                    && Utility.tileWithinRadiusOfPlayer((int)tile.X, (int)tile.Y, 1, Game1.player)
+                )
+                    ? tile
+                    : Game1.player.GetGrabTile();
+        }
         return new CursorPosition(absolutePixels, screenPixels, tile, grabTile);
     }
 

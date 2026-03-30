@@ -38,12 +38,7 @@ public class QuickSaveOptionButton : OptionsElement
             QuickSavePatch.InvokeLoad();
     }
 
-    public override void draw(
-        SpriteBatch b,
-        int slotX,
-        int slotY,
-        IClickableMenu? context = null
-    )
+    public new void draw(SpriteBatch b, int slotX, int slotY, IClickableMenu? context = null)
     {
         greyedOut = !_isSaveButton && !QuickSavePatch.QuicksaveExists;
 

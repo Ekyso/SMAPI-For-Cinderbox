@@ -26,7 +26,6 @@ internal class SymbolReader : ISymbolReader
     /// <summary>The underlying symbol reader.</summary>
     private ISymbolReader Reader;
 
-
     /*********
     ** Public methods
     *********/
@@ -41,7 +40,10 @@ internal class SymbolReader : ISymbolReader
         // Pre-load Cecil symbol assemblies so DefaultSymbolReaderProvider can resolve them
         // (Assembly.Load on Mono/Android can create assemblies invisible to the native JIT).
         SymbolReader.EnsureCecilSymbolAssembliesLoaded();
-        this.Reader = new DefaultSymbolReaderProvider(throwIfNoSymbol: true).GetSymbolReader(module, stream);
+        this.Reader = new DefaultSymbolReaderProvider(throwIfNoSymbol: true).GetSymbolReader(
+            module,
+            stream
+        );
 #else
         this.Reader = new NativePdbReaderProvider().GetSymbolReader(module, stream);
 #endif
@@ -111,7 +113,10 @@ internal class SymbolReader : ISymbolReader
         const string tag = "SymbolReader";
 
         string? cecilLocation = typeof(ModuleDefinition).Assembly.Location;
-        Log.Info(tag, $"Cecil assembly location: '{cecilLocation ?? "(null)"}'");
+        global::Android.Util.Log.Info(
+            tag,
+            $"Cecil assembly location: '{cecilLocation ?? "(null)"}'"
+        );
         if (string.IsNullOrEmpty(cecilLocation))
             return;
 
@@ -127,16 +132,19 @@ internal class SymbolReader : ISymbolReader
                 try
                 {
                     var asm = Assembly.LoadFrom(path);
-                    Log.Info(tag, $"Pre-loaded {name} from '{path}' -> {asm.FullName}");
+                    global::Android.Util.Log.Info(
+                        tag,
+                        $"Pre-loaded {name} from '{path}' -> {asm.FullName}"
+                    );
                 }
                 catch (Exception ex)
                 {
-                    Log.Warn(tag, $"Failed to pre-load {name}: {ex.Message}");
+                    global::Android.Util.Log.Warn(tag, $"Failed to pre-load {name}: {ex.Message}");
                 }
             }
             else
             {
-                Log.Warn(tag, $"{name} not found at '{path}'");
+                global::Android.Util.Log.Warn(tag, $"{name} not found at '{path}'");
             }
         }
     }

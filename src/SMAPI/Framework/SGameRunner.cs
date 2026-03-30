@@ -53,13 +53,11 @@ internal class SGameRunner : GameRunner
     /// <summary>Raised after an instance finishes a draw loop.</summary>
     private readonly Action<RenderTarget2D> OnPlayerInstanceRendered;
 
-
     /*********
     ** Public methods
     *********/
     /// <summary>The singleton instance.</summary>
     public new static SGameRunner Instance => (SGameRunner)GameRunner.instance;
-
 
     /*********
     ** Public methods
@@ -77,7 +75,20 @@ internal class SGameRunner : GameRunner
     /// <param name="onPlayerInstanceUpdating">Raised when the game instance for a local split-screen player is updating (once per <see cref="OnGameUpdating"/> per player).</param>
     /// <param name="onPlayerInstanceRendered">Raised after an instance finishes a draw loop.</param>
     /// <param name="onGameExiting">Raised before the game exits.</param>
-    public SGameRunner(Monitor monitor, Reflector reflection, SModHooks modHooks, IGameLogger gameLogger, SMultiplayer multiplayer, Action<string> exitGameImmediately, Action onGameContentLoaded, Action<LoadStage> onLoadStageChanged, Action<GameTime, Action> onGameUpdating, Action<SGame, GameTime, Action> onPlayerInstanceUpdating, Action onGameExiting, Action<RenderTarget2D> onPlayerInstanceRendered)
+    public SGameRunner(
+        Monitor monitor,
+        Reflector reflection,
+        SModHooks modHooks,
+        IGameLogger gameLogger,
+        SMultiplayer multiplayer,
+        Action<string> exitGameImmediately,
+        Action onGameContentLoaded,
+        Action<LoadStage> onLoadStageChanged,
+        Action<GameTime, Action> onGameUpdating,
+        Action<SGame, GameTime, Action> onPlayerInstanceUpdating,
+        Action onGameExiting,
+        Action<RenderTarget2D> onPlayerInstanceRendered
+    )
     {
         // init XNA
         Game1.graphics.GraphicsProfile = GraphicsProfile.HiDef;
@@ -102,7 +113,10 @@ internal class SGameRunner : GameRunner
     /// <summary>Create a game instance for a local player.</summary>
     /// <param name="playerIndex">The player index.</param>
     /// <param name="instanceIndex">The instance index.</param>
-    public override Game1 CreateGameInstance(PlayerIndex playerIndex = PlayerIndex.One, int instanceIndex = 0)
+    public override Game1 CreateGameInstance(
+        PlayerIndex playerIndex = PlayerIndex.One,
+        int instanceIndex = 0
+    )
     {
         SInputState inputState = new();
         return new SGame(
@@ -145,11 +159,8 @@ internal class SGameRunner : GameRunner
     /// <param name="playerId">The player ID to check.</param>
     public int? GetScreenId(long playerId)
     {
-        return this.gameInstances
-            .FirstOrDefault(p => ((SGame)p).PlayerId == playerId)
-            ?.instanceId;
+        return this.gameInstances.FirstOrDefault(p => ((SGame)p).PlayerId == playerId)?.instanceId;
     }
-
 
     /*********
     ** Protected methods

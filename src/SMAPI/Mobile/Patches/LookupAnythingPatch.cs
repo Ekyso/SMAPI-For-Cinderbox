@@ -21,7 +21,7 @@ internal static class LookupAnythingPatch
     private static void LogInfo(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Info(Tag, message);
+        global::Android.Util.Log.Info(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] {message}");
 #endif
@@ -30,7 +30,7 @@ internal static class LookupAnythingPatch
     private static void LogError(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Error(Tag, message);
+        global::Android.Util.Log.Error(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] ERROR: {message}");
 #endif

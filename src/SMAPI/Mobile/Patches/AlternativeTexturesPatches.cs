@@ -36,7 +36,10 @@ internal static class AlternativeTexturesPatches
 
             if (assembly == null)
             {
-                Log.Info(Tag, "AlternativeTextures not found, skipping patches");
+                global::Android.Util.Log.Info(
+                    Tag,
+                    "AlternativeTextures not found, skipping patches"
+                );
                 return;
             }
 
@@ -45,7 +48,10 @@ internal static class AlternativeTexturesPatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to patch AlternativeTextures: {ex.Message}");
+            global::Android.Util.Log.Error(
+                Tag,
+                $"Failed to patch AlternativeTextures: {ex.Message}"
+            );
         }
     }
 
@@ -56,7 +62,7 @@ internal static class AlternativeTexturesPatches
             var menuType = assembly.GetType("AlternativeTextures.Framework.UI.CatalogueMenu");
             if (menuType == null)
             {
-                Log.Info(Tag, "CatalogueMenu type not found, skipping");
+                global::Android.Util.Log.Info(Tag, "CatalogueMenu type not found, skipping");
                 return;
             }
 
@@ -66,14 +72,18 @@ internal static class AlternativeTexturesPatches
             )!;
             if (_catalogueSearchBox == null)
             {
-                Log.Error(Tag, "CatalogueMenu._searchBox field not found");
+                global::Android.Util.Log.Error(Tag, "CatalogueMenu._searchBox field not found");
                 return;
             }
 
             var ctor = menuType.GetConstructors()[0];
-            harmony.Patch(ctor,
-                postfix: new HarmonyMethod(typeof(AlternativeTexturesPatches),
-                    nameof(CatalogueMenu_Ctor_Postfix)));
+            harmony.Patch(
+                ctor,
+                postfix: new HarmonyMethod(
+                    typeof(AlternativeTexturesPatches),
+                    nameof(CatalogueMenu_Ctor_Postfix)
+                )
+            );
 
             var clickMethod = menuType.GetMethod(
                 "receiveLeftClick",
@@ -84,16 +94,23 @@ internal static class AlternativeTexturesPatches
             );
             if (clickMethod != null)
             {
-                harmony.Patch(clickMethod,
-                    postfix: new HarmonyMethod(typeof(AlternativeTexturesPatches),
-                        nameof(CatalogueMenu_ReceiveLeftClick_Postfix)));
+                harmony.Patch(
+                    clickMethod,
+                    postfix: new HarmonyMethod(
+                        typeof(AlternativeTexturesPatches),
+                        nameof(CatalogueMenu_ReceiveLeftClick_Postfix)
+                    )
+                );
             }
 
-            Log.Info(Tag, "Patched CatalogueMenu (constructor + receiveLeftClick)");
+            global::Android.Util.Log.Info(
+                Tag,
+                "Patched CatalogueMenu (constructor + receiveLeftClick)"
+            );
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to patch CatalogueMenu: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to patch CatalogueMenu: {ex.Message}");
         }
     }
 
@@ -104,7 +121,7 @@ internal static class AlternativeTexturesPatches
             var menuType = assembly.GetType("AlternativeTextures.Framework.UI.PaintBucketMenu");
             if (menuType == null)
             {
-                Log.Info(Tag, "PaintBucketMenu type not found, skipping");
+                global::Android.Util.Log.Info(Tag, "PaintBucketMenu type not found, skipping");
                 return;
             }
 
@@ -114,14 +131,18 @@ internal static class AlternativeTexturesPatches
             )!;
             if (_paintBucketSearchBox == null)
             {
-                Log.Error(Tag, "PaintBucketMenu._searchBox field not found");
+                global::Android.Util.Log.Error(Tag, "PaintBucketMenu._searchBox field not found");
                 return;
             }
 
             var ctor = menuType.GetConstructors()[0];
-            harmony.Patch(ctor,
-                postfix: new HarmonyMethod(typeof(AlternativeTexturesPatches),
-                    nameof(PaintBucketMenu_Ctor_Postfix)));
+            harmony.Patch(
+                ctor,
+                postfix: new HarmonyMethod(
+                    typeof(AlternativeTexturesPatches),
+                    nameof(PaintBucketMenu_Ctor_Postfix)
+                )
+            );
 
             var clickMethod = menuType.GetMethod(
                 "receiveLeftClick",
@@ -132,16 +153,23 @@ internal static class AlternativeTexturesPatches
             );
             if (clickMethod != null)
             {
-                harmony.Patch(clickMethod,
-                    postfix: new HarmonyMethod(typeof(AlternativeTexturesPatches),
-                        nameof(PaintBucketMenu_ReceiveLeftClick_Postfix)));
+                harmony.Patch(
+                    clickMethod,
+                    postfix: new HarmonyMethod(
+                        typeof(AlternativeTexturesPatches),
+                        nameof(PaintBucketMenu_ReceiveLeftClick_Postfix)
+                    )
+                );
             }
 
-            Log.Info(Tag, "Patched PaintBucketMenu (constructor + receiveLeftClick, covers SprayCanMenu)");
+            global::Android.Util.Log.Info(
+                Tag,
+                "Patched PaintBucketMenu (constructor + receiveLeftClick, covers SprayCanMenu)"
+            );
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to patch PaintBucketMenu: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to patch PaintBucketMenu: {ex.Message}");
         }
     }
 
@@ -154,7 +182,7 @@ internal static class AlternativeTexturesPatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"CatalogueMenu ctor postfix error: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"CatalogueMenu ctor postfix error: {ex.Message}");
         }
     }
 
@@ -167,7 +195,10 @@ internal static class AlternativeTexturesPatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"PaintBucketMenu ctor postfix error: {ex.Message}");
+            global::Android.Util.Log.Error(
+                Tag,
+                $"PaintBucketMenu ctor postfix error: {ex.Message}"
+            );
         }
     }
 
@@ -181,7 +212,7 @@ internal static class AlternativeTexturesPatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"CatalogueMenu click postfix error: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"CatalogueMenu click postfix error: {ex.Message}");
         }
     }
 
@@ -194,7 +225,10 @@ internal static class AlternativeTexturesPatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"PaintBucketMenu click postfix error: {ex.Message}");
+            global::Android.Util.Log.Error(
+                Tag,
+                $"PaintBucketMenu click postfix error: {ex.Message}"
+            );
         }
     }
 

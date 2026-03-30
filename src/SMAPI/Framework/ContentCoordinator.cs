@@ -71,7 +71,9 @@ internal class ContentCoordinator : IDisposable
     private readonly ReaderWriterLockSlim ContentManagerLock = new();
 
     /// <summary>A cache of ordered tilesheet IDs used by vanilla maps.</summary>
-    private readonly Dictionary<string, TilesheetReference[]?> VanillaTilesheets = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TilesheetReference[]?> VanillaTilesheets = new(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     /// <summary>An unmodified content manager which doesn't intercept assets, used to compare asset data.</summary>
     private readonly LocalizedContentManager VanillaContentManager;
@@ -80,14 +82,13 @@ internal class ContentCoordinator : IDisposable
     private Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>> LocaleCodes;
 
     /// <summary>The cached asset load/edit operations to apply, indexed by asset name.</summary>
-    private readonly TickCacheDictionary<IAssetName, AssetOperationGroup?> AssetOperationsByKey = new();
+    private readonly TickCacheDictionary<IAssetName, AssetOperationGroup?> AssetOperationsByKey =
+        new();
 
 #if SMAPI_FOR_ANDROID
     /// <summary>Shared cache for decoded PNG/JSON/OGG file data, or null if disabled.</summary>
     internal readonly RawFileCache? RawFileCache;
 #endif
-
-
 
     /*********
     ** Accessors
@@ -103,8 +104,8 @@ internal class ContentCoordinator : IDisposable
 
     /// <summary>A lookup which tracks whether each given asset name has a localized form.</summary>
     /// <remarks>This is a per-screen equivalent to the base game's <see cref="LocalizedContentManager.localizedAssetNames"/> field, since mods may provide different assets per-screen. Uses <see cref="ConcurrentDictionary{TKey, TValue}"/> for thread safety on Android, where parallel location updates may access it concurrently.</remarks>
-    public PerScreen<ConcurrentDictionary<string, string>> LocalizedAssetNames { get; } = new(() => new());
-
+    public PerScreen<ConcurrentDictionary<string, string>> LocalizedAssetNames { get; } =
+        new(() => new());
 
     /*********
     ** Public methods
@@ -122,7 +123,20 @@ internal class ContentCoordinator : IDisposable
     /// <param name="getFileLookup">Get a file lookup for the given directory.</param>
     /// <param name="onAssetsInvalidated">A callback to invoke when any asset names have been invalidated from the cache.</param>
     /// <param name="requestAssetOperations">Get the load/edit operations to apply to an asset by querying registered <see cref="IContentEvents.AssetRequested"/> event handlers.</param>
-    public ContentCoordinator(IServiceProvider serviceProvider, string rootDirectory, CultureInfo currentCulture, IMonitor monitor, Multiplayer multiplayer, Reflector reflection, JsonHelper jsonHelper, Action onLoadingFirstAsset, Action<BaseContentManager, IAssetName> onAssetLoaded, Func<string, IFileLookup> getFileLookup, Action<IList<IAssetName>> onAssetsInvalidated, Func<IAssetInfo, AssetOperationGroup?> requestAssetOperations)
+    public ContentCoordinator(
+        IServiceProvider serviceProvider,
+        string rootDirectory,
+        CultureInfo currentCulture,
+        IMonitor monitor,
+        Multiplayer multiplayer,
+        Reflector reflection,
+        JsonHelper jsonHelper,
+        Action onLoadingFirstAsset,
+        Action<BaseContentManager, IAssetName> onAssetLoaded,
+        Func<string, IFileLookup> getFileLookup,
+        Action<IList<IAssetName>> onAssetsInvalidated,
+        Func<IAssetInfo, AssetOperationGroup?> requestAssetOperations
+    )
     {
         this.GetFileLookup = getFileLookup;
         this.Monitor = monitor ?? throw new ArgumentNullException(nameof(monitor));
@@ -163,11 +177,22 @@ internal class ContentCoordinator : IDisposable
         this.ContentManagers.Add(contentManagerForAssetPropagation);
 
         this.VanillaContentManager = new LocalizedContentManager(serviceProvider, rootDirectory);
-        this.CoreAssets = new CoreAssetPropagator(this.MainContentManager, contentManagerForAssetPropagation, this.Monitor, multiplayer, reflection, name => this.ParseAssetName(name, allowLocales: true));
-        this.LocaleCodes = new Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>>(() => this.GetLocaleCodes(customLanguages: []));
+        this.CoreAssets = new CoreAssetPropagator(
+            this.MainContentManager,
+            contentManagerForAssetPropagation,
+            this.Monitor,
+            multiplayer,
+            reflection,
+            name => this.ParseAssetName(name, allowLocales: true)
+        );
+        this.LocaleCodes = new Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>>(() =>
+            this.GetLocaleCodes(customLanguages: [])
+        );
 
 #if SMAPI_FOR_ANDROID
-        this.RawFileCache = StardewModdingAPI.Mobile.AndroidPaths.UseRawFileCache ? new RawFileCache() : null;
+        this.RawFileCache = StardewModdingAPI.Mobile.AndroidPaths.UseRawFileCache
+            ? new RawFileCache()
+            : null;
 #endif
     }
 
@@ -199,7 +224,12 @@ internal class ContentCoordinator : IDisposable
     /// <param name="modName">The mod display name to show in errors.</param>
     /// <param name="rootDirectory">The root directory to search for content (or <c>null</c> for the default).</param>
     /// <param name="gameContentManager">The game content manager used for map tilesheets not provided by the mod.</param>
-    public ModContentManager CreateModContentManager(string name, string modName, string rootDirectory, IContentManager gameContentManager)
+    public ModContentManager CreateModContentManager(
+        string name,
+        string modName,
+        string rootDirectory,
+        IContentManager gameContentManager
+    )
     {
         return this.ContentManagerLock.InWriteLock(() =>
         {
@@ -233,7 +263,9 @@ internal class ContentCoordinator : IDisposable
     {
         // update locale cache for custom languages, and load it now (since languages added later won't work)
         var customLanguages = DataLoader.AdditionalLanguages(this.MainContentManager);
-        this.LocaleCodes = new Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>>(() => this.GetLocaleCodes(customLanguages));
+        this.LocaleCodes = new Lazy<Dictionary<string, LocalizedContentManager.LanguageCode>>(() =>
+            this.GetLocaleCodes(customLanguages)
+        );
         _ = this.LocaleCodes.Value;
     }
 
@@ -280,7 +312,12 @@ internal class ContentCoordinator : IDisposable
             this.InvalidateCache((contentManager, _, _) => contentManager is GameContentManager);
 
         // clear the localized assets lookup (to match the logic in Game1.CleanupReturningToTitle)
-        foreach ((_, ConcurrentDictionary<string, string> localizedAssets) in this.LocalizedAssetNames.GetActiveValues())
+        foreach (
+            (
+                _,
+                ConcurrentDictionary<string, string> localizedAssets
+            ) in this.LocalizedAssetNames.GetActiveValues()
+        )
             localizedAssets.Clear();
 
 #if SMAPI_FOR_ANDROID
@@ -310,10 +347,19 @@ internal class ContentCoordinator : IDisposable
             ? AssetName.Parse(
                 rawName: rawName,
                 parseLocale: allowLocales
-                    ? locale => this.LocaleCodes.Value.TryGetValue(locale, out LocalizedContentManager.LanguageCode langCode) ? langCode : null
+                    ? locale =>
+                        this.LocaleCodes.Value.TryGetValue(
+                            locale,
+                            out LocalizedContentManager.LanguageCode langCode
+                        )
+                            ? langCode
+                            : null
                     : _ => null
             )
-            : throw new ArgumentException("The asset name can't be null or empty.", nameof(rawName));
+            : throw new ArgumentException(
+                "The asset name can't be null or empty.",
+                nameof(rawName)
+            );
     }
 
     /// <summary>Get whether this asset is mapped to a mod folder.</summary>
@@ -328,7 +374,11 @@ internal class ContentCoordinator : IDisposable
     /// <param name="contentManagerId">The unique name for the content manager which should load this asset.</param>
     /// <param name="relativePath">The asset name within the mod folder.</param>
     /// <returns>Returns whether the asset was parsed successfully.</returns>
-    public bool TryParseManagedAssetKey(string key, [NotNullWhen(true)] out string? contentManagerId, [NotNullWhen(true)] out IAssetName? relativePath)
+    public bool TryParseManagedAssetKey(
+        string key,
+        [NotNullWhen(true)] out string? contentManagerId,
+        [NotNullWhen(true)] out IAssetName? relativePath
+    )
     {
         contentManagerId = null;
         relativePath = null;
@@ -365,7 +415,9 @@ internal class ContentCoordinator : IDisposable
             this.ContentManagers.FirstOrDefault(p => p.IsNamespaced && p.Name == contentManagerId)
         );
         if (contentManager == null)
-            throw new InvalidOperationException($"The '{contentManagerId}' prefix isn't handled by any mod.");
+            throw new InvalidOperationException(
+                $"The '{contentManagerId}' prefix isn't handled by any mod."
+            );
 
         // get whether the asset exists
         return contentManager.DoesAssetExist<T>(assetName);
@@ -383,7 +435,9 @@ internal class ContentCoordinator : IDisposable
             this.ContentManagers.FirstOrDefault(p => p.IsNamespaced && p.Name == contentManagerId)
         );
         if (contentManager == null)
-            throw new InvalidOperationException($"The '{contentManagerId}' prefix isn't handled by any mod.");
+            throw new InvalidOperationException(
+                $"The '{contentManagerId}' prefix isn't handled by any mod."
+            );
 
         // get fresh asset
         return contentManager.LoadExact<T>(relativePath, useCache: false);
@@ -393,7 +447,10 @@ internal class ContentCoordinator : IDisposable
     /// <param name="assetNames">The exact asset names to invalidate.</param>
     /// <param name="dispose">Whether to dispose invalidated assets. This should only be <c>true</c> when they're being invalidated as part of a dispose, to avoid crashing the game.</param>
     /// <returns>Returns the invalidated asset names.</returns>
-    public IEnumerable<IAssetName> InvalidateCache(ISet<IAssetName> assetNames, bool dispose = false)
+    public IEnumerable<IAssetName> InvalidateCache(
+        ISet<IAssetName> assetNames,
+        bool dispose = false
+    )
     {
         return this.InvalidateCache(info => assetNames.Contains(info.Name), dispose);
     }
@@ -402,22 +459,36 @@ internal class ContentCoordinator : IDisposable
     /// <param name="predicate">Matches the asset keys to invalidate.</param>
     /// <param name="dispose">Whether to dispose invalidated assets. This should only be <c>true</c> when they're being invalidated as part of a dispose, to avoid crashing the game.</param>
     /// <returns>Returns the invalidated asset keys.</returns>
-    public ICollection<IAssetName> InvalidateCache(Func<IAssetInfo, bool> predicate, bool dispose = false)
+    public ICollection<IAssetName> InvalidateCache(
+        Func<IAssetInfo, bool> predicate,
+        bool dispose = false
+    )
     {
         string locale = this.GetLocale();
-        return this.InvalidateCache((_, rawName, type) =>
-        {
-            IAssetName assetName = this.ParseAssetName(rawName, allowLocales: true);
-            IAssetInfo info = new AssetInfo(locale, assetName, type, this.MainContentManager.AssertAndNormalizeAssetName);
-            return predicate(info);
-        }, dispose);
+        return this.InvalidateCache(
+            (_, rawName, type) =>
+            {
+                IAssetName assetName = this.ParseAssetName(rawName, allowLocales: true);
+                IAssetInfo info = new AssetInfo(
+                    locale,
+                    assetName,
+                    type,
+                    this.MainContentManager.AssertAndNormalizeAssetName
+                );
+                return predicate(info);
+            },
+            dispose
+        );
     }
 
     /// <summary>Purge matched assets from the cache.</summary>
     /// <param name="predicate">Matches the asset keys to invalidate.</param>
     /// <param name="dispose">Whether to dispose invalidated assets. This should only be <c>true</c> when they're being invalidated as part of a dispose, to avoid crashing the game.</param>
     /// <returns>Returns the invalidated asset names.</returns>
-    public ICollection<IAssetName> InvalidateCache(Func<IContentManager, string, Type, bool> predicate, bool dispose = false)
+    public ICollection<IAssetName> InvalidateCache(
+        Func<IContentManager, string, Type, bool> predicate,
+        bool dispose = false
+    )
     {
         // invalidate cache & track removed assets
         IDictionary<IAssetName, Type> invalidatedAssets = new Dictionary<IAssetName, Type>();
@@ -446,28 +517,42 @@ internal class ContentCoordinator : IDisposable
             // `Maps/MovieTheater.fr-FR`). When the asset is invalidated, we need to recheck
             // whether the asset is localized in case it stops providing it.
             {
-                ConcurrentDictionary<string, string> localizedAssetNames = this.LocalizedAssetNames.Value;
+                ConcurrentDictionary<string, string> localizedAssetNames =
+                    this.LocalizedAssetNames.Value;
                 foreach (IAssetName assetName in invalidatedAssets.Keys)
                 {
                     localizedAssetNames.TryRemove(assetName.Name, out _);
 
-                    if (localizedAssetNames.TryGetValue(assetName.BaseName, out string? targetForBaseKey) && targetForBaseKey == assetName.Name)
+                    if (
+                        localizedAssetNames.TryGetValue(
+                            assetName.BaseName,
+                            out string? targetForBaseKey
+                        )
+                        && targetForBaseKey == assetName.Name
+                    )
                         localizedAssetNames.TryRemove(assetName.BaseName, out _);
                 }
             }
 
             // special case: maps may be loaded through a temporary content manager that's removed while the map is still in use.
             // This notably affects the town and farmhouse maps.
-            if (Game1.locations != null)
+            var locationsForMap = CrossPlatform.GameAccessors.GetLocations();
+            if (locationsForMap != null)
             {
-                foreach (GameLocation location in Game1.locations)
+                foreach (GameLocation location in locationsForMap)
                 {
                     if (location.map == null || string.IsNullOrWhiteSpace(location.mapPath.Value))
                         continue;
 
                     // get map path
-                    AssetName mapPath = this.ParseAssetName(this.MainContentManager.AssertAndNormalizeAssetName(location.mapPath.Value), allowLocales: true);
-                    if (!invalidatedAssets.ContainsKey(mapPath) && predicate(this.MainContentManager, mapPath.Name, typeof(Map)))
+                    AssetName mapPath = this.ParseAssetName(
+                        this.MainContentManager.AssertAndNormalizeAssetName(location.mapPath.Value),
+                        allowLocales: true
+                    );
+                    if (
+                        !invalidatedAssets.ContainsKey(mapPath)
+                        && predicate(this.MainContentManager, mapPath.Name, typeof(Map))
+                    )
                         invalidatedAssets[mapPath] = typeof(Map);
                 }
             }
@@ -496,14 +581,24 @@ internal class ContentCoordinator : IDisposable
             StringBuilder report = new();
             {
                 IAssetName[] invalidatedKeys = invalidatedAssets.Keys.ToArray();
-                IAssetName[] propagatedKeys = propagated.Where(p => p.Value).Select(p => p.Key).ToArray();
+                IAssetName[] propagatedKeys = propagated
+                    .Where(p => p.Value)
+                    .Select(p => p.Key)
+                    .ToArray();
 
-                string FormatKeyList(IEnumerable<IAssetName> keys) => string.Join(", ", keys.Select(p => p.Name).OrderBy(p => p, StringComparer.OrdinalIgnoreCase));
+                string FormatKeyList(IEnumerable<IAssetName> keys) =>
+                    string.Join(
+                        ", ",
+                        keys.Select(p => p.Name).OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+                    );
 
-                report.AppendLine($"Invalidated {invalidatedKeys.Length} asset names ({FormatKeyList(invalidatedKeys)}).");
-                report.AppendLine(propagated.Count > 0
-                    ? $"Propagated {propagatedKeys.Length} core assets ({FormatKeyList(propagatedKeys)})."
-                    : "Propagated 0 core assets."
+                report.AppendLine(
+                    $"Invalidated {invalidatedKeys.Length} asset names ({FormatKeyList(invalidatedKeys)})."
+                );
+                report.AppendLine(
+                    propagated.Count > 0
+                        ? $"Propagated {propagatedKeys.Length} core assets ({FormatKeyList(propagatedKeys)})."
+                        : "Propagated 0 core assets."
                 );
                 if (updatedWarpRoutes)
                     report.AppendLine("Updated NPC warp route cache.");
@@ -528,13 +623,21 @@ internal class ContentCoordinator : IDisposable
 
     /// <summary>Get all loaded instances of an asset name.</summary>
     /// <param name="assetName">The asset name.</param>
-    [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "This method is provided for Content Patcher.")]
+    [SuppressMessage(
+        "ReSharper",
+        "UnusedMember.Global",
+        Justification = "This method is provided for Content Patcher."
+    )]
     public IEnumerable<object> GetLoadedValues(IAssetName assetName)
     {
         return this.ContentManagerLock.InReadLock(() =>
         {
             List<object> values = [];
-            foreach (IContentManager content in this.ContentManagers.Where(p => !p.IsNamespaced && p.IsLoaded(assetName)))
+            foreach (
+                IContentManager content in this.ContentManagers.Where(p =>
+                    !p.IsNamespaced && p.IsLoaded(assetName)
+                )
+            )
             {
                 object value = content.LoadExact<object>(assetName, useCache: true);
                 values.Add(value);
@@ -550,7 +653,18 @@ internal class ContentCoordinator : IDisposable
         if (!this.VanillaTilesheets.TryGetValue(assetName, out TilesheetReference[]? tilesheets))
         {
             tilesheets = this.TryLoadVanillaAsset(assetName, out Map? map)
-                ? map.TileSheets.Select((sheet, index) => new TilesheetReference(index, sheet.Id, sheet.ImageSource, sheet.SheetSize, sheet.TileSize)).ToArray()
+                ? map
+                    .TileSheets.Select(
+                        (sheet, index) =>
+                            new TilesheetReference(
+                                index,
+                                sheet.Id,
+                                sheet.ImageSource,
+                                sheet.SheetSize,
+                                sheet.TileSize
+                            )
+                    )
+                    .ToArray()
                 : null;
 
             this.VanillaTilesheets[assetName] = tilesheets;
@@ -564,7 +678,10 @@ internal class ContentCoordinator : IDisposable
     /// <param name="language">The language enum to search.</param>
     public string? GetLocaleCode(LocalizedContentManager.LanguageCode language)
     {
-        if (language == LocalizedContentManager.LanguageCode.mod && LocalizedContentManager.CurrentModLanguage == null)
+        if (
+            language == LocalizedContentManager.LanguageCode.mod
+            && LocalizedContentManager.CurrentModLanguage == null
+        )
             return null;
 
         return this.MainContentManager.GetLocale(language);
@@ -577,7 +694,9 @@ internal class ContentCoordinator : IDisposable
             return;
         this.IsDisposed = true;
 
-        this.Monitor.Log("Disposing the content coordinator. Content managers will no longer be usable after this point.");
+        this.Monitor.Log(
+            "Disposing the content coordinator. Content managers will no longer be usable after this point."
+        );
 #if SMAPI_FOR_ANDROID
         this.RawFileCache?.Dispose();
 #endif
@@ -589,7 +708,6 @@ internal class ContentCoordinator : IDisposable
         this.ContentManagerLock.Dispose();
     }
 
-
     /*********
     ** Private methods
     *********/
@@ -600,9 +718,7 @@ internal class ContentCoordinator : IDisposable
         if (this.IsDisposed)
             return;
 
-        this.ContentManagerLock.InWriteLock(() =>
-            this.ContentManagers.Remove(contentManager)
-        );
+        this.ContentManagerLock.InWriteLock(() => this.ContentManagers.Remove(contentManager));
     }
 
     /// <summary>Get a vanilla asset without interception.</summary>
@@ -631,9 +747,13 @@ internal class ContentCoordinator : IDisposable
 
     /// <summary>Get the language enums (like <see cref="LocalizedContentManager.LanguageCode.ja"/>) indexed by locale code (like <c>ja-JP</c>).</summary>
     /// <param name="customLanguages">The custom languages to add to the lookup.</param>
-    private Dictionary<string, LocalizedContentManager.LanguageCode> GetLocaleCodes(IEnumerable<ModLanguage?> customLanguages)
+    private Dictionary<string, LocalizedContentManager.LanguageCode> GetLocaleCodes(
+        IEnumerable<ModLanguage?> customLanguages
+    )
     {
-        var map = new Dictionary<string, LocalizedContentManager.LanguageCode>(StringComparer.OrdinalIgnoreCase);
+        var map = new Dictionary<string, LocalizedContentManager.LanguageCode>(
+            StringComparer.OrdinalIgnoreCase
+        );
 
         // custom languages
         foreach (ModLanguage? language in customLanguages)
@@ -643,7 +763,11 @@ internal class ContentCoordinator : IDisposable
         }
 
         // vanilla languages (override custom language if they conflict)
-        foreach (LocalizedContentManager.LanguageCode code in Enum.GetValues(typeof(LocalizedContentManager.LanguageCode)))
+        foreach (
+            LocalizedContentManager.LanguageCode code in Enum.GetValues(
+                typeof(LocalizedContentManager.LanguageCode)
+            )
+        )
         {
             string? locale = this.GetLocaleCode(code);
             if (locale != null)

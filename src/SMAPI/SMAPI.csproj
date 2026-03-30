@@ -3,26 +3,28 @@
     <AssemblyName>StardewModdingAPI</AssemblyName>
     <RootNamespace>StardewModdingAPI</RootNamespace>
     <Description>The modding API for Stardew Valley.</Description>
-    <TargetFrameworks>net6.0;net8.0-android</TargetFrameworks>
-    <PlatformTarget Condition="'$(TargetFramework)' != 'net8.0-android'">x64</PlatformTarget>
-    <OutputType Condition="'$(TargetFramework)' != 'net8.0-android'">Exe</OutputType>
-    <OutputType Condition="'$(TargetFramework)' == 'net8.0-android'">Library</OutputType>
+    <TargetFrameworks>net10.0-android;net6.0</TargetFrameworks>
+    <PlatformTarget Condition="'$(TargetFramework)' != 'net10.0-android'">x64</PlatformTarget>
+    <OutputType Condition="'$(TargetFramework)' != 'net10.0-android'">Exe</OutputType>
+    <OutputType Condition="'$(TargetFramework)' == 'net10.0-android'">Library</OutputType>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <ApplicationIcon Condition="'$(TargetFramework)' != 'net8.0-android'">icon.ico</ApplicationIcon>
+    <ApplicationIcon Condition="'$(TargetFramework)' != 'net10.0-android'"
+      >icon.ico</ApplicationIcon
+    >
 
     <!--copy dependency DLLs to bin folder so we can include them in installer bundle -->
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
 
     <!-- tiered compilation breaks Harmony -->
     <TieredCompilation>false</TieredCompilation>
-    <ApplicationManifest Condition="'$(TargetFramework)' != 'net8.0-android'"
+    <ApplicationManifest Condition="'$(TargetFramework)' != 'net10.0-android'"
       >app.manifest</ApplicationManifest
     >
 
     <!-- Sibling repo roots (override via -p: if your layout differs) -->
     <CinderboxRoot Condition="'$(CinderboxRoot)' == ''"
-      >$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', 'Cinderbox'))</CinderboxRoot
+      >$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', 'Cinderbox'))</CinderboxRoot
     >
     <DesktopLibsPath Condition="'$(DesktopLibsPath)' == ''"
       >$(CinderboxRoot)libs/desktop/</DesktopLibsPath
@@ -36,21 +38,21 @@
 
   <ItemGroup>
     <!-- Mono.Cecil: Use NuGet package for desktop, thin Harmony ships its own Cecil DLLs for Android -->
-    <PackageReference Include="Mono.Cecil" Condition="'$(TargetFramework)' != 'net8.0-android'" />
+    <PackageReference Include="Mono.Cecil" Condition="'$(TargetFramework)' != 'net10.0-android'" />
     <!-- Android: Use NuGet Mono.Cecil for compile-time resolution; runtime DLLs come from staging/harmony/ -->
     <PackageReference
       Include="Mono.Cecil"
-      Condition="'$(TargetFramework)' == 'net8.0-android'"
+      Condition="'$(TargetFramework)' == 'net10.0-android'"
       PrivateAssets="all"
     />
     <!-- On Android, use Harmony's built-in CecilILGenerator (MonoModStubs.cs) instead of MonoMod.Common's version -->
     <PackageReference
       Include="MonoMod.Common"
-      Condition="'$(TargetFramework)' != 'net8.0-android'"
+      Condition="'$(TargetFramework)' != 'net10.0-android'"
     />
     <PackageReference
       Include="MonoMod.Common"
-      Condition="'$(TargetFramework)' == 'net8.0-android'"
+      Condition="'$(TargetFramework)' == 'net10.0-android'"
       Aliases="MonoModCommon"
     />
     <PackageReference Include="Newtonsoft.Json" />
@@ -69,11 +71,11 @@
       <HintPath>$(DesktopLibsPath)StardewValley.GameData.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="MonoGame.Framework" Condition="'$(TargetFramework)' != 'net8.0-android'">
+    <Reference Include="MonoGame.Framework" Condition="'$(TargetFramework)' != 'net10.0-android'">
       <HintPath>$(DesktopLibsPath)MonoGame.Framework.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="MonoGame.Framework" Condition="'$(TargetFramework)' == 'net8.0-android'">
+    <Reference Include="MonoGame.Framework" Condition="'$(TargetFramework)' == 'net10.0-android'">
       <HintPath>$(CinderboxRoot)src\libs\MonoGame.Framework.dll</HintPath>
       <Private>False</Private>
     </Reference>
@@ -90,24 +92,26 @@
   <ItemGroup>
     <PackageReference Include="SkiaSharp" />
     <!-- NVorbis: Used for OGG audio preloading in RawFileCache (Android only) -->
-    <PackageReference Include="NVorbis" Condition="'$(TargetFramework)' == 'net8.0-android'" />
+    <PackageReference Include="NVorbis" Condition="'$(TargetFramework)' == 'net10.0-android'" />
+    <!-- DeepCloner: Embedded in desktop SDV but missing from mobile. Mods reference Force.DeepCloner types. -->
+    <PackageReference Include="DeepCloner" Condition="'$(TargetFramework)' == 'net10.0-android'" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\SMAPI.Toolkit.CoreInterfaces\SMAPI.Toolkit.CoreInterfaces.csproj" />
     <ProjectReference Include="..\SMAPI.Toolkit\SMAPI.Toolkit.csproj" />
     <!-- Use thin Harmony DLL + MonoMod from staging/harmony/ -->
-    <Reference Include="0Harmony" Condition="'$(TargetFramework)' == 'net8.0-android'">
+    <Reference Include="0Harmony" Condition="'$(TargetFramework)' == 'net10.0-android'">
       <HintPath>$(HarmonyStagingPath)0Harmony.dll</HintPath>
       <Private>true</Private>
     </Reference>
-    <Reference Include="MonoMod.Utils" Condition="'$(TargetFramework)' == 'net8.0-android'">
+    <Reference Include="MonoMod.Utils" Condition="'$(TargetFramework)' == 'net10.0-android'">
       <HintPath>$(HarmonyStagingPath)MonoMod.Utils.dll</HintPath>
       <Private>false</Private>
     </Reference>
   </ItemGroup>
 
-  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-android'">
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-android'">
     <Content Include="SMAPI.config.json" CopyToOutputDirectory="PreserveNewest" />
     <Content
       Include="..\SMAPI.Web\wwwroot\SMAPI.blacklist.json"
@@ -125,7 +129,7 @@
   </ItemGroup>
 
   <!-- Android: Embed SMAPI internal files as resources for extraction at runtime -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-android'">
+  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-android'">
     <EmbeddedResource Include="SMAPI.config.json" LogicalName="SMAPI.config.json" />
     <EmbeddedResource Include="SMAPI.metadata.json" LogicalName="SMAPI.metadata.json" />
     <EmbeddedResource Include="i18n\*.json" LogicalName="i18n.%(Filename)%(Extension)" />

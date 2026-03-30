@@ -7,7 +7,7 @@ repo. It imports the other MSBuild files as needed.
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <!--set general build properties -->
-    <Version>4.5.2.3</Version>
+    <Version>4.5.2.4</Version>
     <Product>SMAPI</Product>
     <LangVersion>preview</LangVersion>
     <AssemblySearchPaths>$(AssemblySearchPaths);{GAC}</AssemblySearchPaths>
@@ -21,8 +21,12 @@ repo. It imports the other MSBuild files as needed.
     <NoWarn Condition="'$(TargetFramework)' == 'netstandard2.0'">$(NoWarn);CS8632</NoWarn>
 
     <!--set platform-->
-    <DefineConstants Condition="$(OS) == 'Windows_NT'">$(DefineConstants);SMAPI_FOR_WINDOWS</DefineConstants>
-    <DefineConstants Condition="$(TargetFramework.Contains('android'))">$(DefineConstants);SMAPI_FOR_ANDROID</DefineConstants>
+    <DefineConstants Condition="$(OS) == 'Windows_NT'"
+      >$(DefineConstants);SMAPI_FOR_WINDOWS</DefineConstants
+    >
+    <DefineConstants Condition="$(TargetFramework.Contains('android'))"
+      >$(DefineConstants);SMAPI_FOR_ANDROID</DefineConstants
+    >
     <CopyToGameFolder Condition="!$(TargetFramework.Contains('android'))">true</CopyToGameFolder>
     <CopyToGameFolder Condition="$(TargetFramework.Contains('android'))">false</CopyToGameFolder>
 
@@ -39,14 +43,17 @@ repo. It imports the other MSBuild files as needed.
       CS0809  | all        | obsolete overload for non-obsolete member | This is deliberate to signal to mods that certain APIs are only implemented for the game and shouldn't be called by mods.
       NU1701  | all        | NuGet package targets older .NET version  | All such packages are carefully tested to make sure they do work.
     -->
-      <NoWarn>$(NoWarn);CS0436;CA1416;CS0809;NU1701</NoWarn>
+    <NoWarn>$(NoWarn);CS0436;CA1416;CS0809;NU1701</NoWarn>
   </PropertyGroup>
 
   <!--find game folder-->
   <Import Project="find-game-folder.targets" />
   <Target Name="ValidateInstallPath" AfterTargets="BeforeBuild">
     <!-- if game path is invalid, show one user-friendly error instead of a slew of reference errors -->
-    <Error Condition="!Exists('$(GamePath)')" Text="Failed to find the game install path automatically. You can specify where to find it; see https://smapi.io/package/custom-game-path." />
+    <Error
+      Condition="!Exists('$(GamePath)')"
+      Text="Failed to find the game install path automatically. You can specify where to find it; see https://smapi.io/package/custom-game-path."
+    />
   </Target>
 
   <!--deploy local files-->

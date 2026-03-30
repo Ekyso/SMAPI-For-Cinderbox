@@ -1,4 +1,3 @@
-using Microsoft.Xna.Framework;
 using StardewModdingAPI.Framework.ModLoading.Framework;
 using StardewValley.Menus;
 
@@ -8,20 +7,6 @@ namespace StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
 /// <remarks>This is public to support SMAPI rewriting and should never be referenced directly by mods. See remarks on <see cref="ReplaceReferencesRewriter"/> for more info.</remarks>
 public class DiscreteColorPickerFacade : DiscreteColorPicker, IRewriteFacade
 {
-    /*********
-    ** Public methods
-    *********/
-    public new int getSelectionFromColor(Color c)
-    {
-        return DiscreteColorPicker.getSelectionFromColor(c);
-    }
-
-    public new Color getColorFromSelection(int selection)
-    {
-        return DiscreteColorPicker.getColorFromSelection(selection);
-    }
-
-
     /*********
     ** Private methods
     *********/

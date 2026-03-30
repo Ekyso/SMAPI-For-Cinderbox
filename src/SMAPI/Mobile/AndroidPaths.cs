@@ -1,4 +1,5 @@
 #if SMAPI_FOR_ANDROID
+using System;
 using System.IO;
 
 namespace StardewModdingAPI.Mobile;
@@ -12,8 +13,20 @@ internal static class AndroidPaths
     /// <summary>Whether paths have been initialized.</summary>
     public static bool IsInitialized { get; private set; }
 
+    /// <summary>Whether running mobile Stardew Valley (vs desktop).</summary>
+    public static bool IsMobile { get; private set; }
+
     /// <summary>Directory containing the game DLLs (Stardew Valley.dll, etc.).</summary>
-    public static string DesktopDlls { get; private set; } = string.Empty;
+    private static string _gameDllsPath = string.Empty;
+    public static string GameDllsPath
+    {
+        get
+        {
+            ThrowIfNotInitialized();
+            return _gameDllsPath;
+        }
+        private set => _gameDllsPath = value;
+    }
 
     /// <summary>Directory for SMAPI internal files (config, metadata, i18n).</summary>
     public static string SmapiInternal { get; private set; } = string.Empty;
@@ -32,6 +45,12 @@ internal static class AndroidPaths
 
     /// <summary>External storage root (/storage/emulated/0/StardewValley).</summary>
     public static string ExternalRoot { get; private set; } = string.Empty;
+
+    /// <summary>Game files directory (DLLs + Content). May be internal storage for mobile.</summary>
+    public static string GameFiles { get; private set; } = string.Empty;
+
+    /// <summary>Directory containing patch dependencies (BCL facades, reference assemblies) for Mono.Cecil type resolution.</summary>
+    public static string PatchDeps { get; private set; } = string.Empty;
 
     /// <summary>Enable concurrent event pipeline for mod event processing.</summary>
     public static bool UseAsyncModEvents { get; private set; } = true;
@@ -70,22 +89,42 @@ internal static class AndroidPaths
     /// Initialize paths. Called by SmapiAndroidLauncher with values from Iridium.Android.
     /// </summary>
     public static void Initialize(
-        string desktopDlls,
+        string gameDlls,
+        string patchDeps,
         string smapiInternal,
         string stardewData,
         string smapiLogs,
         string saves,
         string mods,
-        string externalRoot)
+        string externalRoot,
+        string gameFiles,
+        bool isMobile = false
+    )
     {
-        DesktopDlls = desktopDlls;
+        if (string.IsNullOrEmpty(gameDlls))
+            throw new ArgumentException("gameDlls path is required", nameof(gameDlls));
+        if (string.IsNullOrEmpty(smapiInternal))
+            throw new ArgumentException("smapiInternal path is required", nameof(smapiInternal));
+
+        GameDllsPath = gameDlls;
+        PatchDeps = patchDeps ?? "";
         SmapiInternal = smapiInternal;
-        StardewData = stardewData;
-        SmapiLogs = smapiLogs;
-        Saves = saves;
-        Mods = mods;
-        ExternalRoot = externalRoot;
+        StardewData = stardewData ?? "";
+        SmapiLogs = smapiLogs ?? "";
+        Saves = saves ?? "";
+        Mods = mods ?? "";
+        ExternalRoot = externalRoot ?? "";
+        GameFiles = gameFiles ?? "";
+        IsMobile = isMobile;
         IsInitialized = true;
+    }
+
+    internal static void ThrowIfNotInitialized()
+    {
+        if (!IsInitialized)
+            throw new InvalidOperationException(
+                "AndroidPaths.Initialize() must be called before accessing path properties."
+            );
     }
 
     /// <summary>
@@ -102,7 +141,8 @@ internal static class AndroidPaths
         bool useOptimizedAnimalUpdates,
         bool useOptimizedDelayedActions,
         bool useOptimizedWeatherDrawing,
-        bool useRawFileCache)
+        bool useRawFileCache
+    )
     {
         UseAsyncModEvents = useAsyncModEvents;
         ModEventThreads = modEventThreads;
@@ -115,12 +155,6 @@ internal static class AndroidPaths
         UseOptimizedDelayedActions = useOptimizedDelayedActions;
         UseOptimizedWeatherDrawing = useOptimizedWeatherDrawing;
         UseRawFileCache = useRawFileCache;
-    }
-
-    /// <summary>Get the full path for a game DLL.</summary>
-    public static string GetDesktopDllPath(string dllName)
-    {
-        return Path.Combine(DesktopDlls, dllName);
     }
 }
 #endif

@@ -22,7 +22,7 @@ internal static class MobilePhonePatch
     private static void LogInfo(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Info(Tag, message);
+        global::Android.Util.Log.Info(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] {message}");
 #endif
@@ -31,7 +31,7 @@ internal static class MobilePhonePatch
     private static void LogError(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Error(Tag, message);
+        global::Android.Util.Log.Error(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] ERROR: {message}");
 #endif
@@ -59,21 +59,27 @@ internal static class MobilePhonePatch
             }
 
             var transpiler = new HarmonyMethod(
-                typeof(MobilePhonePatch).GetMethod(nameof(ViewportToUiViewport_Transpiler),
-                    BindingFlags.Public | BindingFlags.Static));
+                typeof(MobilePhonePatch).GetMethod(
+                    nameof(ViewportToUiViewport_Transpiler),
+                    BindingFlags.Public | BindingFlags.Static
+                )
+            );
 
-            string[] methodNames = {
+            string[] methodNames =
+            {
                 "GetPhonePosition",
                 "GetPhoneIconPosition",
                 "GetOpenSurroundingPosition",
                 "GetScreenPosition",
-                "CheckIconOffScreen"
+                "CheckIconOffScreen",
             };
 
             foreach (var methodName in methodNames)
             {
-                var method = phoneUtilsType.GetMethod(methodName,
-                    BindingFlags.Public | BindingFlags.Static);
+                var method = phoneUtilsType.GetMethod(
+                    methodName,
+                    BindingFlags.Public | BindingFlags.Static
+                );
                 if (method != null)
                 {
                     harmony.Patch(method, transpiler: transpiler);
@@ -93,12 +99,17 @@ internal static class MobilePhonePatch
 
     /// <summary>Transpiler that replaces Game1.viewport references with Game1.uiViewport.</summary>
     public static IEnumerable<CodeInstruction> ViewportToUiViewport_Transpiler(
-        IEnumerable<CodeInstruction> instructions)
+        IEnumerable<CodeInstruction> instructions
+    )
     {
-        var viewportField = typeof(Game1).GetField("viewport",
-            BindingFlags.Public | BindingFlags.Static);
-        var uiViewportField = typeof(Game1).GetField("uiViewport",
-            BindingFlags.Public | BindingFlags.Static);
+        var viewportField = typeof(Game1).GetField(
+            "viewport",
+            BindingFlags.Public | BindingFlags.Static
+        );
+        var uiViewportField = typeof(Game1).GetField(
+            "uiViewport",
+            BindingFlags.Public | BindingFlags.Static
+        );
 
         if (viewportField == null || uiViewportField == null)
         {

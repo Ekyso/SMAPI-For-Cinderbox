@@ -13,7 +13,10 @@ internal class SConfig
     ** Fields
     ********/
     /// <summary>The default config values, for fields that should be logged if different.</summary>
-    private static readonly IDictionary<string, object> DefaultValues = new Dictionary<string, object>
+    private static readonly IDictionary<string, object> DefaultValues = new Dictionary<
+        string,
+        object
+    >
     {
         [nameof(SConfig.CheckForUpdates)] = true,
         [nameof(SConfig.CheckForBlacklistUpdates)] = true,
@@ -21,24 +24,26 @@ internal class SConfig
         [nameof(SConfig.ListenForConsoleInput)] = true,
         [nameof(SConfig.ParanoidWarnings)] = Constants.IsDebugBuild,
         [nameof(SConfig.UseBetaChannel)] = Constants.ApiVersion.IsPrerelease(),
-        [nameof(SConfig.GitHubProjectName)] = "Pathoschild/SMAPI",
+        [nameof(SConfig.GitHubProjectName)] = "Ekyso/SMAPI-For-Cinderbox",
         [nameof(SConfig.WebApiBaseUrl)] = "https://smapi.io/api/",
         [nameof(SConfig.LogNetworkTraffic)] = false,
         [nameof(SConfig.LogTechnicalDetailsForBrokenMods)] = false,
         [nameof(SConfig.RewriteMods)] = true,
         [nameof(SConfig.EnableConfigMenu)] = true,
         [nameof(SConfig.FixHarmony)] = true,
-        [nameof(SConfig.UseCaseInsensitivePaths)] = Constants.Platform is Platform.Android or Platform.Linux,
-        [nameof(SConfig.SuppressHarmonyDebugMode)] = true
+        [nameof(SConfig.UseCaseInsensitivePaths)] =
+            Constants.Platform is Platform.Android or Platform.Linux,
+        [nameof(SConfig.SuppressHarmonyDebugMode)] = true,
     };
 
     /// <summary>The default values for <see cref="SuppressUpdateChecks"/>, to log changes if different.</summary>
-    private static readonly HashSet<string> DefaultSuppressUpdateChecks = new(StringComparer.OrdinalIgnoreCase)
+    private static readonly HashSet<string> DefaultSuppressUpdateChecks = new(
+        StringComparer.OrdinalIgnoreCase
+    )
     {
         "SMAPI.ConsoleCommands",
-        "SMAPI.SaveBackup"
+        "SMAPI.SaveBackup",
     };
-
 
     /********
     ** Accessors
@@ -103,7 +108,10 @@ internal class SConfig
     public MonitorColorScheme ConsoleColorScheme { get; set; }
 
     /// <summary>The colors to use for text written to the SMAPI console.</summary>
-    public Dictionary<MonitorColorScheme, Dictionary<ConsoleLogLevel, ConsoleColor>> ConsoleColorSchemes { get; set; }
+    public Dictionary<
+        MonitorColorScheme,
+        Dictionary<ConsoleLogLevel, ConsoleColor>
+    > ConsoleColorSchemes { get; set; }
 
     /// <summary>Whether to prevent mods from enabling Harmony's debug mode, which impacts performance and creates a file on your desktop. Debug mode should never be enabled by a released mod.</summary>
     public bool SuppressHarmonyDebugMode { get; set; }
@@ -116,7 +124,6 @@ internal class SConfig
 
     /// <summary>The mod IDs SMAPI should load after any other mods.</summary>
     public HashSet<string> ModsToLoadLate { get; set; }
-
 
     /********
     ** Public methods
@@ -164,7 +171,10 @@ internal class SConfig
         bool? logNetworkTraffic,
         bool? logTechnicalDetailsForBrokenMods,
         MonitorColorScheme consoleColorScheme,
-        Dictionary<MonitorColorScheme, Dictionary<ConsoleLogLevel, ConsoleColor>>? consoleColorSchemes,
+        Dictionary<
+            MonitorColorScheme,
+            Dictionary<ConsoleLogLevel, ConsoleColor>
+        >? consoleColorSchemes,
         bool? suppressHarmonyDebugMode,
         string[]? suppressUpdateChecks,
         string[]? modsToLoadEarly,
@@ -172,28 +182,57 @@ internal class SConfig
     )
     {
         this.DeveloperMode = developerMode;
-        this.CheckForUpdates = checkForUpdates ?? (bool)SConfig.DefaultValues[nameof(this.CheckForUpdates)];
-        this.CheckForBlacklistUpdates = checkForBlacklistUpdates ?? (bool)SConfig.DefaultValues[nameof(this.CheckForBlacklistUpdates)];
-        this.CheckContentIntegrity = checkContentIntegrity ?? (bool)SConfig.DefaultValues[nameof(this.CheckContentIntegrity)];
-        this.ListenForConsoleInput = listenForConsoleInput ?? (bool)SConfig.DefaultValues[nameof(this.ListenForConsoleInput)];
-        this.ParanoidWarnings = paranoidWarnings ?? (bool)SConfig.DefaultValues[nameof(this.ParanoidWarnings)];
-        this.UseBetaChannel = useBetaChannel ?? (bool)SConfig.DefaultValues[nameof(this.UseBetaChannel)];
+        this.CheckForUpdates =
+            checkForUpdates ?? (bool)SConfig.DefaultValues[nameof(this.CheckForUpdates)];
+        this.CheckForBlacklistUpdates =
+            checkForBlacklistUpdates
+            ?? (bool)SConfig.DefaultValues[nameof(this.CheckForBlacklistUpdates)];
+        this.CheckContentIntegrity =
+            checkContentIntegrity
+            ?? (bool)SConfig.DefaultValues[nameof(this.CheckContentIntegrity)];
+        this.ListenForConsoleInput =
+            listenForConsoleInput
+            ?? (bool)SConfig.DefaultValues[nameof(this.ListenForConsoleInput)];
+        this.ParanoidWarnings =
+            paranoidWarnings ?? (bool)SConfig.DefaultValues[nameof(this.ParanoidWarnings)];
+        this.UseBetaChannel =
+            useBetaChannel ?? (bool)SConfig.DefaultValues[nameof(this.UseBetaChannel)];
         this.GitHubProjectName = gitHubProjectName;
         this.WebApiBaseUrl = webApiBaseUrl;
         this.BlacklistUrl = blacklistUrl;
-        this.VerboseLogging = new HashSet<string>(verboseLogging ?? [], StringComparer.OrdinalIgnoreCase);
+        this.VerboseLogging = new HashSet<string>(
+            verboseLogging ?? [],
+            StringComparer.OrdinalIgnoreCase
+        );
         this.RewriteMods = rewriteMods ?? (bool)SConfig.DefaultValues[nameof(this.RewriteMods)];
-        this.EnableConfigMenu = enableConfigMenu ?? (bool)SConfig.DefaultValues[nameof(this.EnableConfigMenu)];
+        this.EnableConfigMenu =
+            enableConfigMenu ?? (bool)SConfig.DefaultValues[nameof(this.EnableConfigMenu)];
         this.FixHarmony = fixHarmony ?? (bool)SConfig.DefaultValues[nameof(this.FixHarmony)];
-        this.UseCaseInsensitivePaths = useCaseInsensitivePaths ?? (bool)SConfig.DefaultValues[nameof(this.UseCaseInsensitivePaths)];
-        this.LogNetworkTraffic = logNetworkTraffic ?? (bool)SConfig.DefaultValues[nameof(this.LogNetworkTraffic)];
-        this.LogTechnicalDetailsForBrokenMods = logTechnicalDetailsForBrokenMods ?? (bool)SConfig.DefaultValues[nameof(this.LogTechnicalDetailsForBrokenMods)];
+        this.UseCaseInsensitivePaths =
+            useCaseInsensitivePaths
+            ?? (bool)SConfig.DefaultValues[nameof(this.UseCaseInsensitivePaths)];
+        this.LogNetworkTraffic =
+            logNetworkTraffic ?? (bool)SConfig.DefaultValues[nameof(this.LogNetworkTraffic)];
+        this.LogTechnicalDetailsForBrokenMods =
+            logTechnicalDetailsForBrokenMods
+            ?? (bool)SConfig.DefaultValues[nameof(this.LogTechnicalDetailsForBrokenMods)];
         this.ConsoleColorScheme = consoleColorScheme;
         this.ConsoleColorSchemes = consoleColorSchemes ?? [];
-        this.SuppressHarmonyDebugMode = suppressHarmonyDebugMode ?? (bool)SConfig.DefaultValues[nameof(this.SuppressHarmonyDebugMode)];
-        this.SuppressUpdateChecks = new HashSet<string>(suppressUpdateChecks ?? [], StringComparer.OrdinalIgnoreCase);
-        this.ModsToLoadEarly = new HashSet<string>(modsToLoadEarly ?? [], StringComparer.OrdinalIgnoreCase);
-        this.ModsToLoadLate = new HashSet<string>(modsToLoadLate ?? [], StringComparer.OrdinalIgnoreCase);
+        this.SuppressHarmonyDebugMode =
+            suppressHarmonyDebugMode
+            ?? (bool)SConfig.DefaultValues[nameof(this.SuppressHarmonyDebugMode)];
+        this.SuppressUpdateChecks = new HashSet<string>(
+            suppressUpdateChecks ?? [],
+            StringComparer.OrdinalIgnoreCase
+        );
+        this.ModsToLoadEarly = new HashSet<string>(
+            modsToLoadEarly ?? [],
+            StringComparer.OrdinalIgnoreCase
+        );
+        this.ModsToLoadLate = new HashSet<string>(
+            modsToLoadLate ?? [],
+            StringComparer.OrdinalIgnoreCase
+        );
     }
 
     /// <summary>Override the value of <see cref="DeveloperMode"/>.</summary>
@@ -222,7 +261,8 @@ internal class SConfig
             custom[nameof(this.ModsToLoadLate)] = $"[{string.Join(", ", this.ModsToLoadLate)}]";
 
         if (!this.SuppressUpdateChecks.SetEquals(SConfig.DefaultSuppressUpdateChecks))
-            custom[nameof(this.SuppressUpdateChecks)] = $"[{string.Join(", ", this.SuppressUpdateChecks)}]";
+            custom[nameof(this.SuppressUpdateChecks)] =
+                $"[{string.Join(", ", this.SuppressUpdateChecks)}]";
 
         if (this.VerboseLogging.Any())
             custom[nameof(this.VerboseLogging)] = $"[{string.Join(", ", this.VerboseLogging)}]";

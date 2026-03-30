@@ -44,7 +44,7 @@ internal static class FashionSensePatches
 
             if (fashionSenseAssembly == null)
             {
-                Log.Info(Tag, "FashionSense not found, skipping patches");
+                global::Android.Util.Log.Info(Tag, "FashionSense not found, skipping patches");
                 return;
             }
 
@@ -53,7 +53,7 @@ internal static class FashionSensePatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to patch FashionSense: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to patch FashionSense: {ex.Message}");
         }
     }
 
@@ -66,7 +66,7 @@ internal static class FashionSensePatches
             var searchMenuType = assembly.GetType("FashionSense.Framework.UI.SearchMenu");
             if (searchMenuType == null)
             {
-                Log.Info(Tag, "SearchMenu type not found, skipping");
+                global::Android.Util.Log.Info(Tag, "SearchMenu type not found, skipping");
                 return;
             }
 
@@ -76,14 +76,18 @@ internal static class FashionSensePatches
             )!;
             if (_searchBoxField == null)
             {
-                Log.Error(Tag, "SearchMenu._searchBox field not found");
+                global::Android.Util.Log.Error(Tag, "SearchMenu._searchBox field not found");
                 return;
             }
 
             var ctor = searchMenuType.GetConstructors()[0];
-            harmony.Patch(ctor,
-                postfix: new HarmonyMethod(typeof(FashionSensePatches),
-                    nameof(SearchMenu_Ctor_Postfix)));
+            harmony.Patch(
+                ctor,
+                postfix: new HarmonyMethod(
+                    typeof(FashionSensePatches),
+                    nameof(SearchMenu_Ctor_Postfix)
+                )
+            );
 
             var clickMethod = searchMenuType.GetMethod(
                 "receiveLeftClick",
@@ -94,16 +98,23 @@ internal static class FashionSensePatches
             );
             if (clickMethod != null)
             {
-                harmony.Patch(clickMethod,
-                    postfix: new HarmonyMethod(typeof(FashionSensePatches),
-                        nameof(SearchMenu_ReceiveLeftClick_Postfix)));
+                harmony.Patch(
+                    clickMethod,
+                    postfix: new HarmonyMethod(
+                        typeof(FashionSensePatches),
+                        nameof(SearchMenu_ReceiveLeftClick_Postfix)
+                    )
+                );
             }
 
-            Log.Info(Tag, "Patched SearchMenu (constructor + receiveLeftClick)");
+            global::Android.Util.Log.Info(
+                Tag,
+                "Patched SearchMenu (constructor + receiveLeftClick)"
+            );
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to patch SearchMenu: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to patch SearchMenu: {ex.Message}");
         }
     }
 
@@ -117,7 +128,7 @@ internal static class FashionSensePatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"SearchMenu ctor postfix error: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"SearchMenu ctor postfix error: {ex.Message}");
         }
     }
 
@@ -131,7 +142,7 @@ internal static class FashionSensePatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"SearchMenu click postfix error: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"SearchMenu click postfix error: {ex.Message}");
         }
     }
 
@@ -155,7 +166,7 @@ internal static class FashionSensePatches
             var nameMenuType = assembly.GetType("FashionSense.Framework.UI.NameMenu");
             if (nameMenuType == null)
             {
-                Log.Info(Tag, "NameMenu type not found, skipping");
+                global::Android.Util.Log.Info(Tag, "NameMenu type not found, skipping");
                 return;
             }
 
@@ -180,10 +191,17 @@ internal static class FashionSensePatches
                 BindingFlags.NonPublic | BindingFlags.Instance
             )!;
 
-            if (_evaluateNameMethod == null || _nameTextBoxField == null ||
-                _doneNamingButtonField == null || _callbackMenuField == null)
+            if (
+                _evaluateNameMethod == null
+                || _nameTextBoxField == null
+                || _doneNamingButtonField == null
+                || _callbackMenuField == null
+            )
             {
-                Log.Error(Tag, "Could not find required fields/methods on NameMenu");
+                global::Android.Util.Log.Error(
+                    Tag,
+                    "Could not find required fields/methods on NameMenu"
+                );
                 return;
             }
 
@@ -196,9 +214,13 @@ internal static class FashionSensePatches
             );
             if (drawMethod != null)
             {
-                harmony.Patch(drawMethod,
-                    prefix: new HarmonyMethod(typeof(FashionSensePatches),
-                        nameof(NameMenu_Draw_Prefix)));
+                harmony.Patch(
+                    drawMethod,
+                    prefix: new HarmonyMethod(
+                        typeof(FashionSensePatches),
+                        nameof(NameMenu_Draw_Prefix)
+                    )
+                );
             }
 
             var clickMethod = nameMenuType.GetMethod(
@@ -210,16 +232,23 @@ internal static class FashionSensePatches
             );
             if (clickMethod != null)
             {
-                harmony.Patch(clickMethod,
-                    prefix: new HarmonyMethod(typeof(FashionSensePatches),
-                        nameof(NameMenu_ReceiveLeftClick_Prefix)));
+                harmony.Patch(
+                    clickMethod,
+                    prefix: new HarmonyMethod(
+                        typeof(FashionSensePatches),
+                        nameof(NameMenu_ReceiveLeftClick_Prefix)
+                    )
+                );
             }
 
-            Log.Info(Tag, "Patched NameMenu (EvaluateName on draw + click, empty-text close)");
+            global::Android.Util.Log.Info(
+                Tag,
+                "Patched NameMenu (EvaluateName on draw + click, empty-text close)"
+            );
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"Failed to patch NameMenu: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"Failed to patch NameMenu: {ex.Message}");
         }
     }
 
@@ -232,7 +261,7 @@ internal static class FashionSensePatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"NameMenu draw prefix error: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"NameMenu draw prefix error: {ex.Message}");
         }
     }
 
@@ -242,7 +271,8 @@ internal static class FashionSensePatches
         try
         {
             var textBox = _nameTextBoxField?.GetValue(__instance) as TextBox;
-            var doneButton = _doneNamingButtonField?.GetValue(__instance) as ClickableTextureComponent;
+            var doneButton =
+                _doneNamingButtonField?.GetValue(__instance) as ClickableTextureComponent;
 
             if (textBox == null || doneButton == null)
                 return true;
@@ -262,7 +292,7 @@ internal static class FashionSensePatches
         }
         catch (Exception ex)
         {
-            Log.Error(Tag, $"NameMenu click prefix error: {ex.Message}");
+            global::Android.Util.Log.Error(Tag, $"NameMenu click prefix error: {ex.Message}");
             return true;
         }
     }

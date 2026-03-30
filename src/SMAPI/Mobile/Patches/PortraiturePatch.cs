@@ -26,7 +26,7 @@ internal static class PortraiturePatch
     private static void LogInfo(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Info(Tag, message);
+        global::Android.Util.Log.Info(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] {message}");
 #endif
@@ -35,7 +35,7 @@ internal static class PortraiturePatch
     private static void LogError(string message)
     {
 #if SMAPI_FOR_ANDROID
-        Log.Error(Tag, message);
+        global::Android.Util.Log.Error(Tag, message);
 #else
         System.Diagnostics.Debug.WriteLine($"[{Tag}] ERROR: {message}");
 #endif
@@ -108,7 +108,9 @@ internal static class PortraiturePatch
             }
             else
             {
-                LogError("Could not find TextureLoader.nextFolder - cache won't invalidate on folder change");
+                LogError(
+                    "Could not find TextureLoader.nextFolder - cache won't invalidate on folder change"
+                );
             }
         }
         catch (Exception ex)
@@ -126,7 +128,11 @@ internal static class PortraiturePatch
         if (npc?.Name == null)
             return true; // run original
 
-        if (PortraitCache.TryGetValue(npc.Name, out var cached) && cached != null && !cached.IsDisposed)
+        if (
+            PortraitCache.TryGetValue(npc.Name, out var cached)
+            && cached != null
+            && !cached.IsDisposed
+        )
         {
             __result = cached;
             return false; // skip original

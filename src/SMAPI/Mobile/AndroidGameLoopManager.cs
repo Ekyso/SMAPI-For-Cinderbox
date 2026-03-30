@@ -218,9 +218,7 @@ internal static class AndroidGameLoopManager
                 }
             }
         }
-        catch
-        {
-        }
+        catch { }
 
         _performanceMonitor.Log(log.ToString().TrimEnd(), LogLevel.Info);
 
