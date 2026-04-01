@@ -13,6 +13,16 @@
         {
             "Id": "BrEvoiultion.GiveSpeedInMorning", // 'Give Speed In Morning' (Nexus:35650, 97860c755192a27cdb6c16ec32327774, malicious reupload of legit mod)
             "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
+        },
+
+        // 2026-01
+        {
+            "Id": "DweDweD1.GhostCompanion", // 'Ghost Companion' (Nexus:44342, c95364ba4634fef7826df261712e885d)
+            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
+        },
+        {
+            "Id": "DweDweD1.MusicPlayer", // 'Music Player' (Nexus:44488, 159093613f4f62001db88c3078ee5c99)
+            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
         }
     ],
 
