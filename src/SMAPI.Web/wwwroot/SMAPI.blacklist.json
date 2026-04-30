@@ -17,15 +17,19 @@
 
         // 2026-04
         {
+            "Id": "BritishW.ChaosWhispers", // 'Chaos Whispers' by BritishW (Nexus: 44497, 381A5A9892E6699D9DB1A8E2517A9A91)
+            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
+        },
+        {
+            "Id": "BritishW.TheStardewDoppelganger", // The Stardew Doppelganger by BritishW (Nexus: 44345, F0D1636288CB0877441D3F08134FC2CF)
+            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
+        },
+        {
             "Id": "DweDweD1.GhostCompanion", // 'Ghost Companion' by DweDweD1 (Nexus:44342, c95364ba4634fef7826df261712e885d)
             "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
         },
         {
             "Id": "DweDweD1.MusicPlayer", // 'Music Player' by DweDweD1 (Nexus:44488, 159093613f4f62001db88c3078ee5c99)
-            "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
-        },
-        {
-            "Id": "BritishW.ChaosWhispers", // 'Chaos Whispers' by BritishW (Nexus: 44497, 381A5A9892E6699D9DB1A8E2517A9A91)
             "Message": "It downloads malicious code from a remote server and runs it on your computer. SMAPI refused to load the mod, but you should delete this mod and run a complete anti-malware scan of your computer now to be safe."
         }
     ],
