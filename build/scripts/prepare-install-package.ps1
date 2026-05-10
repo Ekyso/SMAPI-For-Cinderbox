@@ -9,6 +9,15 @@
 
 
 ##########
+## Validate environment
+##########
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    Write-Error "This script needs PowerShell 7 or later. Run it using 'pwsh' instead." # needed for `$IsWindows`
+    exit 1
+}
+
+
+##########
 ## Read arguments
 ##########
 $windowsOnly = $false # Windows-only build
