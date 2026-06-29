@@ -1,4 +1,4 @@
-namespace StardewModdingAPI.Toolkit.Framework.ModData;
+namespace StardewModdingAPI.Toolkit.Framework.BundledModData;
 
 /// <summary>The valid field keys.</summary>
 public enum ModDataFieldKey

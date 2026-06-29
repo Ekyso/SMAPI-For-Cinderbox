@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace StardewModdingAPI.Toolkit.Framework.ModData;
+namespace StardewModdingAPI.Toolkit.Framework.BundledModData;
 
 /// <summary>Handles access to SMAPI's internal mod metadata list.</summary>
 public class ModDatabase

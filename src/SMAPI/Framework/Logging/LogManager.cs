@@ -10,7 +10,7 @@ using StardewModdingAPI.Framework.Models;
 using StardewModdingAPI.Framework.ModLoading;
 using StardewModdingAPI.Internal;
 using StardewModdingAPI.Internal.ConsoleWriting;
-using StardewModdingAPI.Toolkit.Framework.ModData;
+using StardewModdingAPI.Toolkit.Framework.BundledModData;
 using StardewModdingAPI.Toolkit.Utilities;
 using StardewValley;
 

@@ -45,6 +45,9 @@ public class ModDropFileExport
     /// <summary>When the file was uploaded, as a Unix millisecond timestamp since epoch.</summary>
     public long DateCreated { get; set; }
 
+    /// <summary>The file size in bytes.</summary>
+    public long Size { get; set; }
+
     /// <summary>The extra fields returned by the export API, if any.</summary>
     [JsonExtensionData]
     [SuppressMessage("ReSharper", "UnusedMember.Global", Justification = "Used to track any new data provided by the API.")]

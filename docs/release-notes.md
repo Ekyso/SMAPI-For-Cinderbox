@@ -11,6 +11,9 @@
 * For mod authors:
   * Added OS metrics to the [metrics API](technical/web.md#modsmetrics).
 
+* For tool maintainers:
+  * Updated the SMAPI toolkit (`SMAPI.Toolkit.dll`) for the [open mod dataset](https://github.com/Pathoschild/StardewModData).
+
 ## 4.5.2
 Released 14 March 2026 for Stardew Valley 1.6.14 or later.
 

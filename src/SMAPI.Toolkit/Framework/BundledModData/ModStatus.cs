@@ -1,4 +1,4 @@
-namespace StardewModdingAPI.Toolkit.Framework.ModData;
+namespace StardewModdingAPI.Toolkit.Framework.BundledModData;
 
 /// <summary>Indicates how SMAPI should treat a mod.</summary>
 public enum ModStatus

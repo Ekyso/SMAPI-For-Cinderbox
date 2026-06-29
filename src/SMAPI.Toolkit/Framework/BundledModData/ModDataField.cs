@@ -1,4 +1,4 @@
-namespace StardewModdingAPI.Toolkit.Framework.ModData;
+namespace StardewModdingAPI.Toolkit.Framework.BundledModData;
 
 /// <summary>A versioned mod metadata field.</summary>
 public class ModDataField

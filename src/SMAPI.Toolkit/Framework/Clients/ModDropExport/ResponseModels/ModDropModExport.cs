@@ -13,11 +13,21 @@ public class ModDropModExport
     /// <summary>The mod page title.</summary>
     public string? Title { get; set; }
 
+    /// <summary>A brief descriptive blurb for the mod.</summary>
+    public string? TagLine { get; set; }
+
+    /// <summary>The mod page description body.</summary>
+    [JsonProperty("desc")]
+    public string? Description { get; set; }
+
     /// <summary>The author of the mod.</summary>
     public string? AuthorName { get; set; }
 
     /// <summary>The name of the user who uploaded the mod.</summary>
     public string? UserName { get; set; }
+
+    /// <summary>The mod version.</summary>
+    public string? Version { get; set; }
 
     /// <summary>When the mod was published, as a Unix millisecond timestamp since epoch.</summary>
     public long DatePublished { get; set; }

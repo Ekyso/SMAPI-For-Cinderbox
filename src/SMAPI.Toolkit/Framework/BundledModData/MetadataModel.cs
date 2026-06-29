@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace StardewModdingAPI.Toolkit.Framework.ModData;
+namespace StardewModdingAPI.Toolkit.Framework.BundledModData;
 
 /// <summary>The SMAPI predefined metadata.</summary>
 internal class MetadataModel

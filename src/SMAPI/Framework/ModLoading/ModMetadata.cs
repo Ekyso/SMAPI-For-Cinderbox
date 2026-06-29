@@ -4,8 +4,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using StardewModdingAPI.Framework.ModHelpers;
+using StardewModdingAPI.Toolkit.Framework.BundledModData;
 using StardewModdingAPI.Toolkit.Framework.Clients.WebApi;
-using StardewModdingAPI.Toolkit.Framework.ModData;
 using StardewModdingAPI.Toolkit.Framework.UpdateData;
 using StardewModdingAPI.Toolkit.Utilities;
 

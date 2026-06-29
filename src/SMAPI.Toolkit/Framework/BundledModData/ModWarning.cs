@@ -1,6 +1,6 @@
 using System;
 
-namespace StardewModdingAPI.Toolkit.Framework.ModData;
+namespace StardewModdingAPI.Toolkit.Framework.BundledModData;
 
 /// <summary>Indicates a detected non-error mod issue.</summary>
 [Flags]

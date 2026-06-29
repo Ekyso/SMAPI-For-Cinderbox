@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using StardewModdingAPI.Toolkit.Framework.BundledModData;
 using StardewModdingAPI.Toolkit.Framework.Clients.CompatibilityRepo;
-using StardewModdingAPI.Toolkit.Framework.ModData;
 
 namespace StardewModdingAPI.Toolkit.Framework.Clients.WebApi;
 

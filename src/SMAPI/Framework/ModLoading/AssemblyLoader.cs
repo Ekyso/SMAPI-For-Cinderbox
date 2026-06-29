@@ -11,7 +11,7 @@ using StardewModdingAPI.Framework.Extensions;
 using StardewModdingAPI.Framework.ModLoading.Framework;
 using StardewModdingAPI.Framework.ModLoading.Symbols;
 using StardewModdingAPI.Metadata;
-using StardewModdingAPI.Toolkit.Framework.ModData;
+using StardewModdingAPI.Toolkit.Framework.BundledModData;
 using StardewModdingAPI.Toolkit.Utilities;
 
 namespace StardewModdingAPI.Framework.ModLoading;

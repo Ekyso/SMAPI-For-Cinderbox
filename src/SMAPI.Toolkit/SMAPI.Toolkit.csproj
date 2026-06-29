@@ -20,6 +20,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Pathoschild.Http.FluentClient" />
     <PackageReference Include="Microsoft.Win32.Registry" Condition="'$(OS)' == 'Windows_NT'" />
+    <PackageReference Include="System.Text.Json" Condition="'$(TargetFramework)' == 'netstandard2.0'" />
     <PackageReference Include="VdfConverter" Condition="'$(OS)' == 'Windows_NT'" Private="False" />
   </ItemGroup>
 

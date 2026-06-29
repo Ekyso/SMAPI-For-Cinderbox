@@ -1,4 +1,4 @@
-namespace StardewModdingAPI.Toolkit.Framework.ModData;
+namespace StardewModdingAPI.Toolkit.Framework.BundledModData;
 
 /// <summary>The versioned fields from a <see cref="ModDataRecord"/> for a specific manifest.</summary>
 public class ModDataRecordVersionedFields

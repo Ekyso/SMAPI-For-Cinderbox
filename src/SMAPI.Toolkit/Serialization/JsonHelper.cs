@@ -4,13 +4,23 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using StardewModdingAPI.Toolkit.Serialization.Converters;
 
 namespace StardewModdingAPI.Toolkit.Serialization;
 
+#pragma warning disable IL2026 // Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code -- not applicable to our usage.
+
 /// <summary>Encapsulates SMAPI's JSON file parsing.</summary>
 public class JsonHelper
 {
+    /*********
+    ** Fields
+    *********/
+    /// <summary>The options to use when converting a value to a System.Text.Json node.</summary>
+    private static readonly System.Text.Json.JsonDocumentOptions ConvertToSystemTextJsonOptions = new() { CommentHandling = System.Text.Json.JsonCommentHandling.Skip };
+
+
     /*********
     ** Accessors
     *********/
@@ -33,6 +43,36 @@ public class JsonHelper
                     new SemanticVersionConverter(),
                     new StringEnumConverter()
                 }
+        };
+    }
+
+    /// <summary>Convert an arbitrary value to a System.Text.Json node.</summary>
+    /// <param name="rawValue">The raw value to convert.</param>
+    public static System.Text.Json.Nodes.JsonNode? ConvertToSystemTextJsonNode(object? rawValue)
+    {
+        // avoid JSON serialization when possible
+        return rawValue switch
+        {
+            null => null,
+            bool value => value,
+            byte value => value,
+            char value => value,
+            DateTime value => value,
+            DateTimeOffset value => value,
+            decimal value => value,
+            double value => value,
+            float value => value,
+            Guid value => value,
+            int value => value,
+            long value => value,
+            sbyte value => value,
+            short value => value,
+            string value => value,
+            uint value => value,
+            ulong value => value,
+            ushort value => value,
+            JToken token => System.Text.Json.Nodes.JsonNode.Parse(JsonConvert.SerializeObject(token), null, JsonHelper.ConvertToSystemTextJsonOptions),
+            _ => System.Text.Json.JsonSerializer.SerializeToNode(rawValue)
         };
     }
 
