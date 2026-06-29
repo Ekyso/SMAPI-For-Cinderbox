@@ -43,6 +43,14 @@ smapi.statsPage = function (options) {
             // colors for each mod type (omitted mod types cycle through the colorPalette)
             colors: {
                 "other": "#c0c0c8" // silver-gray
+            },
+
+            // notable events which may affect stats, indexed by their date in mods-by-type.jsonl
+            notableEvents: {
+                "2021-01-01": "Stardew Valley 1.5 (21 December 2020)",
+                "2021-09-01": "Stardew Valley 1.5.5 (17 August 2021)",
+                "2024-04-26": "Stardew Valley 1.6 (19 March 2024)",
+                "2024-11-29": "Stardew Valley 1.6.9 (04 November 2024)"
             }
         }
     };
@@ -116,7 +124,7 @@ smapi.statsPage = function (options) {
 
                         rows,
                         lastRow,
-                        xLabels: rows.map(row => row.date.slice(0, 7)),
+                        xLabels: rows.map(row => row.date),
                         modTypes: getModTypes(rows)
                     };
                     this.modsByType.previouslyUpdated = data.modsByType.previouslyUpdated;
@@ -213,39 +221,56 @@ smapi.statsPage = function (options) {
                 ****/
                 {
                     const curData = data.modsByType;
-                    const countsByType = curData.lastRow; // counts from last row
-                    const includeModTypes = curData.modTypes.filter(type => countsByType[type]); // ignore mod types which don't appear in the last row
-
-                    const total = includeModTypes.reduce((sum, type) => sum + (countsByType[type] ?? 0), 0);
+                    const lastRowIndex = curData.rows.length - 1;
 
                     const chart = echarts.init(document.getElementById("modsByType"));
 
                     chart.setOption({
-                        title: {
-                            text: "Total mods by type",
-                            textStyle: titleStyle
+                        baseOption: {
+                            series: [
+                                {
+                                    type: "pie",
+                                    radius: "80%",
+                                    clockwise: false // start with larger values on the left
+                                }
+                            ],
+                            timeline: createTimeline(curData.xLabels, config.modsByType.notableEvents),
+                            toolbox: createToolbox(false)
                         },
-                        series: [
-                            {
-                                type: "pie",
-                                radius: "80%",
-                                clockwise: false, // start with larger values on the left
-                                label: {
-                                    formatter: entry => `${entry.name}  ${getPercent(entry.value, total)}%`
+                        options: curData.rows.map((row, i) => {
+                            const isLatest = i === lastRowIndex;
+                            const total = curData.modTypes.reduce((sum, type) => sum + (row[type] ?? 0), 0);
+
+                            return {
+                                title: {
+                                    text: getTimelineTitle("Total mods by type", row.date, isLatest),
+                                    textStyle: titleStyle
                                 },
-                                data: includeModTypes.map(modType => ({
-                                    name: getLabel(config.modsByType.labels, modType),
-                                    value: countsByType[modType] ?? 0,
-                                    itemStyle: {
-                                        color: getColor(config.modsByType.colors, modType)
+                                series: [
+                                    {
+                                        label: {
+                                            formatter: entry => `${entry.name}  ${getPercent(entry.value, total)}%`
+                                        },
+                                        data: curData.modTypes.map(modType => ({
+                                            name: getLabel(config.modsByType.labels, modType),
+                                            value: row[modType] ?? 0,
+                                            label: {
+                                                show: !!row[modType]
+                                            },
+                                            itemStyle: {
+                                                color: getColor(config.modsByType.colors, modType)
+                                            }
+                                        }))
                                     }
-                                }))
-                            }
-                        ],
-                        tooltip: {
-                            formatter: entry => `${entry.name}: ${entry.value.toLocaleString()} (${getPercent(entry.value, total)}%)`
-                        },
-                        toolbox: createToolbox(false)
+                                ],
+                                tooltip: {
+                                    formatter: entry => entry.name && entry.value
+                                        ? `${entry.name}: ${entry.value.toLocaleString()} (${getPercent(entry.value, total)}%)`
+                                        : null // not a slice (e.g. a timeline control)
+                                },
+                                animation: isLatest // don't animate previous rows, which prevents the chart from updating while playing/scrolling timeline
+                            };
+                        })
                     });
 
                     charts.push(chart);
@@ -256,6 +281,8 @@ smapi.statsPage = function (options) {
                 ****/
                 {
                     const curData = data.modsByType;
+                    const lastRowIndex = curData.rows.length - 1;
+
                     const chartConfigs = [
                         {
                             id: "modsByTypeOverTime",
@@ -273,59 +300,84 @@ smapi.statsPage = function (options) {
                         const chart = echarts.init(document.getElementById(chartConfig.id));
 
                         chart.setOption({
-                            title: {
-                                text: chartConfig.title,
-                                textStyle: titleStyle
+                            baseOption: {
+                                legend: {
+                                    show: false
+                                },
+                                grid: {
+                                    top: 40,
+                                    bottom: 100,
+                                    left: 60,
+                                    right: 150 // extra right margin to fit end labels
+                                },
+                                xAxis: {
+                                    data: [], // overridden in `options`
+                                    axisLabel: {
+                                        rotate: 90,
+                                        fontSize: 11,
+                                        formatter: value => value.slice(0, 7)
+                                    }
+                                },
+                                yAxis: {},
+                                series: chartConfig.modTypes.map(modType => {
+                                    const extendsToEnd = !!curData.lastRow[modType];
+                                    const rawColor = getColor(config.modsByType.colors, modType);
+                                    const color = extendsToEnd
+                                        ? rawColor
+                                        : hexToRgba(rawColor, 0.6);
+
+                                    return {
+                                        type: "line",
+                                        name: getLabel(config.modsByType.labels, modType),
+                                        data: [], // overridden in `options`
+                                        color: color,
+                                        lineStyle: {
+                                            type: extendsToEnd ? "solid" : "dotted",
+                                            width: 2
+                                        },
+                                        symbol: "none",
+                                        endLabel: {
+                                            show: true,
+                                            formatter: "{a}", // {a} = name
+                                            color: color
+                                        },
+                                        labelLayout: {
+                                            moveOverlap: extendsToEnd
+                                                ? "shiftY" // if the line reaches the end of the chart, use 'shiftY' layout to avoid overlapping labels
+                                                : null     // if the line ends early, just display it next to the line instead
+                                        }
+                                    };
+                                }),
+                                tooltip: {
+                                    trigger: "axis"
+                                },
+                                toolbox: createToolbox(true),
+                                timeline: createTimeline(curData.xLabels, config.modsByType.notableEvents)
                             },
-                            legend: {
-                                show: false
-                            },
-                            grid: {
-                                top: 40,
-                                left: 60,
-                                right: 150 // extra right margin to fit end labels
-                            },
-                            xAxis: {
-                                data: curData.xLabels,
-                                axisLabel: {
-                                    rotate: 90,
-                                    fontSize: 11
-                                }
-                            },
-                            yAxis: {},
-                            series: chartConfig.modTypes.map(modType => {
-                                const extendsToEnd = !!curData.lastRow[modType];
-                                const rawColor = getColor(config.modsByType.colors, modType);
-                                const color = extendsToEnd
-                                    ? rawColor
-                                    : hexToRgba(rawColor, 0.6);
+                            options: curData.rows.map((row, i) => {
+                                const isLatest = i === lastRowIndex;
 
                                 return {
-                                    type: "line",
-                                    name: getLabel(config.modsByType.labels, modType),
-                                    data: curData.rows.map(row => row[modType] ?? null),
-                                    color: color,
-                                    lineStyle: {
-                                        type: extendsToEnd ? "solid" : "dotted",
-                                        width: 2
+                                    title: {
+                                        text: getTimelineTitle(chartConfig.title, row.date, isLatest),
+                                        textStyle: titleStyle
                                     },
-                                    symbol: "none",
-                                    endLabel: {
-                                        show: true,
-                                        formatter: "{a}", // {a} = name
-                                        color: color
+                                    xAxis: {
+                                        data: curData.xLabels.slice(0, i + 1) // skip first row, since it has no previous row to delta against
                                     },
-                                    labelLayout: {
-                                        moveOverlap: extendsToEnd
-                                            ? "shiftY" // if the line reaches the end of the chart, use 'shiftY' layout to avoid overlapping labels
-                                            : null     // if the line ends early, just display it next to the line instead
-                                    }
+                                    series: chartConfig.modTypes.map(modType => {
+                                        const data = curData.rows.slice(0, i + 1).map(row => row[modType] ?? null);
+
+                                        return {
+                                            data,
+                                            endLabel: {
+                                                show: !!data[data.length - 1]
+                                            }
+                                        };
+                                    }),
+                                    animation: isLatest
                                 };
-                            }),
-                            tooltip: {
-                                trigger: "axis"
-                            },
-                            toolbox: createToolbox(true)
+                            })
                         });
 
                         charts.push(chart);
@@ -336,45 +388,67 @@ smapi.statsPage = function (options) {
                 ** 'New mods' pie chart
                 ****/
                 {
-                    const countsByType = [
-                        ...this.latestNewMods.byType,
-                        {
-                            type: "other",
-                            label: getLabel(config.modsByType.labels, "other"),
-                            delta: this.latestNewMods.forOther
-                        }
-                    ];
+                    const curData = data.modsByType;
+                    const lastRowIndex = curData.rows.length - 2; // rendered rows start at row 1 (since they delta against previous row)
 
                     const chart = echarts.init(document.getElementById("newModsLastDelta"));
 
                     chart.setOption({
-                        title: {
-                            text: `New mods between ${data.modsByType.previouslyUpdated} and ${data.modsByType.lastUpdated}`,
-                            textStyle: titleStyle
+                        baseOption: {
+                            series: [
+                                {
+                                    type: "pie",
+                                    radius: "80%",
+                                    clockwise: false, // start with larger values on the left
+                                    label: {
+                                        formatter: entry => `${entry.name}  ${entry.percent.toFixed(1)}%`
+                                    },
+                                    data: [] // overridden in `options`
+                                }
+                            ],
+                            tooltip: {
+                                formatter: entry => `${entry.name}: ${entry.value.toLocaleString()} (${entry.percent.toFixed(1)}%)`
+                            },
+                            toolbox: createToolbox(false),
+                            timeline: createTimeline(
+                                curData.xLabels.slice(1),
+                                config.modsByType.notableEvents,
+                                {
+                                    controlStyle: {
+                                        showPlayBtn: false // hide play button, since the data is too erratic for autoplay to be useful
+                                    }
+                                }
+                            )
                         },
-                        series: [
-                            {
-                                type: "pie",
-                                radius: "80%",
-                                clockwise: false, // start with larger values on the left
-                                label: {
-                                    formatter: entry => `${entry.name}  ${entry.percent.toFixed(1)}%`
+                        options: curData.rows.slice(1).map((row, i) => {
+                            const prevRow = curData.rows[i];
+                            const isLatest = i === lastRowIndex;
+
+                            return {
+                                title: {
+                                    text: `New mods between ${formatFullDate(prevRow.date)} and ${formatFullDate(row.date)}`,
+                                    textStyle: titleStyle
                                 },
-                                data: countsByType
-                                    .filter(entry => entry.delta > 0)
-                                    .map(entry => ({
-                                        name: entry.label,
-                                        value: entry.delta,
-                                        itemStyle: {
-                                            color: getColor(config.modsByType.colors, entry.type)
-                                        }
-                                    }))
-                            }
-                        ],
-                        tooltip: {
-                            formatter: entry => `${entry.name}: ${entry.value.toLocaleString()} (${entry.percent.toFixed(1)}%)`
-                        },
-                        toolbox: createToolbox(false)
+                                series: [
+                                    {
+                                        data: curData.modTypes
+                                            .map(modType => ({
+                                                type: modType,
+                                                delta: (row[modType] ?? 0) - (prevRow[modType] ?? 0)
+                                            }))
+                                            .filter(entry => entry.delta > 0)
+                                            .map(entry => ({
+                                                name: getLabel(config.modsByType.labels, entry.type),
+                                                value: entry.delta,
+                                                itemStyle: {
+                                                    color: getColor(config.modsByType.colors, entry.type)
+                                                }
+                                            }))
+                                    }
+                                ],
+                                animation: isLatest
+                            };
+                        })
                     });
 
                     charts.push(chart);
@@ -385,38 +459,59 @@ smapi.statsPage = function (options) {
                 ****/
                 {
                     const chart = echarts.init(document.getElementById("newMods"));
+                    const lastRowIndex = data.newMods.xLabels.length - 1;
 
                     chart.setOption({
-                        title: {
-                            text: "New mods by month",
-                            textStyle: titleStyle
+                        baseOption: {
+                            legend: {
+                                show: false
+                            },
+                            grid: {
+                                top: 40,
+                                bottom: 100,
+                                left: 60,
+                                right: 60
+                            },
+                            xAxis: {
+                                data: data.newMods.xLabels, // base data; overridden per frame in options[]
+                                axisLabel: {
+                                    rotate: 90,
+                                    fontSize: 11,
+                                    formatter: value => value.slice(0, 7)
+                                }
+                            },
+                            yAxis: {},
+                            series: [
+                                {
+                                    type: "bar",
+                                    data: [] // placeholder; overridden per frame in options[]
+                                }
+                            ],
+                            tooltip: {
+                                trigger: "axis"
+                            },
+                            toolbox: createToolbox(true),
+                            timeline: createTimeline(data.newMods.xLabels, config.modsByType.notableEvents)
                         },
-                        legend: {
-                            show: false
-                        },
-                        grid: {
-                            top: 40,
-                            left: 60,
-                            right: 60
-                        },
-                        xAxis: {
-                            data: data.newMods.xLabels,
-                            axisLabel: {
-                                rotate: 90,
-                                fontSize: 11
-                            }
-                        },
-                        yAxis: {},
-                        series: [
-                            {
-                                type: "bar",
-                                data: data.newMods.deltas
-                            }
-                        ],
-                        tooltip: {
-                            trigger: "axis"
-                        },
-                        toolbox: createToolbox(true)
+                        options: data.newMods.xLabels.map((xLabel, i) => {
+                            const isLatest = i === lastRowIndex;
+
+                            return {
+                                title: {
+                                    text: getTimelineTitle("New mods by month", xLabel, isLatest),
+                                    textStyle: titleStyle
+                                },
+                                xAxis: {
+                                    data: data.newMods.xLabels.slice(0, i + 1)
+                                },
+                                series: [
+                                    {
+                                        data: data.newMods.deltas.slice(0, i + 1)
+                                    }
+                                ],
+                                animation: isLatest
+                            };
+                        })
                     });
                     charts.push(chart);
                 }
@@ -571,6 +666,54 @@ smapi.statsPage = function (options) {
     ** Charts
     ****/
     /**
+     * Get the chart title for a given timeline frame.
+     * @param {string} baseTitle The base chart title.
+     * @param {string|Date} date The date of the current timeline frame.
+     * @param {boolean} isLatest Whether the chart is displaying the last frame on the timeline.
+     * @returns {string}
+     */
+    function getTimelineTitle(baseTitle, date, isLatest) {
+        return isLatest
+            ? baseTitle
+            : `${baseTitle} (${formatFullDate(date)})`;
+    }
+
+    /**
+     * Create the timeline options for a chart, given its x-axis labels and optional date markers.
+     * @param {array<string>} xLabels The x-axis labels.
+     * @param {array<object>} markers The date markers to display on the timeline, if any. This should be a lookup of `xLabels` key to tooltip text.
+     * @param {object|null} customOptions the custom ECharts timeline options to merge into the default options, if any.
+     */
+    function createTimeline(xLabels, markers, customOptions) {
+        return {
+            axisType: "category",
+            data: xLabels.map(xLabel => {
+                const marker = markers[xLabel];
+                return marker
+                    ? {
+                        value: xLabel,
+                        symbol: "diamond",
+                        tooltip: {
+                            formatter: () => marker
+                        }
+                    }
+                    : {
+                        value: xLabel,
+                        symbol: "none"
+                    };
+            }),
+            currentIndex: xLabels.length - 1, // default to latest row
+            playInterval: 200,
+            loop: false,
+            realtime: true,
+            label: {
+                show: false
+            },
+            ...customOptions
+        };
+    }
+
+    /**
      * Create the toolbox options for a chart.
      * @param {boolean} isLinearChart Whether the options are for a linear chart (e.g. a bar chart or line chart).
      */
@@ -581,7 +724,9 @@ smapi.statsPage = function (options) {
                 dataView: {
                     readOnly: true
                 },
-                saveAsImage: { }
+                saveAsImage: {
+                    excludeComponents: ["timeline", "toolbox"]
+                }
             }
         };
 
