@@ -67,6 +67,20 @@ smapi.statsPage = function (options) {
             }
         },
 
+        // configure the 'web traffic' stats
+        dnsQueries: {
+            // notable events which may affect traffic, indexed by their date in smapi-dns-queries.json
+            notableEvents: {
+                "2018-05": "Stardew Valley 1.3 beta", // 30 April 2018
+                "2018-08": "Stardew Valley 1.3",      // 01 August 2018
+                "2019-12": "Stardew Valley 1.4",      // 26 November 2019
+                "2020-12": "Stardew Valley 1.5",      // 21 December 2020
+                "2021-08": "Stardew Valley 1.5.5",    // 17 August 2021
+                "2024-03": "Stardew Valley 1.6",      // 19 March 2024
+                "2024-11": "Stardew Valley 1.6.9"     // 04 November 2024
+            }
+        },
+
         // configure the 'SMAPI costs' stats
         costs: {
             // colors for each service (omitted entries cycle through the colorPalette)
@@ -110,6 +124,10 @@ smapi.statsPage = function (options) {
             xLabels: [],
             versions: []
         },
+        dnsQueries: {
+            xLabels: [],
+            values: []
+        },
         costs: {
             rows: [],
             serviceKeys: [],
@@ -146,6 +164,10 @@ smapi.statsPage = function (options) {
                 lastUpdated: null,
                 total: 0,
                 topVersions: []
+            },
+            dnsQueries: {
+                lastUpdated: null,
+                latestCount: 0
             },
             costs: {
                 lastUpdated: null,
@@ -187,12 +209,13 @@ smapi.statsPage = function (options) {
                 /*********
                 ** Fetch data files
                 *********/
-                const [modsByTypeRows, contentPacksRows, costsRows] = await Promise.all([
+                const [modsByTypeRows, contentPacksRows, costsRows, dnsData] = await Promise.all([
                     fetchJsonLinesAsync(options.modsByTypeUri),
                     fetchJsonLinesAsync(options.contentPacksByFormatUri),
-                    fetchJsonLinesAsync(options.smapiCostsUri)
+                    fetchJsonLinesAsync(options.smapiCostsUri),
+                    fetchJsonAsync(options.smapiDnsQueriesUri)
                 ]);
-                if (!modsByTypeRows || !contentPacksRows || !costsRows) {
+                if (!modsByTypeRows || !contentPacksRows || !costsRows || !dnsData) {
                     this.isDataFailed = true;
                     return;
                 }
@@ -315,6 +338,25 @@ smapi.statsPage = function (options) {
                             count: lastRow[version] ?? 0,
                             delta: (lastRow[version] ?? 0) - (prevRow[version] ?? 0)
                         }))
+                    };
+                }
+
+
+                /*********
+                ** Process DNS queries
+                *********/
+                {
+                    const xLabels = Object.keys(dnsData);
+                    const values = Object.values(dnsData);
+
+                    data.dnsQueries = {
+                        xLabels,
+                        values
+                    };
+
+                    this.dnsQueries = {
+                        lastUpdated: formatMonthYear(xLabels[xLabels.length - 1]),
+                        latestCount: values[values.length - 1]
                     };
                 }
 
@@ -859,6 +901,70 @@ smapi.statsPage = function (options) {
 
 
                 /*********
+                ** 'DNS queries over time' bar chart
+                *********/
+                {
+                    const curData = data.dnsQueries;
+
+                    const chart = echarts.init(document.getElementById("dnsQueriesOverTime"));
+
+                    chart.setOption({
+                        title: {
+                            text: "Web traffic",
+                            textStyle: createTitleStyle()
+                        },
+                        grid: {
+                            top: 55,
+                            bottom: this.showAdvancedControls ? 80 : 60,
+                            left: 70,
+                            right: 20
+                        },
+                        xAxis: {
+                            type: "category",
+                            data: curData.xLabels,
+                            axisLabel: {
+                                rotate: 90,
+                                fontSize: 11
+                            }
+                        },
+                        yAxis: {
+                            type: "value",
+                            name: "DNS queries (millions)",
+                            axisLabel: {
+                                formatter: value => (value / 1_000_000).toFixed(0)
+                            }
+                        },
+                        series: [
+                            {
+                                type: "bar",
+                                data: curData.values,
+                                color: "#3388cc",
+                                markLine: createMarkLine(p => p.name, config.dnsQueries.notableEvents)
+                            }
+                        ],
+                        tooltip: {
+                            trigger: "axis",
+                            formatter: params => {
+                                const value = params[0].value;
+
+                                const lines = [
+                                    params[0].axisValue, // date
+                                    value > 1_000_000
+                                        ? `${(Math.round(value / 100_000) / 10).toLocaleString()} million`
+                                        : value.toLocaleString()
+                                ];
+
+                                return lines.join("<br />");
+                            }
+                        },
+                        toolbox: createToolbox(true, this.showAdvancedControls)
+                    });
+
+                    charts.push(chart);
+                }
+
+
+                /*********
                 ** 'SMAPI costs over time' stacked bar chart
                 *********/
                 {
@@ -958,6 +1064,19 @@ smapi.statsPage = function (options) {
 
         const rawJsonLines = await response.text();
         return rawJsonLines.trim().split(/\r?\n/).filter(row => !!row).map(JSON.parse);
+    }
+
+    /**
+     * Fetch and parse data from a JSON URI.
+     * @param {string} fetchUri The URI from which to fetch the JSON data.
+     * @returns {null|object} Returns the parsed data if it was found, else `null`.
+     */
+    async function fetchJsonAsync(fetchUri) {
+        const response = await fetch(fetchUri);
+        if (!response.ok)
+            return null;
+
+        return await response.json();
     }
 
     /**

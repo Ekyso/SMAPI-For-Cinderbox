@@ -20,7 +20,8 @@
             smapi.statsPage({
                 modsByTypeUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/mods-by-type.jsonl")),
                 contentPacksByFormatUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/content-packs-by-format.jsonl")),
-                smapiCostsUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/smapi-costs.jsonl"))
+                smapiCostsUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/smapi-costs.jsonl")),
+                smapiDnsQueriesUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/smapi-dns-queries.json"))
             });
         });
     </script>
@@ -35,6 +36,7 @@
             <li><a href="#mods-by-type">Mods by type</a></li>
             <li><a href="#new-mods">New mods</a></li>
             <li><a href="#content-patcher-packs">Content Patcher packs</a></li>
+            <li><a href="#web-traffic">Web traffic</a></li>
             <li><a href="#smapi-costs">SMAPI costs</a></li>
         </ul>
     </nav>
@@ -100,6 +102,13 @@
 
         <div class="chart pie-chart" id="contentPacksByFormat"></div>
         <div class="chart line-chart" id="contentPacksByFormatOverTime"></div>
+
+        @* web traffic *@
+        <h2 id="web-traffic">Web traffic</h2>
+        <div class="last-updated">Based on data from {{dnsQueries.lastUpdated}}.</div>
+
+        <div class="chart-intro">SMAPI's web services received about {{(dnsQueries.latestCount / 1000000).toFixed(1)}} million DNS queries in {{dnsQueries.lastUpdated}}. This serves as a rough indicator of player and mod author activity, since SMAPI doesn't collect any telemetry.</div>
+        <div class="chart" id="dnsQueriesOverTime"></div>
 
         @* SMAPI costs *@
         <h2 id="smapi-costs">SMAPI costs</h2>

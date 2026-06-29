@@ -13,7 +13,7 @@ obj/
 appsettings.Development.json
 
 # auto-generated files
-src/SMAPI.Web/wwwroot/Content/data/*.jsonl
+src/SMAPI.Web/wwwroot/Content/data
 src/SMAPI.Web/Properties/PublishProfiles
 src/SMAPI.Web/Properties/ServiceDependencies
 
