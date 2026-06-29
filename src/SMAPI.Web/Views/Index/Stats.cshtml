@@ -50,14 +50,12 @@
 </noscript>
 
 <div v-cloak id="app">
-    @* loading indicator *@
-    <div v-if="!isDataLoaded && !isDataFailed" class="loading-indicator"><div></div><div></div><div></div><div></div></div>
-
-    @* error state *@
-    <div v-if="isDataFailed" class="error">↻ The mod data hasn't been fetched yet; please try again in a few minutes.</div>
+    @* data not ready yet *@
+    <div v-if="isLoadingData" class="loading-indicator"><div></div><div></div><div></div><div></div></div>
+    <div v-else-if="!anyDataLoaded" class="error">These stats are generated automatically from the <a href="https://github.com/Pathoschild/StardewModData">Stardew mod dataset</a>, which hasn't been fetched yet. Please try again in a few minutes.</div>
 
     @* stats area *@
-    <div v-if="isDataLoaded" id="stats-area">
+    <div v-else id="stats-area">
         @* header *@
         <div id="stats-intro">These stats are generated automatically from the <a href="https://github.com/Pathoschild/StardewModData">Stardew mod dataset</a>.</div>
         <div id="stats-controls">
@@ -69,73 +67,88 @@
 
         @* mods by type *@
         <h2 id="mods-by-type">Mods by type</h2>
-        <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
+        <div v-if="modsByType.loadFailed" class="error">These stats couldn't be fetched from the mod dataset.</div>
+        <template v-else>
+            <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
 
-        <div class="chart-intro">We have {{modsByType.total.toLocaleString()}} tracked mods. The majority use {{modsByType.topThree[0].label}} ({{modsByType.topThree[0].percent}}%), followed by {{modsByType.topThree[1].label}} at {{modsByType.topThree[1].percent}}% and {{modsByType.topThree[2].label}} at {{modsByType.topThree[2].percent}}%. <a href="https://stardewvalleywiki.com/Modding:Using_XNB_mods">Legacy XNB mods</a> are no longer recommended, and now only make up {{modsByType.xnbPercent}}% of mods.</div>
-        <div class="chart pie-chart" id="modsByType"></div>
-        <div class="chart line-chart" id="modsByTypeOverTime"></div>
-        <div class="chart line-chart" id="modsByTypeOverTimeExcludingOutliers"></div>
+            <div class="chart-intro">We have {{modsByType.total.toLocaleString()}} tracked mods. The majority use {{modsByType.topThree[0].label}} ({{modsByType.topThree[0].percent}}%), followed by {{modsByType.topThree[1].label}} at {{modsByType.topThree[1].percent}}% and {{modsByType.topThree[2].label}} at {{modsByType.topThree[2].percent}}%. <a href="https://stardewvalleywiki.com/Modding:Using_XNB_mods">Legacy XNB mods</a> are no longer recommended, and now only make up {{modsByType.xnbPercent}}% of mods.</div>
+            <div class="chart pie-chart" id="modsByType"></div>
+            <div class="chart line-chart" id="modsByTypeOverTime"></div>
+            <div class="chart line-chart" id="modsByTypeOverTimeExcludingOutliers"></div>
+        </template>
 
         @* new mods *@
         <h2 id="new-mods">New mods</h2>
-        <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
-        <div class="chart-intro">
-            Between {{modsByType.previouslyUpdated}} and {{modsByType.lastUpdated}}, there were {{latestNewMods.total.toLocaleString()}} more mods. That includes:
-            <ul>
-                <li v-for="entry in latestNewMods.byType">{{formatDelta(entry.delta)}} {{entry.label}};</li>
-                <li>and {{formatDelta(latestNewMods.forOther)}} for frameworks with &lt;100 content packs.</li>
-            </ul>
-        </div>
-        <div class="chart pie-chart" id="newModsLastDelta"></div>
-        <div class="chart bar-chart" id="newMods"></div>
+        <div v-if="modsByType.loadFailed" class="error">These stats couldn't be fetched from the mod dataset.</div>
+        <template v-else>
+            <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
+            <div class="chart-intro">
+                Between {{modsByType.previouslyUpdated}} and {{modsByType.lastUpdated}}, there were {{modsByType.latestNewMods.total.toLocaleString()}} more mods. That includes:
+                <ul>
+                    <li v-for="entry in modsByType.latestNewMods.byType">{{formatDelta(entry.delta)}} {{entry.label}};</li>
+                    <li>and {{formatDelta(modsByType.latestNewMods.forOther)}} for frameworks with &lt;100 content packs.</li>
+                </ul>
+            </div>
+            <div class="chart pie-chart" id="newModsLastDelta"></div>
+            <div class="chart bar-chart" id="newMods"></div>
+        </template>
 
         @* Content Patcher packs *@
         <h2 id="content-patcher-packs">Content Patcher packs</h2>
-        <div class="last-updated">Based on data from {{contentPacks.lastUpdated}}.</div>
+        <div v-if="contentPacks.loadFailed" class="error">These stats couldn't be fetched from the mod dataset.</div>
+        <template v-else>
+            <div class="last-updated">Based on data from {{contentPacks.lastUpdated}}.</div>
 
-        <div class="chart-intro">
-            We have {{contentPacks.total.toLocaleString()}} tracked <a href="https://www.nexusmods.com/stardewvalley/mods/1915">Content Patcher</a> packs. The top five format versions are (with the change since {{contentPacks.previouslyUpdated}}):
-            <ul>
-                <li v-for="(entry, i) in contentPacks.topVersions">{{i == 4 ? "and " : ""}} {{entry.version}} ({{entry.count.toLocaleString()}}, {{formatDelta(entry.delta)}}){{i < 4 ? ";" : "."}}</li>
-            </ul>
-        </div>
+            <div class="chart-intro">
+                We have {{contentPacks.total.toLocaleString()}} tracked <a href="https://www.nexusmods.com/stardewvalley/mods/1915">Content Patcher</a> packs. The top five format versions are (with the change since {{contentPacks.previouslyUpdated}}):
+                <ul>
+                    <li v-for="(entry, i) in contentPacks.topVersions">{{i == 4 ? "and " : ""}} {{entry.version}} ({{entry.count.toLocaleString()}}, {{formatDelta(entry.delta)}}){{i < 4 ? ";" : "."}}</li>
+                </ul>
+            </div>
 
-        <div class="chart pie-chart" id="contentPacksByFormat"></div>
-        <div class="chart line-chart" id="contentPacksByFormatOverTime"></div>
+            <div class="chart pie-chart" id="contentPacksByFormat"></div>
+            <div class="chart line-chart" id="contentPacksByFormatOverTime"></div>
+        </template>
 
         @* web traffic *@
         <h2 id="web-traffic">Web traffic</h2>
-        <div class="last-updated">Based on data from {{dnsQueries.lastUpdated}}.</div>
+        <div v-if="dnsQueries.loadFailed" class="error">These stats couldn't be fetched from the mod dataset.</div>
+        <template v-else>
+            <div class="last-updated">Based on data from {{dnsQueries.lastUpdated}}.</div>
 
-        <div class="chart-intro">SMAPI's web services received about {{(dnsQueries.latestCount / 1000000).toFixed(1)}} million DNS queries in {{dnsQueries.lastUpdated}}. This serves as a rough indicator of player and mod author activity, since SMAPI doesn't collect any telemetry.</div>
-        <div class="chart" id="dnsQueriesOverTime"></div>
+            <div class="chart-intro">SMAPI's web services received about {{(dnsQueries.latestCount / 1000000).toFixed(1)}} million DNS queries in {{dnsQueries.lastUpdated}}. This serves as a rough indicator of player and mod author activity, since SMAPI doesn't collect any telemetry.</div>
+            <div class="chart" id="dnsQueriesOverTime"></div>
+        </template>
 
         @* SMAPI costs *@
         <h2 id="smapi-costs">SMAPI costs</h2>
-        <div class="last-updated">Based on data from {{costs.lastUpdated}}. This information is delayed due to billing cycles.</div>
+        <div v-if="costs.loadFailed" class="error">These stats couldn't be fetched from the mod dataset.</div>
+        <template v-else>
+            <div class="last-updated">Based on data from {{costs.lastUpdated}}. This information is delayed due to billing cycles.</div>
 
-        <div class="chart-intro">
-            <p>
-                SMAPI has monthly costs for the domains, update alert servers, web hosting for pages like this, etc. Those monthly costs
-                <template v-if="costs.percentChange <= 0.05">held steady around US${{costs.latestCost.toFixed(0)}}/month</template>
-                <template v-else-if="costs.percentChange <= 0.10">{{costs.latestCost > costs.previousCost ? "rose" : "dropped"}} a bit from US${{costs.previousCost.toFixed(0)}} to ${{costs.latestCost.toFixed(0)}}/month</template>
-                <template v-else>{{costs.latestCost > costs.previousCost ? "rose" : "dropped"}} from US${{costs.previousCost.toFixed(0)}} to ${{costs.latestCost.toFixed(0)}}/month</template>
-                in {{costs.lastUpdated}}.
-            </p>
-        </div>
-        <div class="chart" id="costsOverTime"></div>
+            <div class="chart-intro">
+                <p>
+                    SMAPI has monthly costs for the domains, update alert servers, web hosting for pages like this, etc. Those monthly costs
+                    <template v-if="costs.percentChange <= 0.05">held steady around US${{costs.latestCost.toFixed(0)}}/month</template>
+                    <template v-else-if="costs.percentChange <= 0.10">{{costs.latestCost > costs.previousCost ? "rose" : "dropped"}} a bit from US${{costs.previousCost.toFixed(0)}} to ${{costs.latestCost.toFixed(0)}}/month</template>
+                    <template v-else>{{costs.latestCost > costs.previousCost ? "rose" : "dropped"}} from US${{costs.previousCost.toFixed(0)}} to ${{costs.latestCost.toFixed(0)}}/month</template>
+                    in {{costs.lastUpdated}}.
+                </p>
+            </div>
+            <div class="chart" id="costsOverTime"></div>
 
-        <div id="support-box">
-            <p>Tip: you can help cover SMAPI costs by joining <a href="https://www.patreon.com/pathoschild">its author's Patreon</a> (starting from $1/month)!</p>
+            <div id="support-box">
+                <p>Tip: you can help cover SMAPI costs by joining <a href="https://www.patreon.com/pathoschild">its author's Patreon</a> (starting from $1/month)!</p>
 
-            <p>That comes with monthly posts about:</p>
-            <ul>
-                <li>what's happening in the Stardew Valley modding community;</li>
-                <li>analyses of changes to these stats;</li>
-                <li>sneak peeks at modding changes in upcoming versions of the game;</li>
-                <li>discussion about proposed modding changes;</li>
-                <li>and more.</li>
-            </ul>
-        </div>
+                <p>That comes with monthly posts about:</p>
+                <ul>
+                    <li>what's happening in the Stardew Valley modding community;</li>
+                    <li>analyses of changes to these stats;</li>
+                    <li>sneak peeks at modding changes in upcoming versions of the game;</li>
+                    <li>discussion about proposed modding changes;</li>
+                    <li>and more.</li>
+                </ul>
+            </div>
+        </template>
     </div>
 </div>
