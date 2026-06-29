@@ -177,11 +177,6 @@ smapi.statsPage = function (options) {
             anyDataLoaded: false,
 
             /**
-             * Whether to show advanced chart controls like timelines and data views.
-             */
-            showAdvancedControls: false,
-
-            /**
              * View data based on `mods-by-type.jsonl`.
              */
             modsByType: {
@@ -235,11 +230,6 @@ smapi.statsPage = function (options) {
             }
         },
         watch: {
-            showAdvancedControls: function () {
-                if (this.anyDataLoaded)
-                    this.createChartsAsync();
-            },
-
             isLoadingData: function () {
                 const quickNav = document.getElementById("quickNav");
                 if (quickNav)
@@ -542,8 +532,8 @@ smapi.statsPage = function (options) {
                             chart.setOption({
                                 baseOption: {
                                     series: [createPieChartSeries()],
-                                    timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.modsByType.notableEvents),
-                                    toolbox: createToolbox(false, this.showAdvancedControls)
+                                    timeline: createTimeline(curData.xLabels, config.modsByType.notableEvents),
+                                    toolbox: createToolbox(false)
                                 },
                                 options: curData.rows.map((row, i) => {
                                     const isLatest = i === lastRowIndex;
@@ -660,7 +650,7 @@ smapi.statsPage = function (options) {
                                     tooltip: {
                                         trigger: "axis"
                                     },
-                                    toolbox: createToolbox(true, this.showAdvancedControls)
+                                    toolbox: createToolbox(true)
                                 });
 
                                 charts.push(chart);
@@ -685,10 +675,9 @@ smapi.statsPage = function (options) {
                                     tooltip: {
                                         formatter: entry => `${entry.name}: ${entry.value.toLocaleString()} (${entry.percent.toFixed(1)}%)`
                                     },
-                                    toolbox: createToolbox(false, this.showAdvancedControls),
+                                    toolbox: createToolbox(false),
                                     timeline: createTimeline(
                                         curData.xLabels.slice(1),
-                                        this.showAdvancedControls,
                                         config.modsByType.notableEvents,
                                         {
                                             controlStyle: {
@@ -767,7 +756,7 @@ smapi.statsPage = function (options) {
                                 tooltip: {
                                     trigger: "axis"
                                 },
-                                toolbox: createToolbox(true, this.showAdvancedControls)
+                                toolbox: createToolbox(true)
                             });
                             charts.push(chart);
                         }
@@ -793,8 +782,8 @@ smapi.statsPage = function (options) {
                             chart.setOption({
                                 baseOption: {
                                     series: [createPieChartSeries()],
-                                    timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.contentPacks.notableEvents),
-                                    toolbox: createToolbox(false, this.showAdvancedControls)
+                                    timeline: createTimeline(curData.xLabels, config.contentPacks.notableEvents),
+                                    toolbox: createToolbox(false)
                                 },
                                 options: curData.rows.map((row, i) => {
                                     const isLatest = i === lastRowIndex;
@@ -908,7 +897,7 @@ smapi.statsPage = function (options) {
                                 tooltip: {
                                     trigger: "axis"
                                 },
-                                toolbox: createToolbox(true, this.showAdvancedControls)
+                                toolbox: createToolbox(true)
                             });
 
                             charts.push(chart);
@@ -979,7 +968,7 @@ smapi.statsPage = function (options) {
                                         return lines.join("<br />");
                                     }
                                 },
-                                toolbox: createToolbox(true, this.showAdvancedControls)
+                                toolbox: createToolbox(true)
                             });
 
                             charts.push(chart);
@@ -1054,7 +1043,7 @@ smapi.statsPage = function (options) {
                                         return lines.join("<br />");
                                     }
                                 },
-                                toolbox: createToolbox(true, this.showAdvancedControls)
+                                toolbox: createToolbox(true)
                             });
 
                             charts.push(chart);
@@ -1305,13 +1294,11 @@ smapi.statsPage = function (options) {
     /**
      * Create the timeline options for a chart, given its x-axis labels and optional date markers.
      * @param {array<string>} xLabels The x-axis labels.
-     * @param {boolean} show Whether the timeline controls should be visible.
      * @param {array<object>} markers The date markers to display on the timeline, if any. This should be a lookup of `xLabels` key to tooltip text.
      * @param {object|null} customOptions the custom ECharts timeline options to merge into the default options, if any.
      */
-    function createTimeline(xLabels, show, markers, customOptions) {
+    function createTimeline(xLabels, markers, customOptions) {
         return {
-            show,
             axisType: "category",
             data: xLabels.map(xLabel => {
                 const marker = markers[xLabel];
@@ -1342,25 +1329,18 @@ smapi.statsPage = function (options) {
     /**
      * Create the toolbox options for a chart.
      * @param {boolean} isLinearChart Whether the options are for a linear chart (e.g. a bar chart or line chart).
-     * @param {boolean} show Whether to show advanced controls.
      */
-    function createToolbox(isLinearChart, showAdvancedControls = true) {
-        const toolbox = {
+    function createToolbox(isLinearChart) {
+        return {
             feature: {
-                dataView: {
-                    show: showAdvancedControls,
-                    readOnly: true
+                dataZoom: {
+                    show: isLinearChart
                 },
                 saveAsImage: {
                     excludeComponents: ["timeline", "toolbox"]
                 }
             }
         };
-
-        if (isLinearChart && showAdvancedControls)
-            toolbox.feature.dataZoom = {};
-
-        return toolbox;
     }
 
     /**
