@@ -279,6 +279,7 @@ internal class BackgroundService : IHostedService, IDisposable
         Directory.CreateDirectory(Path.GetDirectoryName(copyToPath)!);
         File.Copy(BackgroundService.ModDatasetRepo.GetFilePath("stats/mods by type.jsonl"), copyToPath, overwrite: true);
         File.Copy(BackgroundService.ModDatasetRepo.GetFilePath("stats/Content Patcher packs by format version.jsonl"), Path.Combine(BackgroundService.WebRootPath, "Content", "data", "content-packs-by-format.jsonl"), overwrite: true);
+        File.Copy(BackgroundService.ModDatasetRepo.GetFilePath("reference-data/SMAPI costs.jsonl"), Path.Combine(BackgroundService.WebRootPath, "Content", "data", "smapi-costs.jsonl"), overwrite: true);
 
         context.WriteLine("Done!");
     }

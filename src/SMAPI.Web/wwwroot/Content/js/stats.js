@@ -65,6 +65,19 @@ smapi.statsPage = function (options) {
                 "2024-04-01": "Stardew Valley 1.6 (19 March 2024)",
                 "2024-11-29": "Stardew Valley 1.6.9 (04 November 2024)"
             }
+        },
+
+        // configure the 'SMAPI costs' stats
+        costs: {
+            // colors for each service (omitted entries cycle through the colorPalette)
+            colors: {
+                "GitHub": "#ddcc77",         // gold
+                "MongoDB": "#aa4499",        // magenta
+                "Azure hosting": "#db4437",  // muted rose
+                "Amazon hosting": "#332288", // dark indigo
+                "Amazon SSL": "#44aa99",     // turquoise
+                "Amazon domains": "#117733"   // dark green
+            }
         }
     };
 
@@ -88,6 +101,11 @@ smapi.statsPage = function (options) {
             lastRow: {},
             xLabels: [],
             versions: []
+        },
+        costs: {
+            rows: [],
+            serviceKeys: [],
+            xLabels: []
         }
     };
     const charts = [];
@@ -120,6 +138,12 @@ smapi.statsPage = function (options) {
                 lastUpdated: null,
                 total: 0,
                 topVersions: []
+            },
+            costs: {
+                lastUpdated: null,
+                previousCost: 0,
+                latestCost: 0,
+                percentChange: 0
             }
         },
         watch: {
@@ -155,11 +179,12 @@ smapi.statsPage = function (options) {
                 /*********
                 ** Fetch data files
                 *********/
-                const [modsByTypeRows, contentPacksRows] = await Promise.all([
+                const [modsByTypeRows, contentPacksRows, costsRows] = await Promise.all([
                     fetchJsonLinesAsync(options.modsByTypeUri),
-                    fetchJsonLinesAsync(options.contentPacksByFormatUri)
+                    fetchJsonLinesAsync(options.contentPacksByFormatUri),
+                    fetchJsonLinesAsync(options.smapiCostsUri)
                 ]);
-                if (!modsByTypeRows || !contentPacksRows) {
+                if (!modsByTypeRows || !contentPacksRows || !costsRows) {
                     this.isDataFailed = true;
                     return;
                 }
@@ -282,6 +307,60 @@ smapi.statsPage = function (options) {
                             count: lastRow[version] ?? 0,
                             delta: (lastRow[version] ?? 0) - (prevRow[version] ?? 0)
                         }))
+                    };
+                }
+
+
+                /*********
+                ** Process SMAPI costs
+                *********/
+                {
+                    // read data
+                    const rows = [...costsRows]; // copy since we'll be mutating it
+                    const serviceKeys = [...new Set(rows.flatMap(row => Object.keys(row).filter(isDataField)))];
+                    const xLabels = rows.map(row => row.date);
+
+                    // amortize annual costs into monthly ones (so graph is more representative of average monthly costs)
+                    {
+                        const amortizing = [];
+                        for (const row of rows) {
+                            // collect new amortized amounts
+                            for (const [key, value] of Object.entries(row)) {
+                                if (value.amount && value.months) {
+                                    amortizing.push({ key, perMonth: value.amount / value.months, months: value.months });
+                                    row[key] = 0;
+                                }
+                            }
+
+                            // apply amortized amounts
+                            for (let i = amortizing.length - 1; i >= 0; i--) {
+                                const entry = amortizing[i];
+                                row[entry.key] = (row[entry.key] ?? 0) + entry.perMonth;
+                                entry.months--;
+
+                                if (entry.months < 1)
+                                    amortizing.splice(i, 1);
+                            }
+                        }
+                    }
+
+                    // sort by descending cost in the last row (so the largest segment is at the bottom of the stacked bar)
+                    serviceKeys.sort((a, b) => (rows[rows.length - 1][b] ?? 0) - (rows[rows.length - 1][a] ?? 0));
+
+                    // set data
+                    assignColors(config.costs.colors, serviceKeys);
+                    data.costs = { rows, serviceKeys, xLabels };
+
+                    // set summary
+                    const prevRow = rows[rows.length - 2];
+                    const lastRow = rows[rows.length - 1];
+                    const previousCost = Math.round(getSum(serviceKeys, key => prevRow[key]) * 100) / 100;
+                    const latestCost = Math.round(getSum(serviceKeys, key => lastRow[key]) * 100) / 100;
+                    this.costs = {
+                        lastUpdated: formatMonthYear(rows[rows.length - 1].date),
+                        previousCost,
+                        latestCost,
+                        percentChange: Math.abs((latestCost - previousCost) / previousCost)
                     };
                 }
 
@@ -762,6 +841,70 @@ smapi.statsPage = function (options) {
 
                     charts.push(chart);
                 }
+
+
+                /*********
+                ** 'SMAPI costs over time' stacked bar chart
+                *********/
+                {
+                    const curData = data.costs;
+
+                    const chart = echarts.init(document.getElementById("costsOverTime"));
+
+                    chart.setOption({
+                        title: {
+                            text: `SMAPI costs (${curData.xLabels[0]} through ${curData.xLabels[curData.xLabels.length - 1]})`,
+                            textStyle: createTitleStyle()
+                        },
+                        legend: {
+                            top: 25
+                        },
+                        grid: {
+                            top: 65,
+                            bottom: this.showAdvancedControls ? 80 : 60,
+                            left: 60,
+                            right: 20
+                        },
+                        xAxis: {
+                            type: "category",
+                            data: curData.xLabels,
+                            axisLabel: {
+                                rotate: 90,
+                                fontSize: 11
+                            }
+                        },
+                        yAxis: {
+                            type: "value",
+                            name: "USD"
+                        },
+                        series: curData.serviceKeys.map(key => ({
+                            type: "bar",
+                            name: key,
+                            stack: "total",
+                            data: curData.rows.map(row => Math.round((row[key] ?? 0) * 100) / 100),
+                            color: getColor(config.costs.colors, key)
+                        })),
+                        tooltip: {
+                            trigger: "axis",
+                            formatter: params => {
+                                const total = getSum(params, p => p.value);
+
+                                const lines = [
+                                    params[0].axisValue, // date
+                                    ...params
+                                        .filter(p => p.value > 0)
+                                        .map(p => `${p.marker}${p.seriesName}: $${p.value.toFixed(2)}`),
+                                    `<strong>Total: US$${total.toFixed(2)}</strong>`
+                                ];
+
+                                return lines.join("<br />");
+                            }
+                        },
+                        toolbox: createToolbox(true, this.showAdvancedControls)
+                    });
+
+                    charts.push(chart);
+                }
             },
 
             /**
@@ -816,6 +959,14 @@ smapi.statsPage = function (options) {
      */
     function formatFullDate(date) {
         return formatDate(date, { dateStyle: "long" });
+    }
+
+    /**
+     * Get a formatted month string in the form 'Month YYYY', like 'January 2030'.
+     * @param {string} monthDateStr The month date string in the form 'YYYY-MM'.
+     */
+    function formatMonthYear(monthDateStr) {
+        return formatDate(monthDateStr + "-01", { month: "long", year: "numeric" });
     }
 
     /**
@@ -880,7 +1031,7 @@ smapi.statsPage = function (options) {
      * @returns {array<string>}
      */
     function getModKeys(rows) {
-        const rawModTypes = rows.flatMap(row => Object.keys(row).filter(isModType));
+        const rawModTypes = rows.flatMap(row => Object.keys(row).filter(isDataField));
         const uniqueModTypes = [...new Set(rawModTypes)];
 
         const lastRow = rows[rows.length - 1];
@@ -911,23 +1062,34 @@ smapi.statsPage = function (options) {
         }
     }
 
+    /**
+     * Get whether a field name in a dated row is metadata (like a date or comment) rather than one of the actual data fields.
+     * @param {string} key The data key to check.
+     * @returns {boolean}
+     */
+    function isMetaField(key) {
+        return key === "date" || key === "@comment";
+    }
+
+    /**
+     * Get whether a field name in a dated row is a data value, instead of a metadata field (like a date or comment).
+     * @param {string} key The data key to check.
+     * @returns {boolean}
+     */
+    function isDataField(key) {
+        return !isMetaField(key);
+    }
+
     /****
     ** Mods-by-type data
     ****/
     /**
-     * Get whether a key in a data row is a mod type, rather than a metadata field (like 'date' or '@comment').
-     * @param {string} key The data key to check.
-     */
-    function isModType(key) {
-        return key !== "date" && key !== "@comment";
-    }
-
-    /**
      * Get whether a key in a data row is a strict mod type, rather than a metadata field (like 'date' or '@comment') or 'other'.
      * @param {string} key The data key to check.
+     * @returns {boolean}
      */
     function isSpecificModType(key) {
-        return key !== "date" && key !== "@comment" && key !== "other";
+        return isDataField(key) && key !== "other";
     }
 
     /****

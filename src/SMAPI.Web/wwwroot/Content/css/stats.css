@@ -50,3 +50,10 @@ div.error {
 #stats-area .bar-chart {
     height: 400px; /* bar charts don't need as much vertical room to be readable */
 }
+
+#stats-area #support-box {
+    max-width: 45em;
+    background: rgba(0, 170, 0, 0.2);
+    padding: 0.5em 1em;
+    margin-bottom: 1em;
+}
