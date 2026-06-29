@@ -1,11 +1,13 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Hangfire;
 using Hangfire.Console;
 using Hangfire.Server;
 using Humanizer;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using StardewModdingAPI.Toolkit;
@@ -17,6 +19,7 @@ using StardewModdingAPI.Toolkit.Framework.Clients.NexusExport;
 using StardewModdingAPI.Web.Framework.Caching;
 using StardewModdingAPI.Web.Framework.Caching.CompatibilityRepo;
 using StardewModdingAPI.Web.Framework.Caching.CurseForgeExport;
+using StardewModdingAPI.Web.Framework.Caching.ModDataset;
 using StardewModdingAPI.Web.Framework.Caching.ModDropExport;
 using StardewModdingAPI.Web.Framework.Caching.Mods;
 using StardewModdingAPI.Web.Framework.Caching.NexusExport;
@@ -64,6 +67,12 @@ internal class BackgroundService : IHostedService, IDisposable
     /// <summary>The config settings for mod update checks.</summary>
     private static IOptions<ModUpdateCheckConfig>? UpdateCheckConfig;
 
+    /// <summary>The mod dataset repository.</summary>
+    private static IModDatasetRepository? ModDatasetRepo;
+
+    /// <summary>The web root path for writing static data files.</summary>
+    private static string? WebRootPath;
+
     /// <summary>Whether the service has been started.</summary>
     [MemberNotNullWhen(true,
         nameof(BackgroundService.JobServer),
@@ -75,7 +84,9 @@ internal class BackgroundService : IHostedService, IDisposable
         nameof(BackgroundService.ModDropExportCache),
         nameof(BackgroundService.NexusExportApiClient),
         nameof(BackgroundService.NexusExportCache),
-        nameof(BackgroundService.UpdateCheckConfig)
+        nameof(BackgroundService.ModDatasetRepo),
+        nameof(BackgroundService.UpdateCheckConfig),
+        nameof(BackgroundService.WebRootPath)
     )]
     private static bool IsStarted { get; set; }
 
@@ -90,16 +101,18 @@ internal class BackgroundService : IHostedService, IDisposable
     ** Hosted service
     ****/
     /// <summary>Construct an instance.</summary>
-    /// <param name="compatibilityCache">The cache in which to store compatibility list data.</param>
-    /// <param name="modCache">The cache in which to store mod data.</param>
-    /// <param name="curseForgeExportCache">The cache in which to store mod data from the CurseForge export API.</param>
-    /// <param name="curseForgeExportApiClient">The HTTP client for fetching the mod export from the CurseForge export API.</param>
-    /// /// <param name="modDropExportCache">The cache in which to store mod data from the ModDrop export API.</param>
-    /// <param name="modDropExportApiClient">The HTTP client for fetching the mod export from the ModDrop export API.</param>
-    /// <param name="nexusExportCache">The cache in which to store mod data from the Nexus export API.</param>
-    /// <param name="nexusExportApiClient">The HTTP client for fetching the mod export from the Nexus Mods export API.</param>
+    /// <param name="compatibilityCache"><inheritdoc cref="CompatibilityCache" path="/summary"/></param>
+    /// <param name="modCache"><inheritdoc cref="ModCache" path="/summary"/></param>
+    /// <param name="curseForgeExportCache"><inheritdoc cref="CurseForgeExportCache" path="/summary"/></param>
+    /// <param name="curseForgeExportApiClient"><inheritdoc cref="CurseForgeExportApiClient" path="/summary"/></param>
+    /// <param name="modDropExportCache"><inheritdoc cref="ModDropExportCache" path="/summary"/></param>
+    /// <param name="modDropExportApiClient"><inheritdoc cref="ModDropExportApiClient" path="/summary"/></param>
+    /// <param name="nexusExportCache"><inheritdoc cref="NexusExportCache" path="/summary"/></param>
+    /// <param name="nexusExportApiClient"><inheritdoc cref="NexusExportApiClient" path="/summary"/></param>
+    /// <param name="modDatasetRepo"><inheritdoc cref="ModDatasetRepo" path="/summary"/></param>
     /// <param name="hangfireStorage">The Hangfire storage implementation.</param>
-    /// <param name="updateCheckConfig">The config settings for mod update checks.</param>
+    /// <param name="updateCheckConfig"><inheritdoc cref="UpdateCheckConfig" path="/summary"/></param>
+    /// <param name="hostEnvironment">The web host environment metadata.</param>
     [SuppressMessage("ReSharper", "UnusedParameter.Local", Justification = "The Hangfire reference forces it to initialize first, since it's needed by the background service.")]
     public BackgroundService(
         ICompatibilityCacheRepository compatibilityCache,
@@ -110,8 +123,10 @@ internal class BackgroundService : IHostedService, IDisposable
         IModDropExportApiClient modDropExportApiClient,
         INexusExportCacheRepository nexusExportCache,
         INexusExportApiClient nexusExportApiClient,
+        IModDatasetRepository modDatasetRepo,
         JobStorage hangfireStorage,
-        IOptions<ModUpdateCheckConfig> updateCheckConfig
+        IOptions<ModUpdateCheckConfig> updateCheckConfig,
+        IWebHostEnvironment hostEnvironment
     )
     {
         BackgroundService.CompatibilityCache = compatibilityCache;
@@ -122,7 +137,9 @@ internal class BackgroundService : IHostedService, IDisposable
         BackgroundService.ModDropExportCache = modDropExportCache;
         BackgroundService.NexusExportCache = nexusExportCache;
         BackgroundService.NexusExportApiClient = nexusExportApiClient;
+        BackgroundService.ModDatasetRepo = modDatasetRepo;
         BackgroundService.UpdateCheckConfig = updateCheckConfig;
+        BackgroundService.WebRootPath = hostEnvironment.WebRootPath;
 
         _ = hangfireStorage; // parameter is only received to initialize it before the background service
     }
@@ -146,6 +163,7 @@ internal class BackgroundService : IHostedService, IDisposable
         if (enableNexusExport)
             BackgroundJob.Enqueue(() => BackgroundService.UpdateNexusExportAsync(null));
         BackgroundJob.Enqueue(() => BackgroundService.RemoveStaleModsAsync());
+        BackgroundJob.Enqueue(() => BackgroundService.UpdateModDatasetAsync(null));
 
         // set recurring tasks
         RecurringJob.AddOrUpdate("update compatibility list", () => BackgroundService.UpdateCompatibilityListAsync(null), "*/10 * * * *");      // every 10 minutes
@@ -156,6 +174,7 @@ internal class BackgroundService : IHostedService, IDisposable
         if (enableNexusExport)
             RecurringJob.AddOrUpdate("update Nexus export", () => BackgroundService.UpdateNexusExportAsync(null), "*/10 * * * *");
         RecurringJob.AddOrUpdate("remove stale mods", () => BackgroundService.RemoveStaleModsAsync(), "2/10 * * * *"); // offset by 2 minutes so it runs after updates (e.g. 00:02, 00:12, etc)
+        RecurringJob.AddOrUpdate("update mod dataset", () => BackgroundService.UpdateModDatasetAsync(null), "0 * * * *"); // hourly
 
         BackgroundService.IsStarted = true;
 
@@ -240,6 +259,27 @@ internal class BackgroundService : IHostedService, IDisposable
             fetchCacheHeadersAsync: client => client.FetchCacheHeadersAsync(),
             fetchDataAsync: async (cache, client) => cache.SetData(await client.FetchExportAsync())
         );
+    }
+
+    /// <summary>Clone or pull the Stardew mod dataset repo, then copy the latest data files into the web root for use by frontend scripts.</summary>
+    /// <param name="context">Information about the context in which the job is performed. This is injected automatically by Hangfire.</param>
+    [AutomaticRetry(Attempts = 3, DelaysInSeconds = [30, 60, 120])]
+    public static async Task UpdateModDatasetAsync(PerformContext? context)
+    {
+        if (!BackgroundService.IsStarted)
+            throw new InvalidOperationException($"Must call {nameof(BackgroundService.StartAsync)} before scheduling tasks.");
+
+        // update repo
+        context.WriteLine("Updating mod dataset repo...");
+        await BackgroundService.ModDatasetRepo.UpdateAsync(context.WriteLine);
+
+        // copy files
+        context.WriteLine("Copying data files for script use...");
+        string copyToPath = Path.Combine(BackgroundService.WebRootPath, "Content", "data", "mods-by-type.jsonl");
+        Directory.CreateDirectory(Path.GetDirectoryName(copyToPath)!);
+        File.Copy(BackgroundService.ModDatasetRepo.GetFilePath("stats/mods by type.jsonl"), copyToPath, overwrite: true);
+
+        context.WriteLine("Done!");
     }
 
     /// <summary>Remove mods which haven't been requested in over 48 hours.</summary>

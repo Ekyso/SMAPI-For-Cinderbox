@@ -1,0 +1,42 @@
+/* let charts cover full available screen */
+#content {
+    max-width: none;
+}
+
+#content-column {
+    right: 0;
+}
+
+/* general styles */
+div.error {
+    padding: 2em 0;
+    color: red;
+    font-weight: bold;
+}
+
+/* stats area */
+#stats-area #stats-intro {
+     max-width: 60em;
+     margin-top: 2em;
+}
+
+#stats-area .chart-intro {
+    max-width: 60em;
+    margin-top: 1em;
+}
+
+#stats-area .chart {
+    margin: 1em 0;
+    height: 600px;
+    border: 1px solid #AAA;
+    border-radius: 3px;
+}
+
+#stats-area .chart#modsByType,
+#stats-area .chart#newModsLastDelta {
+    max-width: 900px; /* pie charts don't extend across page, so keep them left-aligned in their box */
+}
+
+#stats-area .chart#newMods {
+    height: 400px; /* bar chart doesn't need as much vertical room to be readable */
+}

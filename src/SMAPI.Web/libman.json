@@ -4,6 +4,12 @@
     "defaultDestination": "wwwroot/Content/lib/[Name]",
     "libraries": [
         {
+            "library": "echarts@5.5.1",
+            "files": [
+                "dist/echarts.min.js"
+            ]
+        },
+        {
             "library": "jquery@3.5.1",
             "files": [
                 "dist/jquery.min.js",

@@ -9,6 +9,14 @@ obj/
 *.user
 *.suo
 
+# sensitive files
+appsettings.Development.json
+
+# auto-generated files
+src/SMAPI.Web/wwwroot/Content/data/*.jsonl
+src/SMAPI.Web/Properties/PublishProfiles
+src/SMAPI.Web/Properties/ServiceDependencies
+
 # OS
 .DS_Store
 Thumbs.db

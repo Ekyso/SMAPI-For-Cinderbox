@@ -77,6 +77,13 @@ internal class IndexController : Controller
         return this.View();
     }
 
+    /// <summary>Display the stats page.</summary>
+    [HttpGet("/stats")]
+    public ViewResult Stats()
+    {
+        return this.View();
+    }
+
 
     /*********
     ** Private methods

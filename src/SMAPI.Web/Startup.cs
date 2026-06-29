@@ -22,6 +22,7 @@ using StardewModdingAPI.Toolkit.Serialization;
 using StardewModdingAPI.Web.Framework;
 using StardewModdingAPI.Web.Framework.Caching.CompatibilityRepo;
 using StardewModdingAPI.Web.Framework.Caching.CurseForgeExport;
+using StardewModdingAPI.Web.Framework.Caching.ModDataset;
 using StardewModdingAPI.Web.Framework.Caching.ModDropExport;
 using StardewModdingAPI.Web.Framework.Caching.Mods;
 using StardewModdingAPI.Web.Framework.Caching.NexusExport;
@@ -107,6 +108,12 @@ internal class Startup
         services.AddSingleton<ICurseForgeExportCacheRepository>(new CurseForgeExportCacheMemoryRepository());
         services.AddSingleton<IModDropExportCacheRepository>(new ModDropExportCacheMemoryRepository());
         services.AddSingleton<INexusExportCacheRepository>(new NexusExportCacheMemoryRepository());
+
+        // init mod dataset
+        {
+            ModDatasetConfig config = this.Configuration.GetRequiredSection("ModDataset").Get<ModDatasetConfig>() ?? throw new InvalidOperationException("Can't initialize server: required 'ModDataset' config section couldn't be loaded.");
+            services.AddSingleton<IModDatasetRepository>(new ModDatasetRepository(config.RepoUrl, config.LocalPath));
+        }
 
         // init Hangfire
         services
@@ -245,7 +252,17 @@ internal class Startup
                 .WithOrigins("https://smapi.io")
             )
             .UseRewriter(this.GetRedirectRules())
-            .UseStaticFiles(new StaticFileOptions { OnPrepareResponse = this.OnPrepareStaticFileResponse }) // wwwroot folder
+            .UseStaticFiles(
+                // serve static files in wwwroot folder
+                new StaticFileOptions
+                {
+                    OnPrepareResponse = this.OnPrepareStaticFileResponse,
+                    ContentTypeProvider = new FileExtensionContentTypeProvider
+                    {
+                        Mappings = { [".jsonl"] = "application/jsonl" }
+                    }
+                }
+            )
             .UseRouting()
             .UseAuthorization()
             .UseEndpoints(p =>
