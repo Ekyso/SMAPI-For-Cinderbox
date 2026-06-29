@@ -603,88 +603,64 @@ smapi.statsPage = function (options) {
                                 const chart = echarts.init(document.getElementById(chartConfig.id));
 
                                 chart.setOption({
-                                    baseOption: {
-                                        legend: {
-                                            show: false
-                                        },
-                                        grid: {
-                                            top: 40,
-                                            bottom: this.showAdvancedControls ? 100 : 60, // make room for timeline
-                                            left: 60,
-                                            right: 150 // make room for end labels
-                                        },
-                                        xAxis: {
-                                            data: [], // overridden per-frame in `options`
-                                            axisLabel: {
-                                                rotate: 90,
-                                                fontSize: 11,
-                                                formatter: value => value.slice(0, 7)
-                                            }
-                                        },
-                                        yAxis: {},
-                                        series: addMarkLine(
-                                            chartConfig.modTypes.map(modType => {
-                                                const extendsToEnd = !!curData.lastRow[modType];
-                                                const rawColor = getColor(config.modsByType.colors, modType);
-                                                const color = extendsToEnd
-                                                    ? rawColor
-                                                    : hexToRgba(rawColor, 0.6);
-
-                                                return {
-                                                    type: "line",
-                                                    name: getLabel(config.modsByType.labels, modType),
-                                                    data: [], // overridden per-frame in `options`
-                                                    color: color,
-                                                    lineStyle: {
-                                                        type: extendsToEnd ? "solid" : "dotted",
-                                                        width: 2
-                                                    },
-                                                    symbol: "none",
-                                                    endLabel: {
-                                                        show: true,
-                                                        formatter: "{a}", // {a} = name
-                                                        color: color
-                                                    },
-                                                    labelLayout: {
-                                                        moveOverlap: extendsToEnd
-                                                            ? "shiftY" // if the line reaches the end of the chart, use 'shiftY' layout to avoid overlapping labels
-                                                            : null     // if the line ends early, just display it next to the line instead
-                                                    }
-                                                };
-                                            }),
-                                            p => p.name,
-                                            config.modsByType.notableEvents
-                                        ),
-                                        tooltip: {
-                                            trigger: "axis"
-                                        },
-                                        toolbox: createToolbox(true, this.showAdvancedControls),
-                                        timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.modsByType.notableEvents)
+                                    title: {
+                                        text: chartConfig.title,
+                                        textStyle: createTitleStyle()
                                     },
-                                    options: curData.rows.map((row, i) => {
-                                        const isLatest = i === lastRowIndex;
+                                    legend: {
+                                        show: false
+                                    },
+                                    grid: {
+                                        top: 40,
+                                        left: 60,
+                                        right: 150 // make room for end labels
+                                    },
+                                    xAxis: {
+                                        data: curData.xLabels,
+                                        axisLabel: {
+                                            rotate: 90,
+                                            fontSize: 11,
+                                            formatter: value => value.slice(0, 7)
+                                        }
+                                    },
+                                    yAxis: {},
+                                    series: addMarkLine(
+                                        chartConfig.modTypes.map(modType => {
+                                            const extendsToEnd = !!curData.lastRow[modType];
+                                            const rawColor = getColor(config.modsByType.colors, modType);
+                                            const color = extendsToEnd
+                                                ? rawColor
+                                                : hexToRgba(rawColor, 0.6);
 
-                                        return {
-                                            title: {
-                                                text: getTimelineTitle(chartConfig.title, row.date, isLatest),
-                                                textStyle: createTitleStyle()
-                                            },
-                                            xAxis: {
-                                                data: curData.xLabels.slice(0, i + 1) // skip first row, since it has no previous row to delta against
-                                            },
-                                            series: chartConfig.modTypes.map(modType => {
-                                                const data = curData.rows.slice(0, i + 1).map(row => row[modType] ?? null);
-
-                                                return {
-                                                    data,
-                                                    endLabel: {
-                                                        show: !!data[data.length - 1]
-                                                    }
-                                                };
-                                            }),
-                                            animation: isLatest
-                                        };
-                                    })
+                                            return {
+                                                type: "line",
+                                                name: getLabel(config.modsByType.labels, modType),
+                                                data: curData.rows.map(row => row[modType] ?? null),
+                                                color: color,
+                                                lineStyle: {
+                                                    type: extendsToEnd ? "solid" : "dotted",
+                                                    width: 2
+                                                },
+                                                symbol: "none",
+                                                endLabel: {
+                                                    show: extendsToEnd,
+                                                    formatter: "{a}", // {a} = name
+                                                    color: color
+                                                },
+                                                labelLayout: {
+                                                    moveOverlap: extendsToEnd
+                                                        ? "shiftY" // if the line reaches the end of the chart, use 'shiftY' layout to avoid overlapping labels
+                                                        : null     // if the line ends early, just display it next to the line instead
+                                                }
+                                            };
+                                        }),
+                                        p => p.name,
+                                        config.modsByType.notableEvents
+                                    ),
+                                    tooltip: {
+                                        trigger: "axis"
+                                    },
+                                    toolbox: createToolbox(true, this.showAdvancedControls)
                                 });
 
                                 charts.push(chart);
@@ -758,60 +734,40 @@ smapi.statsPage = function (options) {
                         // 'new mods' bar chart
                         {
                             const chart = echarts.init(document.getElementById("newMods"));
-                            const lastNewModsRowIndex = data.modsByType.newMods.xLabels.length - 1;
 
                             chart.setOption({
-                                baseOption: {
-                                    legend: {
-                                        show: false
-                                    },
-                                    grid: {
-                                        top: 40,
-                                        bottom: this.showAdvancedControls ? 100 : 60, // make room for timeline
-                                        left: 60,
-                                        right: 60
-                                    },
-                                    xAxis: {
-                                        data: data.modsByType.newMods.xLabels, // base data; overridden per frame in options[]
-                                        axisLabel: {
-                                            rotate: 90,
-                                            fontSize: 11,
-                                            formatter: value => value.slice(0, 7)
-                                        }
-                                    },
-                                    yAxis: {},
-                                    series: [
-                                        {
-                                            type: "bar",
-                                            data: [], // overridden per frame in options[]
-                                            markLine: createMarkLine(p => p.name, config.modsByType.notableEvents)
-                                        }
-                                    ],
-                                    tooltip: {
-                                        trigger: "axis"
-                                    },
-                                    toolbox: createToolbox(true, this.showAdvancedControls),
-                                    timeline: createTimeline(data.modsByType.newMods.xLabels, this.showAdvancedControls, config.modsByType.notableEvents)
+                                title: {
+                                    text: "New mods by month",
+                                    textStyle: createTitleStyle()
                                 },
-                                options: data.modsByType.newMods.xLabels.map((xLabel, i) => {
-                                    const isLatest = i === lastNewModsRowIndex;
-
-                                    return {
-                                        title: {
-                                            text: getTimelineTitle("New mods by month", xLabel, isLatest),
-                                            textStyle: createTitleStyle()
-                                        },
-                                        xAxis: {
-                                            data: data.modsByType.newMods.xLabels.slice(0, i + 1)
-                                        },
-                                        series: [
-                                            {
-                                                data: data.modsByType.newMods.deltas.slice(0, i + 1)
-                                            }
-                                        ],
-                                        animation: isLatest
-                                    };
-                                })
+                                legend: {
+                                    show: false
+                                },
+                                grid: {
+                                    top: 40,
+                                    left: 60,
+                                    right: 60
+                                },
+                                xAxis: {
+                                    data: data.modsByType.newMods.xLabels,
+                                    axisLabel: {
+                                        rotate: 90,
+                                        fontSize: 11,
+                                        formatter: value => value.slice(0, 7)
+                                    }
+                                },
+                                yAxis: {},
+                                series: [
+                                    {
+                                        type: "bar",
+                                        data: data.modsByType.newMods.deltas,
+                                        markLine: createMarkLine(p => p.name, config.modsByType.notableEvents)
+                                    }
+                                ],
+                                tooltip: {
+                                    trigger: "axis"
+                                },
+                                toolbox: createToolbox(true, this.showAdvancedControls)
                             });
                             charts.push(chart);
                         }
@@ -892,88 +848,67 @@ smapi.statsPage = function (options) {
                             // build chart
                             const chart = echarts.init(document.getElementById("contentPacksByFormatOverTime"));
 
+                            const topVersions = new Set(
+                                [...showVersions]
+                                    .sort((a, b) => (curData.lastRow[b] ?? 0) - (curData.lastRow[a] ?? 0))
+                                    .slice(0, 5)
+                            );
+
                             chart.setOption({
-                                baseOption: {
-                                    legend: {
-                                        show: false
-                                    },
-                                    grid: {
-                                        top: 40,
-                                        bottom: this.showAdvancedControls ? 100 : 60, // make room for timeline
-                                        left: 60,
-                                        right: 150 // make room for end labels
-                                    },
-                                    xAxis: {
-                                        data: [], // overridden per-frame in `options`
-                                        axisLabel: {
-                                            rotate: 90,
-                                            fontSize: 11,
-                                            formatter: value => value.slice(0, 7)
-                                        }
-                                    },
-                                    yAxis: {},
-                                    series: addMarkLine(
-                                        showVersions.map(version => ({
+                                title: {
+                                    text: "Content packs by format version (top five)",
+                                    textStyle: createTitleStyle()
+                                },
+                                legend: {
+                                    show: false
+                                },
+                                grid: {
+                                    top: 40,
+                                    left: 60,
+                                    right: 150 // make room for end labels
+                                },
+                                xAxis: {
+                                    data: curData.xLabels,
+                                    axisLabel: {
+                                        rotate: 90,
+                                        fontSize: 11,
+                                        formatter: value => value.slice(0, 7)
+                                    }
+                                },
+                                yAxis: {},
+                                series: addMarkLine(
+                                    showVersions.map(version => {
+                                        const highlight = topVersions.has(version);
+                                        const rawColor = getColor(config.contentPacks.colors, version);
+                                        const color = highlight ? rawColor : hexToRgba(rawColor, 0.5);
+                                        const seriesData = curData.rows.map(r => r[version] ?? null);
+
+                                        return {
                                             type: "line",
                                             name: version,
-                                            data: [], // overridden per-frame in `options`
+                                            data: seriesData,
+                                            color,
                                             symbol: "none",
+                                            lineStyle: {
+                                                type: highlight ? "solid" : "dotted"
+                                            },
                                             endLabel: {
-                                                formatter: "{a}" // {a} = name
+                                                show: !!seriesData[seriesData.length - 1],
+                                                formatter: "{a}", // {a} = name
+                                                color
                                             },
                                             labelLayout: {
                                                 moveOverlap: "shiftY"
                                             }
-                                        })),
-                                        p => p.name,
-                                        config.contentPacks.notableEvents
-                                    ),
-                                    tooltip: {
-                                        trigger: "axis"
-                                    },
-                                    toolbox: createToolbox(true, this.showAdvancedControls),
-                                    timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.contentPacks.notableEvents)
+                                        };
+                                    }),
+                                    p => p.name,
+                                    config.contentPacks.notableEvents
+                                ),
+                                tooltip: {
+                                    trigger: "axis"
                                 },
-                                options: curData.rows.map((row, i) => {
-                                    const isLatest = i === lastRowIndex;
-
-                                    return {
-                                        title: {
-                                            text: getTimelineTitle("Content packs by format version (top five)", row.date, isLatest),
-                                            textStyle: createTitleStyle()
-                                        },
-                                        xAxis: {
-                                            data: curData.xLabels.slice(0, i + 1)
-                                        },
-                                        series: (() => {
-                                            const topVersions = new Set(
-                                                [...showVersions]
-                                                    .sort((a, b) => (curData.rows[i][b] ?? 0) - (curData.rows[i][a] ?? 0))
-                                                    .slice(0, 5)
-                                            );
-
-                                            return showVersions.map(version => {
-                                                const highlight = topVersions.has(version);
-                                                const rawColor = getColor(config.contentPacks.colors, version);
-                                                const color = highlight ? rawColor : hexToRgba(rawColor, 0.5);
-                                                const seriesData = curData.rows.slice(0, i + 1).map(r => r[version] ?? null);
-
-                                                return {
-                                                    data: seriesData,
-                                                    color,
-                                                    lineStyle: {
-                                                        type: highlight ? "solid" : "dotted"
-                                                    },
-                                                    endLabel: {
-                                                        show: !!seriesData[seriesData.length - 1],
-                                                        color
-                                                    }
-                                                };
-                                            });
-                                        })(),
-                                        animation: isLatest
-                                    };
-                                })
+                                toolbox: createToolbox(true, this.showAdvancedControls)
                             });
 
                             charts.push(chart);
@@ -1003,7 +938,6 @@ smapi.statsPage = function (options) {
                                 },
                                 grid: {
                                     top: 55,
-                                    bottom: this.showAdvancedControls ? 80 : 60,
                                     left: 70,
                                     right: 20
                                 },
@@ -1078,7 +1012,6 @@ smapi.statsPage = function (options) {
                                 },
                                 grid: {
                                     top: 65,
-                                    bottom: this.showAdvancedControls ? 80 : 60,
                                     left: 60,
                                     right: 20
                                 },
