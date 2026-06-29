@@ -71,6 +71,7 @@ smapi.statsPage = function (options) {
             xLabels: []
         }
     };
+    const charts = [];
 
 
     /*********
@@ -79,8 +80,9 @@ smapi.statsPage = function (options) {
     app = new Vue({
         el: "#app",
         data: {
-            isLoaded: false,
-            loadFailed: false,
+            isDataLoaded: false,
+            isDataFailed: false,
+            showAdvancedControls: false,
 
             modsByType: {
                 previouslyUpdated: null,
@@ -97,6 +99,12 @@ smapi.statsPage = function (options) {
                 forOther: 0
             }
         },
+        watch: {
+            showAdvancedControls: function () {
+                if (this.isDataLoaded)
+                    this.createChartsAsync();
+            }
+        },
         mounted: function () {
             this.loadAsync();
         },
@@ -105,6 +113,16 @@ smapi.statsPage = function (options) {
              * Fetch the raw data files, initialize the dataset, and build the page's charts.
              */
             loadAsync: async function () {
+                await this.loadDataAsync();
+                await this.createChartsAsync();
+
+                window.addEventListener("resize", () => resizeCharts(charts));
+            },
+
+            /**
+             * Fetch the raw data files and initialize the dataset.
+             */
+            loadDataAsync: async function () {
                 /*********
                 ** Fetch mods by type
                 *********/
@@ -112,7 +130,7 @@ smapi.statsPage = function (options) {
                     // fetch dataset
                     const rows = await fetchJsonLinesAsync(options.modsByTypeUri);
                     if (!rows) {
-                        this.loadFailed = true;
+                        this.isDataFailed = true;
                         return;
                     }
 
@@ -205,20 +223,30 @@ smapi.statsPage = function (options) {
 
 
                 /*********
-                ** Build charts
+                ** Mark data ready
                 *********/
-                this.isLoaded = true;
-                await this.$nextTick(); // wait for Vue to render chart containers
+                this.isDataLoaded = true;
+            },
 
-                const charts = [];
-                const titleStyle = {
-                    fontFamily: "Roboto",
-                    fontSize: 13
-                };
+            /**
+             * Create (or recreate) the charts on the page.
+             */
+            createChartsAsync: async function () {
+                /*********
+                ** Reset
+                *********/
+                // destroy any current charts
+                for (const chart of charts)
+                    chart.dispose();
+                charts.length = 0;
 
-                /****
+                // wait for Vue to render chart containers if needed
+                await this.$nextTick();
+
+
+                /*********
                 ** 'Mods by type' pie chart
-                ****/
+                *********/
                 {
                     const curData = data.modsByType;
                     const lastRowIndex = curData.rows.length - 1;
@@ -234,8 +262,8 @@ smapi.statsPage = function (options) {
                                     clockwise: false // start with larger values on the left
                                 }
                             ],
-                            timeline: createTimeline(curData.xLabels, config.modsByType.notableEvents),
-                            toolbox: createToolbox(false)
+                            timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.modsByType.notableEvents),
+                            toolbox: createToolbox(false, this.showAdvancedControls)
                         },
                         options: curData.rows.map((row, i) => {
                             const isLatest = i === lastRowIndex;
@@ -244,7 +272,7 @@ smapi.statsPage = function (options) {
                             return {
                                 title: {
                                     text: getTimelineTitle("Total mods by type", row.date, isLatest),
-                                    textStyle: titleStyle
+                                    textStyle: createTitleStyle()
                                 },
                                 series: [
                                     {
@@ -276,9 +304,10 @@ smapi.statsPage = function (options) {
                     charts.push(chart);
                 }
 
-                /****
+
+                /*********
                 ** 'Total mods by type' line charts
-                ****/
+                *********/
                 {
                     const curData = data.modsByType;
                     const lastRowIndex = curData.rows.length - 1;
@@ -306,7 +335,7 @@ smapi.statsPage = function (options) {
                                 },
                                 grid: {
                                     top: 40,
-                                    bottom: 100,
+                                    bottom: this.showAdvancedControls ? 100 : 60, // make room for timeline
                                     left: 60,
                                     right: 150 // extra right margin to fit end labels
                                 },
@@ -351,8 +380,8 @@ smapi.statsPage = function (options) {
                                 tooltip: {
                                     trigger: "axis"
                                 },
-                                toolbox: createToolbox(true),
-                                timeline: createTimeline(curData.xLabels, config.modsByType.notableEvents)
+                                toolbox: createToolbox(true, this.showAdvancedControls),
+                                timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.modsByType.notableEvents)
                             },
                             options: curData.rows.map((row, i) => {
                                 const isLatest = i === lastRowIndex;
@@ -360,7 +389,7 @@ smapi.statsPage = function (options) {
                                 return {
                                     title: {
                                         text: getTimelineTitle(chartConfig.title, row.date, isLatest),
-                                        textStyle: titleStyle
+                                        textStyle: createTitleStyle()
                                     },
                                     xAxis: {
                                         data: curData.xLabels.slice(0, i + 1) // skip first row, since it has no previous row to delta against
@@ -384,9 +413,10 @@ smapi.statsPage = function (options) {
                     }
                 }
 
-                /****
+
+                /*********
                 ** 'New mods' pie chart
-                ****/
+                *********/
                 {
                     const curData = data.modsByType;
                     const lastRowIndex = curData.rows.length - 2; // rendered rows start at row 1 (since they delta against previous row)
@@ -409,9 +439,10 @@ smapi.statsPage = function (options) {
                             tooltip: {
                                 formatter: entry => `${entry.name}: ${entry.value.toLocaleString()} (${entry.percent.toFixed(1)}%)`
                             },
-                            toolbox: createToolbox(false),
+                            toolbox: createToolbox(false, this.showAdvancedControls),
                             timeline: createTimeline(
                                 curData.xLabels.slice(1),
+                                this.showAdvancedControls,
                                 config.modsByType.notableEvents,
                                 {
                                     controlStyle: {
@@ -427,7 +458,7 @@ smapi.statsPage = function (options) {
                             return {
                                 title: {
                                     text: `New mods between ${formatFullDate(prevRow.date)} and ${formatFullDate(row.date)}`,
-                                    textStyle: titleStyle
+                                    textStyle: createTitleStyle()
                                 },
                                 series: [
                                     {
@@ -454,9 +485,10 @@ smapi.statsPage = function (options) {
                     charts.push(chart);
                 }
 
-                /****
+
+                /*********
                 ** 'New mods' bar chart
-                ****/
+                *********/
                 {
                     const chart = echarts.init(document.getElementById("newMods"));
                     const lastRowIndex = data.newMods.xLabels.length - 1;
@@ -468,7 +500,7 @@ smapi.statsPage = function (options) {
                             },
                             grid: {
                                 top: 40,
-                                bottom: 100,
+                                bottom: this.showAdvancedControls ? 100 : 60, // make room for timeline
                                 left: 60,
                                 right: 60
                             },
@@ -490,8 +522,8 @@ smapi.statsPage = function (options) {
                             tooltip: {
                                 trigger: "axis"
                             },
-                            toolbox: createToolbox(true),
-                            timeline: createTimeline(data.newMods.xLabels, config.modsByType.notableEvents)
+                            toolbox: createToolbox(true, this.showAdvancedControls),
+                            timeline: createTimeline(data.newMods.xLabels, this.showAdvancedControls, config.modsByType.notableEvents)
                         },
                         options: data.newMods.xLabels.map((xLabel, i) => {
                             const isLatest = i === lastRowIndex;
@@ -499,7 +531,7 @@ smapi.statsPage = function (options) {
                             return {
                                 title: {
                                     text: getTimelineTitle("New mods by month", xLabel, isLatest),
-                                    textStyle: titleStyle
+                                    textStyle: createTitleStyle()
                                 },
                                 xAxis: {
                                     data: data.newMods.xLabels.slice(0, i + 1)
@@ -515,8 +547,6 @@ smapi.statsPage = function (options) {
                     });
                     charts.push(chart);
                 }
-
-                window.addEventListener("resize", () => resizeCharts(charts));
             },
 
             /**
@@ -679,13 +709,25 @@ smapi.statsPage = function (options) {
     }
 
     /**
+     * Create the default chart title style.
+     */
+    function createTitleStyle() {
+        return {
+            fontFamily: "Roboto",
+            fontSize: 13
+        };
+    }
+
+    /**
      * Create the timeline options for a chart, given its x-axis labels and optional date markers.
      * @param {array<string>} xLabels The x-axis labels.
+     * @param {boolean} show Whether the timeline controls should be visible.
      * @param {array<object>} markers The date markers to display on the timeline, if any. This should be a lookup of `xLabels` key to tooltip text.
      * @param {object|null} customOptions the custom ECharts timeline options to merge into the default options, if any.
      */
-    function createTimeline(xLabels, markers, customOptions) {
+    function createTimeline(xLabels, show, markers, customOptions) {
         return {
+            show,
             axisType: "category",
             data: xLabels.map(xLabel => {
                 const marker = markers[xLabel];
@@ -716,12 +758,13 @@ smapi.statsPage = function (options) {
     /**
      * Create the toolbox options for a chart.
      * @param {boolean} isLinearChart Whether the options are for a linear chart (e.g. a bar chart or line chart).
+     * @param {boolean} show Whether to show advanced controls.
      */
-    function createToolbox(isLinearChart) {
+    function createToolbox(isLinearChart, showAdvancedControls = true) {
         const toolbox = {
-            show: true,
             feature: {
                 dataView: {
+                    show: showAdvancedControls,
                     readOnly: true
                 },
                 saveAsImage: {
@@ -730,7 +773,7 @@ smapi.statsPage = function (options) {
             }
         };
 
-        if (isLinearChart)
+        if (isLinearChart && showAdvancedControls)
             toolbox.feature.dataZoom = {};
 
         return toolbox;

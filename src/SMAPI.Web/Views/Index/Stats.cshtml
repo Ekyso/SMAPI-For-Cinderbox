@@ -33,14 +33,21 @@
 
 <div v-cloak id="app">
     @* loading indicator *@
-    <div v-if="!isLoaded && !loadFailed" class="loading-indicator"><div></div><div></div><div></div><div></div></div>
+    <div v-if="!isDataLoaded && !isDataFailed" class="loading-indicator"><div></div><div></div><div></div><div></div></div>
 
     @* error state *@
-    <div v-if="loadFailed" class="error">↻ The mod data hasn't been fetched yet; please try again in a few minutes.</div>
+    <div v-if="isDataFailed" class="error">↻ The mod data hasn't been fetched yet; please try again in a few minutes.</div>
 
     @* stats area *@
-    <div v-if="isLoaded" id="stats-area">
+    <div v-if="isDataLoaded" id="stats-area">
         <div id="stats-intro">These stats are generated automatically from the <a href="https://github.com/Pathoschild/StardewModData">Stardew mod dataset</a>, last updated on {{modsByType.lastUpdated}}.</div>
+
+        <div id="stats-controls">
+            <label>
+                <input type="checkbox" v-model="showAdvancedControls" />
+                Enable advanced controls
+            </label>
+        </div>
 
         <h2>Mods by type</h2>
         <div class="chart-intro">We have {{modsByType.summary.total.toLocaleString()}} tracked mods. The majority use {{modsByType.summary.topThree[0].label}} ({{modsByType.summary.topThree[0].percent}}%), followed by {{modsByType.summary.topThree[1].label}} at {{modsByType.summary.topThree[1].percent}}% and {{modsByType.summary.topThree[2].label}} at {{modsByType.summary.topThree[2].percent}}%. <a href="https://stardewvalleywiki.com/Modding:Using_XNB_mods">Legacy XNB mods</a> are no longer recommended, and now only make up {{modsByType.summary.xnbPercent}}% of mods.</div>
