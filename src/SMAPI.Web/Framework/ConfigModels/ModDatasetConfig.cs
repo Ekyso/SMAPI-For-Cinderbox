@@ -6,9 +6,9 @@ internal class ModDatasetConfig
     /*********
     ** Accessors
     *********/
-    /// <summary>The HTTPS URL of the mod dataset Git repo.</summary>
-    public string RepoUrl { get; set; } = null!;
+    /// <summary>The URL of the zip file to download which contains the Stardew mod dataset (e.g. a GitHub branch download URL).</summary>
+    public string DownloadZipUrl { get; set; } = null!;
 
-    /// <summary>The local path into which to clone the mod dataset repo.</summary>
-    public string LocalPath { get; set; } = null!;
+    /// <summary>The full path to the folder into which to download the mod dataset. This should be a new folder, since anything inside it may be deleted.</summary>
+    public string LocalRootPath { get; set; } = null!;
 }
