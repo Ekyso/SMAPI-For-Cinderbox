@@ -25,6 +25,19 @@
     </script>
 }
 
+@* quick navigation links *@
+@section SidebarExtra {
+    <nav id="quickNav" hidden>
+        <h4>Scroll to...</h4>
+        <ul>
+            <li><a href="#content">Top</a></li>
+            <li><a href="#mods-by-type">Mods by type</a></li>
+            <li><a href="#new-mods">New mods</a></li>
+            <li><a href="#content-patcher-packs">Content Patcher packs</a></li>
+        </ul>
+    </nav>
+}
+
 <noscript>
     <div class="banner error">
         <strong>This page requires JavaScript.</strong><br />
@@ -51,7 +64,7 @@
         </div>
 
         @* mods by type *@
-        <h2>Mods by type</h2>
+        <h2 id="mods-by-type">Mods by type</h2>
         <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
 
         <div class="chart-intro">We have {{modsByType.total.toLocaleString()}} tracked mods. The majority use {{modsByType.topThree[0].label}} ({{modsByType.topThree[0].percent}}%), followed by {{modsByType.topThree[1].label}} at {{modsByType.topThree[1].percent}}% and {{modsByType.topThree[2].label}} at {{modsByType.topThree[2].percent}}%. <a href="https://stardewvalleywiki.com/Modding:Using_XNB_mods">Legacy XNB mods</a> are no longer recommended, and now only make up {{modsByType.xnbPercent}}% of mods.</div>
@@ -60,7 +73,7 @@
         <div class="chart line-chart" id="modsByTypeOverTimeExcludingOutliers"></div>
 
         @* new mods *@
-        <h2>New mods</h2>
+        <h2 id="new-mods">New mods</h2>
         <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
         <div class="chart-intro">
             Between {{modsByType.previouslyUpdated}} and {{modsByType.lastUpdated}}, there were {{latestNewMods.total.toLocaleString()}} more mods. That includes:
@@ -73,7 +86,7 @@
         <div class="chart bar-chart" id="newMods"></div>
 
         @* Content Patcher packs *@
-        <h2>Content Patcher packs</h2>
+        <h2 id="content-patcher-packs">Content Patcher packs</h2>
         <div class="last-updated">Based on data from {{contentPacks.lastUpdated}}.</div>
 
         <div class="chart-intro">

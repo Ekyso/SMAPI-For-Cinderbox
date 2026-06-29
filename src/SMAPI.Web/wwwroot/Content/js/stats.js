@@ -126,6 +126,12 @@ smapi.statsPage = function (options) {
             showAdvancedControls: function () {
                 if (this.isDataLoaded)
                     this.createChartsAsync();
+            },
+
+            isDataLoaded: function () {
+                const quickNav = document.getElementById("quickNav");
+                if (quickNav)
+                    quickNav.hidden = !this.isDataLoaded;
             }
         },
         mounted: function () {
