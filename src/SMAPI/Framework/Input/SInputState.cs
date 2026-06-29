@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using StardewValley;
@@ -362,12 +363,14 @@ internal sealed class SInputState : InputState
         }
 
         // override states
-        if (_keyboardOverridesPool.Count > 0)
-            keyboard.OverrideButtons(_keyboardOverridesPool);
-        if (_controllerOverridesPool.Count > 0)
-            controller.OverrideButtons(_controllerOverridesPool);
-        if (_mouseOverridesPool.Count > 0)
-            mouse.OverrideButtons(_mouseOverridesPool);
+        foreach ((SButton btn, SButtonState s) in _keyboardOverridesPool)
+            if (btn.TryGetKeyboard(out Keys key))
+                keyboard.OverrideButton(key, s);
+        foreach ((SButton btn, SButtonState s) in _controllerOverridesPool)
+            if (btn.TryGetController(out Buttons padBtn))
+                controller.OverrideButton(padBtn, s);
+        foreach ((SButton btn, SButtonState s) in _mouseOverridesPool)
+            mouse.OverrideButton(btn, s);
 
         return true;
     }

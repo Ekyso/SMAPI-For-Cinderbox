@@ -1697,7 +1697,10 @@ internal class SCore : IDisposable
                             if (logInput || raisePressed || raiseReleased)
                             {
                                 foreach (
-                                    (SButton button, SButtonState status) in inputState.ButtonStates
+                                    (
+                                        SButton button,
+                                        SButtonState status
+                                    ) in inputState.GetActiveButtonStates()
                                 )
                                 {
                                     switch (status)
@@ -3544,7 +3547,7 @@ internal class SCore : IDisposable
         foreach (IModMetadata metadata in loadedMods)
         {
 #if SMAPI_FOR_ANDROID
-            float entryProgress = 0.28f + 0.17f * ((float)entryCount / loadedMods.Length);
+            float entryProgress = 0.28f + 0.17f * ((float)entryCount / loadedMods.Count);
             SCore.LoadingProgressHandler?.Invoke(
                 $"Launching {metadata.DisplayName}...",
                 entryProgress,
@@ -3616,7 +3619,7 @@ internal class SCore : IDisposable
             entryCount++;
             if (entryCount % 10 == 0)
                 this.Monitor.Log(
-                    $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after {entryCount}/{loadedMods.Length} mod Entry() calls")}",
+                    $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after {entryCount}/{loadedMods.Count} mod Entry() calls")}",
                     LogLevel.Debug
                 );
 #endif
@@ -3624,7 +3627,7 @@ internal class SCore : IDisposable
 
 #if SMAPI_FOR_ANDROID
         this.Monitor.Log(
-            $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after all {loadedMods.Length} mod Entry() calls")}",
+            $"Memory: {Mobile.MemoryDiagnostics.Snapshot($"after all {loadedMods.Count} mod Entry() calls")}",
             LogLevel.Debug
         );
 #endif
