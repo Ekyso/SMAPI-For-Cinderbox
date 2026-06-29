@@ -47,10 +47,10 @@ smapi.statsPage = function (options) {
 
             // notable events which may affect stats, indexed by their date in mods-by-type.jsonl
             notableEvents: {
-                "2021-01-01": "Stardew Valley 1.5 (21 December 2020)",
-                "2021-09-01": "Stardew Valley 1.5.5 (17 August 2021)",
-                "2024-04-26": "Stardew Valley 1.6 (19 March 2024)",
-                "2024-11-29": "Stardew Valley 1.6.9 (04 November 2024)"
+                "2021-01-01": "Stardew Valley 1.5",   // 21 December 2020
+                "2021-09-01": "Stardew Valley 1.5.5", // 17 August 2021
+                "2024-04-01": "Stardew Valley 1.6",   // 19 March 2024
+                "2024-10-31": "Stardew Valley 1.6.9"  // 04 November 2024
             }
         },
 
@@ -61,9 +61,9 @@ smapi.statsPage = function (options) {
 
             // notable events which may affect stats, indexed by their date in content-packs-by-format.jsonl
             notableEvents: {
-                "2021-10-01": "Stardew Valley 1.5.5 (17 August 2021)",
-                "2024-04-01": "Stardew Valley 1.6 (19 March 2024)",
-                "2024-11-29": "Stardew Valley 1.6.9 (04 November 2024)"
+                "2021-08-01": "Stardew Valley 1.5.5", // 17 August 2021
+                "2024-04-01": "Stardew Valley 1.6",   // 19 March 2024
+                "2024-10-31": "Stardew Valley 1.6.9"  // 04 November 2024
             }
         },
 
@@ -77,6 +77,14 @@ smapi.statsPage = function (options) {
                 "Amazon hosting": "#332288", // dark indigo
                 "Amazon SSL": "#44aa99",     // turquoise
                 "Amazon domains": "#117733"   // dark green
+            },
+
+            // notable events which may affect costs, indexed by their date in smapi-costs.jsonl
+            notableEvents: {
+                "2019-12": "Stardew Valley 1.4",  // 26 November 2019
+                "2020-12": "Stardew Valley 1.5",  // 21 December 2020
+                "2024-03": "Stardew Valley 1.6",  // 19 March 2024
+                "2024-11": "Stardew Valley 1.6.9" // 04 November 2024
             }
         }
     };
@@ -485,35 +493,39 @@ smapi.statsPage = function (options) {
                                     }
                                 },
                                 yAxis: {},
-                                series: chartConfig.modTypes.map(modType => {
-                                    const extendsToEnd = !!curData.lastRow[modType];
-                                    const rawColor = getColor(config.modsByType.colors, modType);
-                                    const color = extendsToEnd
-                                        ? rawColor
-                                        : hexToRgba(rawColor, 0.6);
+                                series: addMarkLine(
+                                    chartConfig.modTypes.map(modType => {
+                                        const extendsToEnd = !!curData.lastRow[modType];
+                                        const rawColor = getColor(config.modsByType.colors, modType);
+                                        const color = extendsToEnd
+                                            ? rawColor
+                                            : hexToRgba(rawColor, 0.6);
 
-                                    return {
-                                        type: "line",
-                                        name: getLabel(config.modsByType.labels, modType),
-                                        data: [], // overridden per-frame in `options`
-                                        color: color,
-                                        lineStyle: {
-                                            type: extendsToEnd ? "solid" : "dotted",
-                                            width: 2
-                                        },
-                                        symbol: "none",
-                                        endLabel: {
-                                            show: true,
-                                            formatter: "{a}", // {a} = name
-                                            color: color
-                                        },
-                                        labelLayout: {
-                                            moveOverlap: extendsToEnd
-                                                ? "shiftY" // if the line reaches the end of the chart, use 'shiftY' layout to avoid overlapping labels
-                                                : null     // if the line ends early, just display it next to the line instead
-                                        }
-                                    };
-                                }),
+                                        return {
+                                            type: "line",
+                                            name: getLabel(config.modsByType.labels, modType),
+                                            data: [], // overridden per-frame in `options`
+                                            color: color,
+                                            lineStyle: {
+                                                type: extendsToEnd ? "solid" : "dotted",
+                                                width: 2
+                                            },
+                                            symbol: "none",
+                                            endLabel: {
+                                                show: true,
+                                                formatter: "{a}", // {a} = name
+                                                color: color
+                                            },
+                                            labelLayout: {
+                                                moveOverlap: extendsToEnd
+                                                    ? "shiftY" // if the line reaches the end of the chart, use 'shiftY' layout to avoid overlapping labels
+                                                    : null     // if the line ends early, just display it next to the line instead
+                                            }
+                                        };
+                                    }),
+                                    p => p.name,
+                                    config.modsByType.notableEvents
+                                ),
                                 tooltip: {
                                     trigger: "axis"
                                 },
@@ -651,7 +663,8 @@ smapi.statsPage = function (options) {
                             series: [
                                 {
                                     type: "bar",
-                                    data: [] // placeholder; overridden per frame in options[]
+                                    data: [], // overridden per frame in options[]
+                                    markLine: createMarkLine(p => p.name, config.modsByType.notableEvents)
                                 }
                             ],
                             tooltip: {
@@ -777,8 +790,8 @@ smapi.statsPage = function (options) {
                                 }
                             },
                             yAxis: {},
-                            series: showVersions.map(version => {
-                                return {
+                            series: addMarkLine(
+                                showVersions.map(version => ({
                                     type: "line",
                                     name: version,
                                     data: [], // overridden per-frame in `options`
@@ -789,8 +802,10 @@ smapi.statsPage = function (options) {
                                     labelLayout: {
                                         moveOverlap: "shiftY"
                                     }
-                                };
-                            }),
+                                })),
+                                p => p.name,
+                                config.contentPacks.notableEvents
+                            ),
                             tooltip: {
                                 trigger: "axis"
                             },
@@ -877,13 +892,17 @@ smapi.statsPage = function (options) {
                             type: "value",
                             name: "USD"
                         },
-                        series: curData.serviceKeys.map(key => ({
-                            type: "bar",
-                            name: key,
-                            stack: "total",
-                            data: curData.rows.map(row => Math.round((row[key] ?? 0) * 100) / 100),
-                            color: getColor(config.costs.colors, key)
-                        })),
+                        series: addMarkLine(
+                            curData.serviceKeys.map(key => ({
+                                type: "bar",
+                                name: key,
+                                stack: "total",
+                                data: curData.rows.map(row => Math.round((row[key] ?? 0) * 100) / 100),
+                                color: getColor(config.costs.colors, key)
+                            })),
+                            p => p.name,
+                            config.costs.notableEvents
+                        ),
                         tooltip: {
                             trigger: "axis",
                             formatter: params => {
@@ -1189,6 +1208,51 @@ smapi.statsPage = function (options) {
             toolbox.feature.dataZoom = {};
 
         return toolbox;
+    }
+
+    /**
+     * Create a 'mark line', which can be added to a series to show annotations for specific dates.
+     * @param {(any) => string} formatter Get the value to display.
+     * @param {object} events A lookup of xAxis label to the annotation to display.
+     * @returns {object}
+     */
+    function createMarkLine(formatter, events) {
+        return {
+            silent: true,
+            symbol: "none",
+            lineStyle: {
+                color: "#888"
+            },
+            label: {
+                formatter,
+                color: "#666",
+                fontSize: 11
+            },
+            data: Object.entries(events).map(([xAxis, name], i) => ({
+                xAxis,
+                name,
+                label: {
+                    offset: i % 2 === 1
+                        ? [0, 16] // shift every second label down to minimize overlapping text
+                        : [0, 0]
+                }
+            }))
+        };
+    }
+
+    /**
+     * Add a 'mark line' (which shows annotations for specific dates) to a chart's series.
+     * @param {array<object>} series The chart series to extend.
+     * @param {(any) => string} formatter Get the value to display.
+     * @param {object} events A lookup of xAxis label to the annotation to display.
+     * @returns {array<object>}
+     */
+    function addMarkLine(series, formatter, events) {
+        if (series.length > 0) {
+            series[0].markLine = createMarkLine(formatter, events);
+        }
+
+        return series;
     }
 
     /**
