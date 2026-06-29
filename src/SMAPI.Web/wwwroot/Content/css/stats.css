@@ -26,6 +26,11 @@ div.error {
     color: #555;
 }
 
+#stats-area .last-updated {
+    font-size: 0.7em;
+    opacity: 0.7;
+}
+
 #stats-area .chart-intro {
     max-width: 60em;
     margin-top: 1em;
@@ -38,11 +43,10 @@ div.error {
     border-radius: 3px;
 }
 
-#stats-area .chart#modsByType,
-#stats-area .chart#newModsLastDelta {
+#stats-area .pie-chart {
     max-width: 900px; /* pie charts don't extend across page, so keep them left-aligned in their box */
 }
 
-#stats-area .chart#newMods {
-    height: 400px; /* bar chart doesn't need as much vertical room to be readable */
+#stats-area .bar-chart {
+    height: 400px; /* bar charts don't need as much vertical room to be readable */
 }

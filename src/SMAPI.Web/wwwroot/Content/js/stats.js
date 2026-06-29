@@ -52,6 +52,19 @@ smapi.statsPage = function (options) {
                 "2024-04-26": "Stardew Valley 1.6 (19 March 2024)",
                 "2024-11-29": "Stardew Valley 1.6.9 (04 November 2024)"
             }
+        },
+
+        // configure the 'content packs by format version' stats
+        contentPacks: {
+            // colors for each format version (omitted entries cycle through the colorPalette)
+            colors: {},
+
+            // notable events which may affect stats, indexed by their date in content-packs-by-format.jsonl
+            notableEvents: {
+                "2021-10-01": "Stardew Valley 1.5.5 (17 August 2021)",
+                "2024-04-01": "Stardew Valley 1.6 (19 March 2024)",
+                "2024-11-29": "Stardew Valley 1.6.9 (04 November 2024)"
+            }
         }
     };
 
@@ -69,6 +82,12 @@ smapi.statsPage = function (options) {
         newMods: {
             deltas: [],
             xLabels: []
+        },
+        contentPacks: {
+            rows: [],
+            lastRow: {},
+            xLabels: [],
+            versions: []
         }
     };
     const charts = [];
@@ -87,16 +106,20 @@ smapi.statsPage = function (options) {
             modsByType: {
                 previouslyUpdated: null,
                 lastUpdated: null,
-                summary: {
-                    total: 0,
-                    topThree: [],
-                    xnbPercent: "0"
-                }
+                total: 0,
+                topThree: [],
+                xnbPercent: "0"
             },
             latestNewMods: {
                 total: 0,
                 byType: [],
                 forOther: 0
+            },
+            contentPacks: {
+                previouslyUpdated: null,
+                lastUpdated: null,
+                total: 0,
+                topVersions: []
             }
         },
         watch: {
@@ -124,15 +147,23 @@ smapi.statsPage = function (options) {
              */
             loadDataAsync: async function () {
                 /*********
-                ** Fetch mods by type
+                ** Fetch data files
+                *********/
+                const [modsByTypeRows, contentPacksRows] = await Promise.all([
+                    fetchJsonLinesAsync(options.modsByTypeUri),
+                    fetchJsonLinesAsync(options.contentPacksByFormatUri)
+                ]);
+                if (!modsByTypeRows || !contentPacksRows) {
+                    this.isDataFailed = true;
+                    return;
+                }
+
+
+                /*********
+                ** Process mods by type
                 *********/
                 {
-                    // fetch dataset
-                    const rows = await fetchJsonLinesAsync(options.modsByTypeUri);
-                    if (!rows) {
-                        this.isDataFailed = true;
-                        return;
-                    }
+                    const rows = modsByTypeRows;
 
                     // derive dataset info
                     const lastRow = rows[rows.length - 1];
@@ -143,7 +174,7 @@ smapi.statsPage = function (options) {
                         rows,
                         lastRow,
                         xLabels: rows.map(row => row.date),
-                        modTypes: getModTypes(rows)
+                        modTypes: getModKeys(rows)
                     };
                     this.modsByType.previouslyUpdated = data.modsByType.previouslyUpdated;
                     this.modsByType.lastUpdated = data.modsByType.lastUpdated;
@@ -151,29 +182,22 @@ smapi.statsPage = function (options) {
                     // summarize mods by type
                     {
                         const curData = data.modsByType;
-                        const total = curData.modTypes.reduce((sum, modType) => sum + (curData.lastRow[modType] ?? 0), 0);
+                        const total = getSum(curData.modTypes, modType => curData.lastRow[modType]);
 
                         const topThree = curData.modTypes
                             .filter(isSpecificModType)
                             .slice(0, 3)
                             .map(modType => ({ label: getLabel(config.modsByType.labels, modType), percent: getPercent(curData.lastRow[modType], total) }));
 
-                        this.modsByType.summary = {
-                            total,
-                            topThree,
-                            xnbPercent: getPercent(curData.lastRow["XNB"], total)
-                        };
+                        this.modsByType.total = total;
+                        this.modsByType.topThree = topThree;
+                        this.modsByType.xnbPercent = getPercent(curData.lastRow["XNB"], total);
                     }
 
                     // assign colors for each mod type
-                    let index = 0;
-                    for (const modType of data.modsByType.modTypes) {
-                        if (config.modsByType.colors[modType])
-                            continue; // assigned in config
-
-                        config.modsByType.colors[modType] = config.colorPalette[index++ % config.colorPalette.length];
-                    }
+                    assignColors(config.modsByType.colors, data.modsByType.modTypes);
                 }
+
 
                 /*********
                 ** Calculate 'new mods this month' stats
@@ -186,7 +210,7 @@ smapi.statsPage = function (options) {
                     const excludeRow = row => excludeDates.has(row.date);
 
                     // get total new mods per month (skip first row which has no delta)
-                    const totals = curData.rows.map(row => curData.modTypes.reduce((curTotal, modType) => curTotal + (row[modType] ?? 0), 0));
+                    const totals = curData.rows.map(row => getSum(curData.modTypes, modType => row[modType]));
                     const deltas = curData.rows
                         .slice(1)
                         .map((_, i) => totals[i + 1] - totals[i])
@@ -218,6 +242,40 @@ smapi.statsPage = function (options) {
                         total: lastDelta,
                         byType: byType,
                         forOther: otherDelta
+                    };
+                }
+
+
+                /*********
+                ** Process content packs by format version
+                *********/
+                {
+                    // read data
+                    const rows = contentPacksRows;
+                    const lastRow = rows[rows.length - 1];
+                    const prevRow = rows[rows.length - 2];
+                    const versions = getModKeys(rows);
+                    data.contentPacks = {
+                        rows,
+                        lastRow,
+                        xLabels: rows.map(row => row.date),
+                        versions
+                    };
+
+                    // assign colors for each format version
+                    assignColors(config.contentPacks.colors, versions);
+
+                    // summarize top versions
+                    const total = getSum(versions, version => lastRow[version]);
+                    this.contentPacks = {
+                        previouslyUpdated: formatFullDate(prevRow.date),
+                        lastUpdated: formatFullDate(lastRow.date),
+                        total,
+                        topVersions: versions.slice(0, 5).map(version => ({
+                            version,
+                            count: lastRow[version] ?? 0,
+                            delta: (lastRow[version] ?? 0) - (prevRow[version] ?? 0)
+                        }))
                     };
                 }
 
@@ -255,19 +313,13 @@ smapi.statsPage = function (options) {
 
                     chart.setOption({
                         baseOption: {
-                            series: [
-                                {
-                                    type: "pie",
-                                    radius: "80%",
-                                    clockwise: false // start with larger values on the left
-                                }
-                            ],
+                            series: [createPieChartSeries()],
                             timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.modsByType.notableEvents),
                             toolbox: createToolbox(false, this.showAdvancedControls)
                         },
                         options: curData.rows.map((row, i) => {
                             const isLatest = i === lastRowIndex;
-                            const total = curData.modTypes.reduce((sum, type) => sum + (row[type] ?? 0), 0);
+                            const total = getSum(curData.modTypes, modType => row[modType]);
 
                             return {
                                 title: {
@@ -321,7 +373,7 @@ smapi.statsPage = function (options) {
                         {
                             id: "modsByTypeOverTimeExcludingOutliers",
                             title: "Mods by type over time (excluding SMAPI and Content Patcher)",
-                            modTypes: curData.modTypes.filter(k => isSpecificModType(k) && k !== "SMAPI" && k !== "Pathoschild.ContentPatcher")
+                            modTypes: curData.modTypes.filter(key => isSpecificModType(key) && key !== "SMAPI" && key !== "Pathoschild.ContentPatcher")
                         }
                     ];
 
@@ -337,10 +389,10 @@ smapi.statsPage = function (options) {
                                     top: 40,
                                     bottom: this.showAdvancedControls ? 100 : 60, // make room for timeline
                                     left: 60,
-                                    right: 150 // extra right margin to fit end labels
+                                    right: 150 // make room for end labels
                                 },
                                 xAxis: {
-                                    data: [], // overridden in `options`
+                                    data: [], // overridden per-frame in `options`
                                     axisLabel: {
                                         rotate: 90,
                                         fontSize: 11,
@@ -358,7 +410,7 @@ smapi.statsPage = function (options) {
                                     return {
                                         type: "line",
                                         name: getLabel(config.modsByType.labels, modType),
-                                        data: [], // overridden in `options`
+                                        data: [], // overridden per-frame in `options`
                                         color: color,
                                         lineStyle: {
                                             type: extendsToEnd ? "solid" : "dotted",
@@ -427,13 +479,11 @@ smapi.statsPage = function (options) {
                         baseOption: {
                             series: [
                                 {
-                                    type: "pie",
-                                    radius: "80%",
-                                    clockwise: false, // start with larger values on the left
+                                    ...createPieChartSeries(),
                                     label: {
                                         formatter: entry => `${entry.name}  ${entry.percent.toFixed(1)}%`
                                     },
-                                    data: [] // overridden in `options`
+                                    data: [] // overridden per-frame in `options`
                                 }
                             ],
                             tooltip: {
@@ -547,6 +597,165 @@ smapi.statsPage = function (options) {
                     });
                     charts.push(chart);
                 }
+
+
+                /*********
+                ** 'Content packs by format version' pie chart
+                *********/
+                {
+                    const curData = data.contentPacks;
+                    const lastRowIndex = curData.rows.length - 1;
+
+                    const chart = echarts.init(document.getElementById("contentPacksByFormat"));
+
+                    chart.setOption({
+                        baseOption: {
+                            series: [createPieChartSeries()],
+                            timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.contentPacks.notableEvents),
+                            toolbox: createToolbox(false, this.showAdvancedControls)
+                        },
+                        options: curData.rows.map((row, i) => {
+                            const isLatest = i === lastRowIndex;
+                            const total = getSum(curData.versions, version => row[version]);
+
+                            return {
+                                title: {
+                                    text: getTimelineTitle("Content packs by format version", row.date, isLatest),
+                                    textStyle: createTitleStyle()
+                                },
+                                series: [
+                                    {
+                                        label: {
+                                            formatter: entry => `${entry.name}  ${getPercent(entry.value, total)}%`
+                                        },
+                                        data: curData.versions.map(version => ({
+                                            name: version,
+                                            value: row[version] ?? 0,
+                                            label: {
+                                                show: !!row[version]
+                                            },
+                                            itemStyle: {
+                                                color: getColor(config.contentPacks.colors, version)
+                                            }
+                                        }))
+                                    }
+                                ],
+                                tooltip: {
+                                    formatter: entry => entry.name && entry.value
+                                        ? `${entry.name}: ${entry.value.toLocaleString()} (${getPercent(entry.value, total)}%)`
+                                        : null
+                                },
+                                animation: isLatest
+                            };
+                        })
+                    });
+
+                    charts.push(chart);
+                }
+
+
+                /*********
+                ** 'Content packs by format version' line chart
+                *********/
+                {
+                    // init main data
+                    const curData = data.contentPacks;
+                    const lastRowIndex = curData.rows.length - 1;
+
+                    // find versions that were ever in the top five
+                    const showVersionsSet = new Set();
+                    for (const row of curData.rows) {
+                        for (const version of [...curData.versions].sort((a, b) => (row[b] ?? 0) - (row[a] ?? 0)).slice(0, 5))
+                            showVersionsSet.add(version);
+                    }
+                    const showVersions = Array.from(showVersionsSet);
+
+                    const chart = echarts.init(document.getElementById("contentPacksByFormatOverTime"));
+
+                    chart.setOption({
+                        baseOption: {
+                            legend: {
+                                show: false
+                            },
+                            grid: {
+                                top: 40,
+                                bottom: this.showAdvancedControls ? 100 : 60, // make room for timeline
+                                left: 60,
+                                right: 150 // make room for end labels
+                            },
+                            xAxis: {
+                                data: [], // overridden per-frame in `options`
+                                axisLabel: {
+                                    rotate: 90,
+                                    fontSize: 11,
+                                    formatter: value => value.slice(0, 7)
+                                }
+                            },
+                            yAxis: {},
+                            series: showVersions.map(version => {
+                                return {
+                                    type: "line",
+                                    name: version,
+                                    data: [], // overridden per-frame in `options`
+                                    symbol: "none",
+                                    endLabel: {
+                                        formatter: "{a}" // {a} = name
+                                    },
+                                    labelLayout: {
+                                        moveOverlap: "shiftY"
+                                    }
+                                };
+                            }),
+                            tooltip: {
+                                trigger: "axis"
+                            },
+                            toolbox: createToolbox(true, this.showAdvancedControls),
+                            timeline: createTimeline(curData.xLabels, this.showAdvancedControls, config.contentPacks.notableEvents)
+                        },
+                        options: curData.rows.map((row, i) => {
+                            const isLatest = i === lastRowIndex;
+
+                            return {
+                                title: {
+                                    text: getTimelineTitle("Content packs by format version (top five)", row.date, isLatest),
+                                    textStyle: createTitleStyle()
+                                },
+                                xAxis: {
+                                    data: curData.xLabels.slice(0, i + 1)
+                                },
+                                series: (() => {
+                                    const topVersions = new Set(
+                                        [...showVersions]
+                                            .sort((a, b) => (curData.rows[i][b] ?? 0) - (curData.rows[i][a] ?? 0))
+                                            .slice(0, 5)
+                                    );
+
+                                    return showVersions.map(version => {
+                                        const highlight = topVersions.has(version);
+                                        const rawColor = getColor(config.contentPacks.colors, version);
+                                        const color = highlight ? rawColor : hexToRgba(rawColor, 0.5);
+                                        const seriesData = curData.rows.slice(0, i + 1).map(r => r[version] ?? null);
+
+                                        return {
+                                            data: seriesData,
+                                            color,
+                                            lineStyle: {
+                                                type: highlight ? "solid" : "dotted"
+                                            },
+                                            endLabel: {
+                                                show: !!seriesData[seriesData.length - 1],
+                                                color
+                                            }
+                                        };
+                                    });
+                                })(),
+                                animation: isLatest
+                            };
+                        })
+                    });
+
+                    charts.push(chart);
+                }
             },
 
             /**
@@ -637,6 +846,16 @@ smapi.statsPage = function (options) {
     }
 
     /**
+     * Get the sum of a function over all values.
+     * @param {array<string|number>} values The values for which to get a sum.
+     * @param {(any) => number|null} getValue Get the value to sum for an entry.
+     * @returns {number}
+     */
+    function getSum(values, getValue) {
+        return values.reduce((sum, value) => sum + (getValue(value) ?? 0), 0);
+    }
+
+    /**
      * Get an RGBA representation of a hexadecimal color.
      * @param {string} hex The hexadecimal color code, including the '#' prefix.
      * @param {number} alpha The alpha channel, as a value between 0 (transparent) and 1 (opaque).
@@ -649,15 +868,12 @@ smapi.statsPage = function (options) {
         return `rgba(${r},${g},${b},${alpha})`;
     }
 
-    /****
-    ** Mods-by-type data
-    ****/
     /**
-     * Get the unique mod types, sorted by their number of mods in the latest row.
-     * @param {array<object>} rows The parsed mods-by-type rows over time.
+     * Get the unique keys from a column-per-key row, sorted by their value in the latest row.
+     * @param {array<object>} rows The parsed rows over time.
      * @returns {array<string>}
      */
-    function getModTypes(rows) {
+    function getModKeys(rows) {
         const rawModTypes = rows.flatMap(row => Object.keys(row).filter(isModType));
         const uniqueModTypes = [...new Set(rawModTypes)];
 
@@ -676,6 +892,22 @@ smapi.statsPage = function (options) {
         })
     }
 
+    /**
+     * Assign colors to each key in a color map based on the color palette.
+     * @param {object} colorMap A lookup of key to color.
+     * @param {array<string>} keys The keys for which to assign colors.
+     */
+    function assignColors(colorMap, keys) {
+        let index = 0;
+        for (const key of keys) {
+            if (!colorMap[key])
+                colorMap[key] = config.colorPalette[index++ % config.colorPalette.length];
+        }
+    }
+
+    /****
+    ** Mods-by-type data
+    ****/
     /**
      * Get whether a key in a data row is a mod type, rather than a metadata field (like 'date' or '@comment').
      * @param {string} key The data key to check.
@@ -715,6 +947,18 @@ smapi.statsPage = function (options) {
         return {
             fontFamily: "Roboto",
             fontSize: 13
+        };
+    }
+
+    /**
+     * Create the default series configuration for a pie chart.
+     * @returns {object}
+     */
+    function createPieChartSeries() {
+        return {
+            type: "pie",
+            radius: "80%",
+            clockwise: false // start with larger values on the left
         };
     }
 

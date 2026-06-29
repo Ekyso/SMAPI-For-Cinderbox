@@ -278,6 +278,7 @@ internal class BackgroundService : IHostedService, IDisposable
         string copyToPath = Path.Combine(BackgroundService.WebRootPath, "Content", "data", "mods-by-type.jsonl");
         Directory.CreateDirectory(Path.GetDirectoryName(copyToPath)!);
         File.Copy(BackgroundService.ModDatasetRepo.GetFilePath("stats/mods by type.jsonl"), copyToPath, overwrite: true);
+        File.Copy(BackgroundService.ModDatasetRepo.GetFilePath("stats/Content Patcher packs by format version.jsonl"), Path.Combine(BackgroundService.WebRootPath, "Content", "data", "content-packs-by-format.jsonl"), overwrite: true);
 
         context.WriteLine("Done!");
     }

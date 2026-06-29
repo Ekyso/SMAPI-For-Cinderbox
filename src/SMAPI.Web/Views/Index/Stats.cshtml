@@ -18,7 +18,8 @@
     <script>
         $(function () {
             smapi.statsPage({
-                modsByTypeUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/mods-by-type.jsonl"))
+                modsByTypeUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/mods-by-type.jsonl")),
+                contentPacksByFormatUri: @this.ForJson(Url.ContentWithCacheBust("~/Content/data/content-packs-by-format.jsonl"))
             });
         });
     </script>
@@ -40,22 +41,27 @@
 
     @* stats area *@
     <div v-if="isDataLoaded" id="stats-area">
-        <div id="stats-intro">These stats are generated automatically from the <a href="https://github.com/Pathoschild/StardewModData">Stardew mod dataset</a>, last updated on {{modsByType.lastUpdated}}.</div>
-
+        @* header *@
+        <div id="stats-intro">These stats are generated automatically from the <a href="https://github.com/Pathoschild/StardewModData">Stardew mod dataset</a>.</div>
         <div id="stats-controls">
             <label>
-                <input type="checkbox" v-model="showAdvancedControls" />
+                <input type="checkbox" v-model="showAdvancedControls"/>
                 Enable advanced controls
             </label>
         </div>
 
+        @* mods by type *@
         <h2>Mods by type</h2>
-        <div class="chart-intro">We have {{modsByType.summary.total.toLocaleString()}} tracked mods. The majority use {{modsByType.summary.topThree[0].label}} ({{modsByType.summary.topThree[0].percent}}%), followed by {{modsByType.summary.topThree[1].label}} at {{modsByType.summary.topThree[1].percent}}% and {{modsByType.summary.topThree[2].label}} at {{modsByType.summary.topThree[2].percent}}%. <a href="https://stardewvalleywiki.com/Modding:Using_XNB_mods">Legacy XNB mods</a> are no longer recommended, and now only make up {{modsByType.summary.xnbPercent}}% of mods.</div>
-        <div class="chart" id="modsByType"></div>
-        <div class="chart" id="modsByTypeOverTime"></div>
-        <div class="chart" id="modsByTypeOverTimeExcludingOutliers"></div>
+        <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
 
+        <div class="chart-intro">We have {{modsByType.total.toLocaleString()}} tracked mods. The majority use {{modsByType.topThree[0].label}} ({{modsByType.topThree[0].percent}}%), followed by {{modsByType.topThree[1].label}} at {{modsByType.topThree[1].percent}}% and {{modsByType.topThree[2].label}} at {{modsByType.topThree[2].percent}}%. <a href="https://stardewvalleywiki.com/Modding:Using_XNB_mods">Legacy XNB mods</a> are no longer recommended, and now only make up {{modsByType.xnbPercent}}% of mods.</div>
+        <div class="chart pie-chart" id="modsByType"></div>
+        <div class="chart line-chart" id="modsByTypeOverTime"></div>
+        <div class="chart line-chart" id="modsByTypeOverTimeExcludingOutliers"></div>
+
+        @* new mods *@
         <h2>New mods</h2>
+        <div class="last-updated">Based on data from {{modsByType.lastUpdated}}.</div>
         <div class="chart-intro">
             Between {{modsByType.previouslyUpdated}} and {{modsByType.lastUpdated}}, there were {{latestNewMods.total.toLocaleString()}} more mods. That includes:
             <ul>
@@ -63,7 +69,21 @@
                 <li>and {{formatDelta(latestNewMods.forOther)}} for frameworks with &lt;100 content packs.</li>
             </ul>
         </div>
-        <div class="chart" id="newModsLastDelta"></div>
-        <div class="chart" id="newMods"></div>
+        <div class="chart pie-chart" id="newModsLastDelta"></div>
+        <div class="chart bar-chart" id="newMods"></div>
+
+        @* Content Patcher packs *@
+        <h2>Content Patcher packs</h2>
+        <div class="last-updated">Based on data from {{contentPacks.lastUpdated}}.</div>
+
+        <div class="chart-intro">
+            We have {{contentPacks.total.toLocaleString()}} tracked <a href="https://www.nexusmods.com/stardewvalley/mods/1915">Content Patcher</a> packs. The top five format versions are (with the change since {{contentPacks.previouslyUpdated}}):
+            <ul>
+                <li v-for="(entry, i) in contentPacks.topVersions">{{i == 4 ? "and " : ""}} {{entry.version}} ({{entry.count.toLocaleString()}}, {{formatDelta(entry.delta)}}){{i < 4 ? ";" : "."}}</li>
+            </ul>
+        </div>
+
+        <div class="chart pie-chart" id="contentPacksByFormat"></div>
+        <div class="chart line-chart" id="contentPacksByFormatOverTime"></div>
     </div>
 </div>
