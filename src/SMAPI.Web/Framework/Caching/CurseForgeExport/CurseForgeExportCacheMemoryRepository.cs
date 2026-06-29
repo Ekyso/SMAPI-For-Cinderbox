@@ -45,7 +45,7 @@ internal class CurseForgeExportCacheMemoryRepository : BaseExportCacheRepository
     }
 
     /// <inheritdoc />
-    public bool TryGetMod(uint id, [NotNullWhen(true)] out CurseForgeModExport? mod)
+    public bool TryGetMod(long id, [NotNullWhen(true)] out CurseForgeModExport? mod)
     {
         var data = this.Data?.Mods;
 

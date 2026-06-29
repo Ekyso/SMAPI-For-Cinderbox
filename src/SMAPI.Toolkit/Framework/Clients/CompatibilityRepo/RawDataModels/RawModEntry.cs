@@ -21,7 +21,7 @@ public class RawModEntry
     public string? Id { get; set; }
 
     /// <summary>The mod's unique ID on Nexus, or null if it has none. This is the number in the mod page's URL.</summary>
-    public int? Nexus { get; set; }
+    public long? Nexus { get; set; }
 
     /// <summary>The mod's GitHub repository in the form owner/repo, or null if it has none.</summary>
     public string? GitHub { get; set; }
@@ -30,13 +30,13 @@ public class RawModEntry
     ** Secondary fields
     ****/
     /// <summary>The mod's unique ID in the legacy Chucklefish mod repository (if any). This is the value shown in the mod page's URL.</summary>
-    public int? Chucklefish { get; set; }
+    public long? Chucklefish { get; set; }
 
     /// <summary>The mod's unique ID on CurseForge (if any). This is the value shown on the mod page next to "Project ID".</summary>
-    public int? Curse { get; set; }
+    public long? Curse { get; set; }
 
     /// <summary>The mod's unique ID on ModDrop (if any). This is the value shown in the mod page's URL.</summary>
-    public int? ModDrop { get; set; }
+    public long? ModDrop { get; set; }
 
     /// <summary>The arbitrary mod URL, if the mod isn't on a mod site supported by more specific fields like `nexus`. This should be avoided if possible, since this makes cross-referencing much more difficult.</summary>
     public string? Url { get; set; }

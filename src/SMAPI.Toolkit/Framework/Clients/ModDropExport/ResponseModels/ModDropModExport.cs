@@ -8,7 +8,7 @@ namespace StardewModdingAPI.Toolkit.Framework.Clients.ModDropExport.ResponseMode
 public class ModDropModExport
 {
     /// <summary>The mod ID.</summary>
-    public uint Id { get; set; }
+    public long Id { get; set; }
 
     /// <summary>The mod page title.</summary>
     public string? Title { get; set; }

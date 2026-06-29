@@ -45,7 +45,7 @@ internal class NexusExportCacheMemoryRepository : BaseExportCacheRepository, INe
     }
 
     /// <inheritdoc />
-    public bool TryGetMod(uint id, [NotNullWhen(true)] out NexusModExport? mod)
+    public bool TryGetMod(long id, [NotNullWhen(true)] out NexusModExport? mod)
     {
         var data = this.Data?.Data;
 

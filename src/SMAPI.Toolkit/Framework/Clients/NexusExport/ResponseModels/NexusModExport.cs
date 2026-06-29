@@ -21,7 +21,7 @@ public class NexusModExport
 
     /// <summary>The ID for the user who uploaded the mod.</summary>
     [JsonProperty("uploader_id")]
-    public int UploaderId { get; set; }
+    public long UploaderId { get; set; }
 
     /// <summary>The mod's semantic version.</summary>
     public string? Version { get; set; }
@@ -47,7 +47,7 @@ public class NexusModExport
     public string Description { get; set; } = "";
 
     /// <summary>The files uploaded for the mod.</summary>
-    public Dictionary<uint, NexusFileExport> Files { get; set; } = new();
+    public Dictionary<long, NexusFileExport> Files { get; set; } = new();
 
     /// <summary>The extra fields returned by the export API, if any.</summary>
     [JsonExtensionData]

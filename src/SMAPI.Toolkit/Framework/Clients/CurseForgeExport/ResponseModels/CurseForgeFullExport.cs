@@ -7,7 +7,7 @@ namespace StardewModdingAPI.Toolkit.Framework.Clients.CurseForgeExport.ResponseM
 public class CurseForgeFullExport
 {
     /// <summary>The mod data indexed by public mod ID.</summary>
-    public Dictionary<uint, CurseForgeModExport> Mods { get; set; } = new();
+    public Dictionary<long, CurseForgeModExport> Mods { get; set; } = new();
 
     /// <summary>The HTTP cache headers set by a remote server.</summary>
     [JsonIgnore]

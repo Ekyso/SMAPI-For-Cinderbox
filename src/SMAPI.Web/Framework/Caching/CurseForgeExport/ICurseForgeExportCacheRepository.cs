@@ -12,7 +12,7 @@ internal interface ICurseForgeExportCacheRepository : IExportCacheRepository
     /// <summary>Get the cached data for a mod, if it exists in the export.</summary>
     /// <param name="id">The CurseForge mod ID.</param>
     /// <param name="mod">The fetched metadata.</param>
-    bool TryGetMod(uint id, [NotNullWhen(true)] out CurseForgeModExport? mod);
+    bool TryGetMod(long id, [NotNullWhen(true)] out CurseForgeModExport? mod);
 
     /// <summary>Set the cached data to use.</summary>
     /// <param name="export">The export received from the CurseForge Mods API, or <c>null</c> to remove it.</param>

@@ -23,16 +23,16 @@ public class ModExtendedMetadataModel
     public string? Name { get; set; }
 
     /// <summary>The mod ID on Nexus.</summary>
-    public int? NexusID { get; set; }
+    public long? NexusID { get; set; }
 
     /// <summary>The mod ID in the Chucklefish mod repo.</summary>
-    public int? ChucklefishID { get; set; }
+    public long? ChucklefishID { get; set; }
 
     /// <summary>The mod ID in the CurseForge mod repo.</summary>
-    public int? CurseForgeID { get; set; }
+    public long? CurseForgeID { get; set; }
 
     /// <summary>The mod ID in the ModDrop mod repo.</summary>
-    public int? ModDropID { get; set; }
+    public long? ModDropID { get; set; }
 
     /// <summary>The GitHub repository in the form 'owner/repo'.</summary>
     public string? GitHubRepo { get; set; }

@@ -7,7 +7,7 @@ namespace StardewModdingAPI.Toolkit.Framework.Clients.NexusExport.ResponseModels
 public class NexusFullExport
 {
     /// <summary>The mod data indexed by public mod ID.</summary>
-    public Dictionary<uint, NexusModExport> Data { get; set; } = new();
+    public Dictionary<long, NexusModExport> Data { get; set; } = new();
 
     /// <summary>The HTTP cache headers set by a remote server.</summary>
     [JsonIgnore]

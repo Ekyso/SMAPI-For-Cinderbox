@@ -59,7 +59,7 @@ internal class CurseForgeClient : ICurseForgeClient
     public async Task<IModPage?> GetModData(string id)
     {
         // get ID
-        if (!uint.TryParse(id, out uint parsedId))
+        if (!long.TryParse(id, out long parsedId))
             return this.InitModPage(id).SetError(RemoteModStatus.DoesNotExist, $"The value '{id}' isn't a valid CurseForge mod ID, must be an integer ID.");
 
         // To minimize time users spend waiting for the update check result, we fetch the mod
@@ -94,7 +94,7 @@ internal class CurseForgeClient : ICurseForgeClient
     *********/
     /// <summary>Initialize an empty mod page model.</summary>
     /// <param name="id">The CurseForge mod ID.</param>
-    private IModPage InitModPage(uint id)
+    private IModPage InitModPage(long id)
     {
         return new GenericModPage(this.SiteKey, id.ToString());
     }
@@ -109,7 +109,7 @@ internal class CurseForgeClient : ICurseForgeClient
     /// <summary>Get metadata about a mod by searching the CurseForge export API data.</summary>
     /// <param name="id">The CurseForge mod ID.</param>
     /// <returns>Returns the mod info if found, else <c>null</c>.</returns>
-    private IModPage? GetModFromExportData(uint id)
+    private IModPage? GetModFromExportData(long id)
     {
         // skip if no data available
         if (!this.ExportCache.IsLoaded || !this.ExportCache.TryGetMod(id, out CurseForgeModExport? data))
@@ -147,7 +147,7 @@ internal class CurseForgeClient : ICurseForgeClient
     /// <summary>Get metadata about a mod from the CurseForge API.</summary>
     /// <param name="id">The CurseForge mod ID.</param>
     /// <returns>Returns the mod info if found, else <c>null</c>.</returns>
-    private async Task<IModPage?> GetModFromApiAsync(uint id)
+    private async Task<IModPage?> GetModFromApiAsync(long id)
     {
         // get raw data
         ModModel? mod;
@@ -208,7 +208,7 @@ internal class CurseForgeClient : ICurseForgeClient
 
     /// <summary>Get the full mod page URL for a given ID.</summary>
     /// <param name="id">The mod ID.</param>
-    private string GetModUrl(uint id)
+    private string GetModUrl(long id)
     {
         return string.Format(this.WebModUrl, id);
     }

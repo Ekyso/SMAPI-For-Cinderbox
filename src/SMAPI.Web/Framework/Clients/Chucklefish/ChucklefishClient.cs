@@ -47,7 +47,7 @@ internal class ChucklefishClient : IChucklefishClient
         IModPage page = new GenericModPage(this.SiteKey, id);
 
         // get mod ID
-        if (!uint.TryParse(id, out uint parsedId))
+        if (!long.TryParse(id, out long parsedId))
             return page.SetError(RemoteModStatus.DoesNotExist, $"The value '{id}' isn't a valid Chucklefish mod ID, must be an integer ID.");
 
         // fetch HTML
@@ -88,7 +88,7 @@ internal class ChucklefishClient : IChucklefishClient
     *********/
     /// <summary>Get the full mod page URL for a given ID.</summary>
     /// <param name="id">The mod ID.</param>
-    private string GetModUrl(uint id)
+    private string GetModUrl(long id)
     {
         UriBuilder builder = new(this.Client.BaseClient.BaseAddress!);
         builder.Path += string.Format(this.ModPageUrlFormat, id);

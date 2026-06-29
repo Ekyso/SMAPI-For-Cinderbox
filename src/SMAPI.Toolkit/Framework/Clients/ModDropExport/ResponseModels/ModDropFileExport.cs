@@ -8,7 +8,7 @@ namespace StardewModdingAPI.Toolkit.Framework.Clients.ModDropExport.ResponseMode
 public class ModDropFileExport
 {
     /// <summary>The file identifier.</summary>
-    public uint Id { get; set; }
+    public long Id { get; set; }
 
     /// <summary>The file's display title.</summary>
     [JsonProperty("title")]

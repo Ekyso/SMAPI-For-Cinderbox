@@ -19,16 +19,16 @@ public class ModCompatibilityEntry
     public string[] Author { get; }
 
     /// <summary>The mod ID on Nexus.</summary>
-    public int? NexusID { get; }
+    public long? NexusID { get; }
 
     /// <summary>The mod ID in the Chucklefish mod repo.</summary>
-    public int? ChucklefishID { get; }
+    public long? ChucklefishID { get; }
 
     /// <summary>The mod ID in the CurseForge mod repo.</summary>
-    public int? CurseForgeID { get; }
+    public long? CurseForgeID { get; }
 
     /// <summary>The mod ID in the ModDrop mod repo.</summary>
-    public int? ModDropID { get; }
+    public long? ModDropID { get; }
 
     /// <summary>The GitHub repository in the form 'owner/repo'.</summary>
     public string? GitHubRepo { get; }
@@ -82,7 +82,7 @@ public class ModCompatibilityEntry
     /// <param name="devNote"><inheritdoc cref="DevNote" path="/summary"/></param>
     /// <param name="overrides"><inheritdoc cref="Overrides" path="/summary"/></param>
     /// <param name="anchor"><inheritdoc cref="Anchor" path="/summary"/></param>
-    public ModCompatibilityEntry(string[] id, string[] name, string[] author, int? nexusId, int? chucklefishId, int? curseForgeId, int? modDropId, string? githubRepo, string? customSourceUrl, string? customUrl, string? contentPackFor, ModCompatibilityInfo compatibility, string[] warnings, string[]? htmlWarnings, string? devNote, ModDataOverrideEntry? overrides, string? anchor)
+    public ModCompatibilityEntry(string[] id, string[] name, string[] author, long? nexusId, long? chucklefishId, long? curseForgeId, long? modDropId, string? githubRepo, string? customSourceUrl, string? customUrl, string? contentPackFor, ModCompatibilityInfo compatibility, string[] warnings, string[]? htmlWarnings, string? devNote, ModDataOverrideEntry? overrides, string? anchor)
     {
         this.ID = id;
         this.Name = name;
@@ -145,7 +145,7 @@ public class ModCompatibilityEntry
     /// <summary>Get whether this compatibility entry refers to the given mod site page ID.</summary>
     /// <param name="site">The mod site.</param>
     /// <param name="id">The mod page ID.</param>
-    public bool HasSiteId(ModSiteKey site, int id)
+    public bool HasSiteId(ModSiteKey site, long id)
     {
         return site switch
         {

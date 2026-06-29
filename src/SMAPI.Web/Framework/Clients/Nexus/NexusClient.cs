@@ -70,7 +70,7 @@ internal class NexusClient : INexusClient
     {
         IModPage page = new GenericModPage(this.SiteKey, id);
 
-        if (!uint.TryParse(id, out uint parsedId))
+        if (!long.TryParse(id, out long parsedId))
             return page.SetError(RemoteModStatus.DoesNotExist, $"The value '{id}' isn't a valid Nexus mod ID, must be an integer ID.");
 
         // Nexus has strict rate limits meant for a user's mod manager, which are too low to
@@ -126,7 +126,7 @@ internal class NexusClient : INexusClient
     /// <summary>Get metadata about a mod by searching the Nexus export API data.</summary>
     /// <param name="id">The Nexus mod ID.</param>
     /// <returns>Returns the mod info if found, else <c>null</c>.</returns>
-    private Task<NexusMod?> GetModFromExportDataAsync(uint id)
+    private Task<NexusMod?> GetModFromExportDataAsync(long id)
     {
         static Task<NexusMod?> ModResult(NexusMod mod) => Task.FromResult<NexusMod?>(mod);
         static Task<NexusMod?> StatusResult(NexusModStatus status) => Task.FromResult<NexusMod?>(new NexusMod(status, status.ToString()));
@@ -143,7 +143,7 @@ internal class NexusClient : INexusClient
 
         // get downloads
         var downloads = new List<IModDownload>();
-        foreach ((uint fileId, NexusFileExport file) in data.Files)
+        foreach ((long fileId, NexusFileExport file) in data.Files)
         {
             if ((FileCategory)file.CategoryId is FileCategory.Main or FileCategory.Optional)
             {
@@ -167,7 +167,7 @@ internal class NexusClient : INexusClient
     /// <summary>Get metadata about a mod by scraping the Nexus website.</summary>
     /// <param name="id">The Nexus mod ID.</param>
     /// <returns>Returns the mod info if found, else <c>null</c>.</returns>
-    private async Task<NexusMod?> GetModFromWebsiteAsync(uint id)
+    private async Task<NexusMod?> GetModFromWebsiteAsync(long id)
     {
         // fetch HTML
         string html;
@@ -244,7 +244,7 @@ internal class NexusClient : INexusClient
     /// <summary>Get metadata about a mod from the Nexus API.</summary>
     /// <param name="id">The Nexus mod ID.</param>
     /// <returns>Returns the mod info if found, else <c>null</c>.</returns>
-    private async Task<NexusMod> GetModFromApiAsync(uint id)
+    private async Task<NexusMod> GetModFromApiAsync(long id)
     {
         // fetch mod
         Mod mod = await this.ApiClient.Mods.GetMod("stardewvalley", (int)id);
@@ -263,7 +263,7 @@ internal class NexusClient : INexusClient
 
     /// <summary>Get the full mod page URL for a given ID.</summary>
     /// <param name="id">The mod ID.</param>
-    private string GetModUrl(uint id)
+    private string GetModUrl(long id)
     {
         UriBuilder builder = new(this.WebClient.BaseClient.BaseAddress!);
         builder.Path += string.Format(this.WebModUrlFormat, id);

@@ -4,7 +4,7 @@ namespace StardewModdingAPI.Toolkit.Framework.Clients.CurseForgeExport.ResponseM
 public class CurseForgeAuthorExport
 {
     /// <summary>The author's user ID.</summary>
-    public uint Id { get; set; }
+    public long Id { get; set; }
 
     /// <summary>The author's display name.</summary>
     public string? Name { get; set; }
