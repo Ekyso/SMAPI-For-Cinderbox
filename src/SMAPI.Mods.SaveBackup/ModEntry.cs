@@ -18,14 +18,21 @@ public class ModEntry : Mod
     private readonly int BackupsToKeep = 10;
 
     /// <summary>The absolute path to the folder in which to store save backups.</summary>
+#if SMAPI_FOR_ANDROID
+    private readonly string BackupFolder = Path.Combine(
+        Path.GetDirectoryName(Constants.GamePath)!,
+        "SaveBackups"
+    );
+#else
     private readonly string BackupFolder = Path.Combine(Constants.GamePath, "save-backups");
+#endif
 
     /// <summary>A unique label for the save backup to create.</summary>
-    private readonly string BackupLabel = $"{DateTime.UtcNow:yyyy-MM-dd} - SMAPI {Constants.ApiVersion} with Stardew Valley {Game1.version}";
+    private readonly string BackupLabel =
+        $"{DateTime.UtcNow:yyyy-MM-dd} - SMAPI {Constants.ApiVersion} with Stardew Valley {Game1.version}";
 
     /// <summary>The name of the save archive to create.</summary>
     private string FileName => $"{this.BackupLabel}.zip";
-
 
     /*********
     ** Public methods
@@ -41,8 +48,7 @@ public class ModEntry : Mod
             backupFolder.Create();
 
             // back up & prune saves
-            Task
-                .Run(() => this.CreateBackup(backupFolder))
+            Task.Run(() => this.CreateBackup(backupFolder))
                 .ContinueWith(_ => this.PruneBackups(backupFolder, this.BackupsToKeep));
         }
         catch (Exception ex)
@@ -50,7 +56,6 @@ public class ModEntry : Mod
             this.Monitor.Log($"Error backing up saves: {ex}", LogLevel.Error);
         }
     }
-
 
     /*********
     ** Private methods
@@ -72,18 +77,28 @@ public class ModEntry : Mod
 
             // copy saves to fallback directory (ignore non-save files/folders)
             DirectoryInfo savesDir = new(Constants.SavesPath);
-            if (!this.RecursiveCopy(savesDir, fallbackDir, entry => this.MatchSaveFolders(savesDir, entry), copyRoot: false))
+            if (
+                !this.RecursiveCopy(
+                    savesDir,
+                    fallbackDir,
+                    entry => this.MatchSaveFolders(savesDir, entry),
+                    copyRoot: false
+                )
+            )
             {
                 this.Monitor.Log("No saves found.");
                 return;
             }
 
             // compress backup if possible
-            if (!this.TryCompressDir(fallbackDir.FullName, targetFile, out Exception? compressError))
+            if (
+                !this.TryCompressDir(fallbackDir.FullName, targetFile, out Exception? compressError)
+            )
             {
-                this.Monitor.Log(Constants.TargetPlatform != GamePlatform.Android
-                    ? $"Backed up to {fallbackDir.FullName}." // expected to fail on Android
-                    : $"Backed up to {fallbackDir.FullName}. Couldn't compress backup:\n{compressError}"
+                this.Monitor.Log(
+                    Constants.TargetPlatform != GamePlatform.Android
+                        ? $"Backed up to {fallbackDir.FullName}." // expected to fail on Android
+                        : $"Backed up to {fallbackDir.FullName}. Couldn't compress backup:\n{compressError}"
                 );
             }
             else
@@ -123,13 +138,19 @@ public class ModEntry : Mod
                 }
                 catch (Exception ex)
                 {
-                    this.Monitor.Log($"Error deleting old save backup '{entry.Name}': {ex}", LogLevel.Error);
+                    this.Monitor.Log(
+                        $"Error deleting old save backup '{entry.Name}': {ex}",
+                        LogLevel.Error
+                    );
                 }
             }
         }
         catch (Exception ex)
         {
-            this.Monitor.Log("Couldn't remove old backups (see log file for details).", LogLevel.Warn);
+            this.Monitor.Log(
+                "Couldn't remove old backups (see log file for details).",
+                LogLevel.Warn
+            );
             this.Monitor.Log(ex.ToString());
         }
     }
@@ -139,11 +160,20 @@ public class ModEntry : Mod
     /// <param name="destination">The destination file to create.</param>
     /// <param name="error">The error which occurred trying to compress, if applicable. This is <see cref="NotSupportedException"/> if compression isn't supported on this platform.</param>
     /// <returns>Returns whether compression succeeded.</returns>
-    private bool TryCompressDir(string sourcePath, FileInfo destination, [NotNullWhen(false)] out Exception? error)
+    private bool TryCompressDir(
+        string sourcePath,
+        FileInfo destination,
+        [NotNullWhen(false)] out Exception? error
+    )
     {
         try
         {
-            ZipFile.CreateFromDirectory(sourcePath, destination.FullName, CompressionLevel.Fastest, false);
+            ZipFile.CreateFromDirectory(
+                sourcePath,
+                destination.FullName,
+                CompressionLevel.Fastest,
+                false
+            );
 
             error = null;
             return true;
@@ -162,7 +192,12 @@ public class ModEntry : Mod
     /// <param name="filter">A filter which matches the files or directories to copy, or <c>null</c> to copy everything.</param>
     /// <remarks>Derived from the SMAPI installer code.</remarks>
     /// <returns>Returns whether any files were copied.</returns>
-    private bool RecursiveCopy(FileSystemInfo source, DirectoryInfo targetFolder, Func<FileSystemInfo, bool>? filter, bool copyRoot = true)
+    private bool RecursiveCopy(
+        FileSystemInfo source,
+        DirectoryInfo targetFolder,
+        Func<FileSystemInfo, bool>? filter,
+        bool copyRoot = true
+    )
     {
         if (!source.Exists || filter?.Invoke(source) == false)
             return false;
@@ -178,13 +213,17 @@ public class ModEntry : Mod
                 break;
 
             case DirectoryInfo sourceDir:
-                DirectoryInfo targetSubfolder = copyRoot ? new DirectoryInfo(Path.Combine(targetFolder.FullName, sourceDir.Name)) : targetFolder;
+                DirectoryInfo targetSubfolder = copyRoot
+                    ? new DirectoryInfo(Path.Combine(targetFolder.FullName, sourceDir.Name))
+                    : targetFolder;
                 foreach (var entry in sourceDir.EnumerateFileSystemInfos())
                     anyCopied = this.RecursiveCopy(entry, targetSubfolder, filter) || anyCopied;
                 break;
 
             default:
-                throw new NotSupportedException($"Unknown filesystem info type '{source.GetType().FullName}'.");
+                throw new NotSupportedException(
+                    $"Unknown filesystem info type '{source.GetType().FullName}'."
+                );
         }
 
         return anyCopied;
@@ -196,14 +235,12 @@ public class ModEntry : Mod
     private bool MatchSaveFolders(DirectoryInfo savesFolder, FileSystemInfo entry)
     {
         // only need to filter top-level entries
-        string? parentPath = (entry as FileInfo)?.DirectoryName ?? (entry as DirectoryInfo)?.Parent?.FullName;
+        string? parentPath =
+            (entry as FileInfo)?.DirectoryName ?? (entry as DirectoryInfo)?.Parent?.FullName;
         if (parentPath != savesFolder.FullName)
             return true;
 
-
         // match folders with Name_ID format
-        return
-            entry is DirectoryInfo
-            && ulong.TryParse(entry.Name.Split('_').Last(), out _);
+        return entry is DirectoryInfo && ulong.TryParse(entry.Name.Split('_').Last(), out _);
     }
 }
