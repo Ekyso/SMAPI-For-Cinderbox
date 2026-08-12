@@ -3445,7 +3445,6 @@ internal class SCore : IDisposable
         if (Mobile.AndroidPatcher.Harmony != null)
         {
             Mobile.Patches.LookupAnythingPatch.Apply(Mobile.AndroidPatcher.Harmony);
-            Mobile.Patches.FashionSensePatches.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.PortraiturePatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.CustomFarmLoaderPatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.QuickSavePatch.Apply(Mobile.AndroidPatcher.Harmony);

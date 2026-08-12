@@ -23,7 +23,6 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
 
 Runtime Harmony patches for mods that need Android-specific fixes:
 
-- **FashionSense** - search box and name validation for soft keyboard input
 - **Lookup Anything** - facing-tile detection when using virtual gamepad
 - **Portraiture** - HDP portrait texture caching to avoid per-frame GPU re-creation
 - **DailyScreenshot** - screenshot path and Android file manager intent
