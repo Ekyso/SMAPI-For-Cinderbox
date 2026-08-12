@@ -1238,7 +1238,6 @@ internal static class AndroidPatcher
         {
 #if SMAPI_FOR_ANDROID
             ParallelAudioLoadPatch.Apply(Harmony);
-            ModDataSafeAccessPatch.Apply(Harmony);
 #endif
         }
         catch (Exception ex)

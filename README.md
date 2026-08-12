@@ -19,12 +19,6 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
 - **Performance patches**  
   O(n) sprite compaction, buffered animal updates, positional delayed action removal, hoisted weather drawing, parallel OGG decoding with IMA4 disk caching, event args pooling.
 
-## Mod Compatibility Patches
-
-Runtime Harmony patches for mods that need Android-specific fixes:
-
-- **ModData** - null return for missing keys instead of throwing
-
 ## Project Structure
 
 ```
