@@ -24,7 +24,6 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
 Runtime Harmony patches for mods that need Android-specific fixes:
 
 - **DailyScreenshot** - screenshot path and Android file manager intent
-- **Custom Farm Loader** - save path redirection to external storage
 - **QuickSave** - options menu button integration
 - **UnofficialModUpdateMenu** - touch-friendly scrollbar and Android browser links
 - **ModData** - null return for missing keys instead of throwing
