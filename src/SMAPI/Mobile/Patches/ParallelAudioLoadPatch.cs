@@ -7,9 +7,14 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Android.App;
+using Android.Content;
 using HarmonyLib;
 using Microsoft.Xna.Framework.Audio;
 using NVorbis;
+using StardewModdingAPI.Framework.Content;
+using StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
+using StardewModdingAPI.Framework.Threading;
 using StardewValley;
 using StardewValley.Audio;
 
@@ -27,21 +32,21 @@ internal static class ParallelAudioLoadPatch
     private const int Ima4BlockAlignmentStereo = 2048;
 
     /// <summary>Cached SoundEffect objects keyed by file path to avoid re-decoding unchanged OGGs.</summary>
-    private static readonly Dictionary<string, SoundEffect> _sfxCache = new(StringComparer.Ordinal);
+    private static readonly Dictionary<string, CachedSoundEffect> _sfxCache =
+        new(StringComparer.Ordinal);
 
     /// <summary>IMA4 buffer size and PCM equivalent for cached SoundEffects, keyed by file path.</summary>
     private static readonly Dictionary<string, (long Ima4Bytes, long PcmEquivBytes)> _sfxIma4Meta =
         new(StringComparer.Ordinal);
 
     private static readonly byte[] Ima4CacheMagic = { 0x49, 0x4D, 0x41, 0x34 }; // "IMA4"
-    private const byte Ima4CacheVersion = 1;
-    private const int Ima4CacheHeaderSize = 28;
+    private const byte Ima4CacheVersion = 2;
+    private const int Ima4CacheHeaderSize = 36;
 
     /// <summary>Apply the Harmony patch.</summary>
     /// <param name="harmony">The Harmony instance.</param>
     public static void Apply(Harmony harmony)
     {
-#if !SMAPI_FOR_ANDROID
         harmony.Patch(
             original: AccessTools.Method(
                 typeof(AudioCueModificationManager),
@@ -52,10 +57,8 @@ internal static class ParallelAudioLoadPatch
                 nameof(ApplyAllCueModifications_Prefix)
             )
         );
-#endif
     }
 
-#if !SMAPI_FOR_ANDROID
     /// <summary>Replaces sequential cue modification with parallel OGG decoding and sequential SoundEffect creation.</summary>
     private static bool ApplyAllCueModifications_Prefix(AudioCueModificationManager __instance)
     {
@@ -101,7 +104,7 @@ internal static class ParallelAudioLoadPatch
             var oggPathsToProcess = new HashSet<string>(StringComparer.Ordinal);
             foreach (var path in oggPathsNonStreamed)
             {
-                if (!_sfxCache.TryGetValue(path, out var cached) || cached.IsDisposed)
+                if (!TryGetCachedSoundEffect(path, out _))
                     oggPathsToProcess.Add(path);
             }
 
@@ -111,7 +114,16 @@ internal static class ParallelAudioLoadPatch
 
             if (oggPathsToProcess.Count > 0)
             {
-                int parallelism = Math.Clamp(Environment.ProcessorCount / 2, 2, 4);
+                bool limitForMemory = ShouldLimitParallelismForMemory();
+                int parallelism = AudioDecodeWorkerPolicy.CalculateWorkerCount(
+                    Environment.ProcessorCount,
+                    limitForMemory
+                );
+
+                Game1.log.Info(
+                    $"{tag}: decoding {oggPathsToProcess.Count} OGG file(s) with {parallelism} worker(s)"
+                        + (limitForMemory ? " due to memory constraints" : "")
+                );
 
                 Parallel.ForEach(
                     oggPathsToProcess,
@@ -131,22 +143,36 @@ internal static class ParallelAudioLoadPatch
                         continue;
 
                     bool isMod = false;
-                    int catIdx = Game1.audioEngine.GetCategoryIndex("Default");
+                    int catIdx = AudioInterfaceMobileFacade.AudioEngineGetCategoryIndex(
+                        Game1.audioEngine,
+                        "Default"
+                    );
+
+                    CueDefinition? existingCue = null;
+                    if (
+                        AudioInterfaceMobileFacade.SoundBankExists(Game1.soundBank, data.Id)
+                    )
+                    {
+                        existingCue = AudioInterfaceMobileFacade.SoundBankGetCueDefinition(
+                            Game1.soundBank,
+                            data.Id
+                        );
+                    }
 
                     CueDefinition cueDef;
-                    if (Game1.soundBank.Exists(data.Id))
+                    if (existingCue != null)
                     {
-                        cueDef = Game1.soundBank.GetCueDefinition(data.Id);
+                        cueDef = existingCue;
                         isMod = true;
                     }
                     else
-                    {
-                        cueDef = new CueDefinition();
-                        cueDef.name = data.Id;
-                    }
+                        cueDef = new CueDefinition { name = data.Id };
 
                     if (data.Category != null)
-                        catIdx = Game1.audioEngine.GetCategoryIndex(data.Category);
+                        catIdx = AudioInterfaceMobileFacade.AudioEngineGetCategoryIndex(
+                            Game1.audioEngine,
+                            data.Category
+                        );
 
                     if (data.FilePaths != null)
                     {
@@ -165,8 +191,7 @@ internal static class ParallelAudioLoadPatch
                                 if (
                                     vorbis
                                     && !data.StreamedVorbis
-                                    && _sfxCache.TryGetValue(path, out var cachedSfx)
-                                    && !cachedSfx.IsDisposed
+                                    && TryGetCachedSoundEffect(path, out var cachedSfx)
                                 )
                                 {
                                     sfx = cachedSfx;
@@ -195,7 +220,10 @@ internal static class ParallelAudioLoadPatch
                                             audio.SampleRate,
                                             audio.Channels
                                         );
-                                    _sfxCache[path] = sfx;
+                                    _sfxCache[path] = new CachedSoundEffect(
+                                        sfx,
+                                        audio.SourceStamp
+                                    );
                                     if (audio.IsIma4)
                                         _sfxIma4Meta[path] = (
                                             audio.Buffer.Length,
@@ -206,8 +234,6 @@ internal static class ParallelAudioLoadPatch
                                 {
                                     using var stream = new FileStream(path, FileMode.Open);
                                     sfx = SoundEffect.FromStream(stream, vorbis);
-                                    if (vorbis)
-                                        _sfxCache[path] = sfx;
                                 }
 
                                 effects[i - invalidSounds] = sfx;
@@ -227,7 +253,7 @@ internal static class ParallelAudioLoadPatch
                             cueDef.OnModified?.Invoke();
                     }
 
-                    Game1.soundBank.AddCue(cueDef);
+                    AudioInterfaceMobileFacade.SoundBankAddCue(Game1.soundBank, cueDef);
                 }
                 catch (NoAudioHardwareException)
                 {
@@ -248,7 +274,7 @@ internal static class ParallelAudioLoadPatch
             var keysToRemove = new List<string>();
             foreach (var kvp in _sfxCache)
             {
-                if (kvp.Value.IsDisposed)
+                if (kvp.Value.Effect.IsDisposed)
                     keysToRemove.Add(kvp.Key);
             }
             foreach (var k in keysToRemove)
@@ -268,14 +294,60 @@ internal static class ParallelAudioLoadPatch
         }
         catch (Exception ex)
         {
+            string result =
+                AndroidPaths.IsMobile
+                    ? "mobile audio changes could not be applied"
+                    : "falling back to Stardew Valley's sequential implementation";
             Game1.log.Error(
-                $"{tag}: Parallel audio loading failed after {totalSw.ElapsedMilliseconds}ms, falling back to sequential",
+                $"{tag}: Parallel audio loading failed after {totalSw.ElapsedMilliseconds}ms; {result}",
                 ex
             );
-            return true; // fall through to original sequential method
+            return true; // desktop falls back; the mobile original is a no-op
         }
 
         return false; // skip original
+    }
+
+    private static bool TryGetCachedSoundEffect(string path, out SoundEffect soundEffect)
+    {
+        if (
+            _sfxCache.TryGetValue(path, out var cached)
+            && !cached.Effect.IsDisposed
+            && AudioFileStamp.TryRead(path, out var currentStamp)
+            && currentStamp == cached.SourceStamp
+        )
+        {
+            soundEffect = cached.Effect;
+            return true;
+        }
+
+        soundEffect = null!;
+        return false;
+    }
+
+    private sealed record CachedSoundEffect(SoundEffect Effect, AudioFileStamp SourceStamp);
+
+    private static bool ShouldLimitParallelismForMemory()
+    {
+        try
+        {
+            ActivityManager? activityManager =
+                SMAPIActivityTool.MainActivity?.GetSystemService(Service.ActivityService)
+                as ActivityManager;
+            if (activityManager == null)
+                return true;
+
+            var memoryInfo = new ActivityManager.MemoryInfo();
+            activityManager.GetMemoryInfo(memoryInfo);
+            return activityManager.IsLowRamDevice || memoryInfo.LowMemory;
+        }
+        catch (Exception ex)
+        {
+            Game1.log.Warn(
+                $"Could not determine Android memory status; limiting parallel audio decoding to one worker: {ex.Message}"
+            );
+            return true;
+        }
     }
 
     /// <summary>Decoded/encoded audio data ready for SoundEffect creation.</summary>
@@ -286,17 +358,56 @@ internal static class ParallelAudioLoadPatch
         bool IsIma4,
         int BlockAlignment,
         int TotalPcmSamples,
-        bool WasCacheHit
+        bool WasCacheHit,
+        AudioFileStamp SourceStamp
     );
 
     /// <summary>Decode an OGG file to PCM or IMA4 audio data, using disk cache when available.</summary>
     private static DecodedAudio? DecodeOggAudio(string absolutePath, bool useIma4)
     {
+        for (int attempt = 0; attempt < 2; attempt++)
+        {
+            if (!AudioFileStamp.TryRead(absolutePath, out var sourceStamp))
+                return null;
+
+            DecodedAudio? audio = DecodeOggAudioOnce(absolutePath, useIma4, sourceStamp);
+            if (
+                audio != null
+                && AudioFileStamp.TryRead(absolutePath, out var currentStamp)
+                && currentStamp == sourceStamp
+            )
+            {
+                if (audio.IsIma4 && !audio.WasCacheHit)
+                {
+                    TryWriteIma4Cache(
+                        absolutePath,
+                        audio.Buffer,
+                        audio.Channels == AudioChannels.Stereo ? 2 : 1,
+                        audio.BlockAlignment,
+                        audio.SampleRate,
+                        audio.TotalPcmSamples,
+                        sourceStamp
+                    );
+                }
+
+                return audio;
+            }
+        }
+
+        return null;
+    }
+
+    private static DecodedAudio? DecodeOggAudioOnce(
+        string absolutePath,
+        bool useIma4,
+        AudioFileStamp sourceStamp
+    )
+    {
         try
         {
             if (useIma4)
             {
-                var cached = TryLoadIma4Cache(absolutePath);
+                var cached = TryLoadIma4Cache(absolutePath, sourceStamp);
                 if (cached != null)
                     return cached;
             }
@@ -334,7 +445,8 @@ internal static class ParallelAudioLoadPatch
                     false,
                     0,
                     totalPcmSamplesPerChannel,
-                    false
+                    false,
+                    sourceStamp
                 );
 
             int blockAlignment =
@@ -347,15 +459,6 @@ internal static class ParallelAudioLoadPatch
                 blockAlignment
             );
 
-            TryWriteIma4Cache(
-                absolutePath,
-                ima4Buffer,
-                channelCount,
-                blockAlignment,
-                sampleRate,
-                totalPcmSamplesPerChannel
-            );
-
             return new DecodedAudio(
                 ima4Buffer,
                 sampleRate,
@@ -363,7 +466,8 @@ internal static class ParallelAudioLoadPatch
                 true,
                 blockAlignment,
                 totalPcmSamplesPerChannel,
-                false
+                false,
+                sourceStamp
             );
         }
         catch
@@ -376,7 +480,10 @@ internal static class ParallelAudioLoadPatch
     /// Try to load a valid IMA4 cache file for the given OGG path.
     /// Returns null if cache doesn't exist, is stale, or is corrupted.
     /// </summary>
-    private static DecodedAudio? TryLoadIma4Cache(string oggPath)
+    private static DecodedAudio? TryLoadIma4Cache(
+        string oggPath,
+        AudioFileStamp sourceStamp
+    )
     {
         try
         {
@@ -384,7 +491,6 @@ internal static class ParallelAudioLoadPatch
             if (!File.Exists(cachePath))
                 return null;
 
-            long oggLastModifiedTicks = File.GetLastWriteTimeUtc(oggPath).Ticks;
             byte[] cacheData = File.ReadAllBytes(cachePath);
 
             if (cacheData.Length < Ima4CacheHeaderSize)
@@ -410,8 +516,12 @@ internal static class ParallelAudioLoadPatch
             int totalPcmSamples = BitConverter.ToInt32(cacheData, 12);
             int ima4DataLength = BitConverter.ToInt32(cacheData, 16);
             long storedOggTicks = BitConverter.ToInt64(cacheData, 20);
+            long storedOggLength = BitConverter.ToInt64(cacheData, 28);
 
-            if (storedOggTicks != oggLastModifiedTicks)
+            if (
+                storedOggTicks != sourceStamp.LastWriteTimeUtcTicks
+                || storedOggLength != sourceStamp.Length
+            )
                 return null;
 
             if (cacheData.Length != Ima4CacheHeaderSize + ima4DataLength)
@@ -428,7 +538,8 @@ internal static class ParallelAudioLoadPatch
                 true,
                 blockAlignment,
                 totalPcmSamples,
-                true
+                true,
+                sourceStamp
             );
         }
         catch
@@ -447,12 +558,12 @@ internal static class ParallelAudioLoadPatch
         int channels,
         int blockAlignment,
         int sampleRate,
-        int totalPcmSamples
+        int totalPcmSamples,
+        AudioFileStamp sourceStamp
     )
     {
         try
         {
-            long oggLastModifiedTicks = File.GetLastWriteTimeUtc(oggPath).Ticks;
             string cachePath = Path.ChangeExtension(oggPath, ".ima4");
             string tmpPath = cachePath + ".tmp";
 
@@ -467,7 +578,8 @@ internal static class ParallelAudioLoadPatch
             BitConverter.TryWriteBytes(header.AsSpan(8), sampleRate);
             BitConverter.TryWriteBytes(header.AsSpan(12), totalPcmSamples);
             BitConverter.TryWriteBytes(header.AsSpan(16), ima4Buffer.Length);
-            BitConverter.TryWriteBytes(header.AsSpan(20), oggLastModifiedTicks);
+            BitConverter.TryWriteBytes(header.AsSpan(20), sourceStamp.LastWriteTimeUtcTicks);
+            BitConverter.TryWriteBytes(header.AsSpan(28), sourceStamp.Length);
 
             using (
                 var fs = new FileStream(tmpPath, FileMode.Create, FileAccess.Write, FileShare.None)
@@ -484,6 +596,5 @@ internal static class ParallelAudioLoadPatch
             Game1.log.Warn($"IMA4 cache write failed for {oggPath}: {ex.Message}");
         }
     }
-#endif
 }
 #endif

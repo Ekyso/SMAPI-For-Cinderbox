@@ -1266,10 +1266,7 @@ internal static class AndroidPatcher
             }
 
 #if SMAPI_FOR_ANDROID
-            // ParallelAudioLoadPatch references desktop-only ISoundBank/IAudioEngine methods
-            // that don't exist on mobile - skip it for mobile SDV
-            if (!AndroidPaths.IsMobile)
-                ParallelAudioLoadPatch.Apply(Harmony);
+            ParallelAudioLoadPatch.Apply(Harmony);
             ModDataSafeAccessPatch.Apply(Harmony);
 #endif
         }
