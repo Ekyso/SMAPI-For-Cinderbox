@@ -3451,7 +3451,6 @@ internal class SCore : IDisposable
             Mobile.Patches.QuickSavePatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.UnofficialModUpdateMenuPatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.DailyScreenshotPatch.Apply(Mobile.AndroidPatcher.Harmony);
-            Mobile.Patches.AlternativeTexturesPatches.Apply(Mobile.AndroidPatcher.Harmony);
         }
 #endif
 
