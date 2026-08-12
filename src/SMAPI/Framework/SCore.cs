@@ -2611,8 +2611,7 @@ internal class SCore : IDisposable
         this.ContentCore.OnReturningToTitleScreen();
 
 #if SMAPI_FOR_ANDROID
-        // Clear mod-specific caches
-        Mobile.Patches.PortraiturePatch.ClearCache();
+        SmapiAndroidLauncher.OnReturningToTitle?.Invoke();
 
         // Force full GC to reclaim large texture/data arrays on Mono
         // (Mono's GC is less aggressive about compacting LOH than CoreCLR)
@@ -3444,7 +3443,6 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_ANDROID
         if (Mobile.AndroidPatcher.Harmony != null)
         {
-            Mobile.Patches.PortraiturePatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.CustomFarmLoaderPatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.QuickSavePatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.UnofficialModUpdateMenuPatch.Apply(Mobile.AndroidPatcher.Harmony);

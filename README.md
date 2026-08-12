@@ -23,7 +23,6 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
 
 Runtime Harmony patches for mods that need Android-specific fixes:
 
-- **Portraiture** - HDP portrait texture caching to avoid per-frame GPU re-creation
 - **DailyScreenshot** - screenshot path and Android file manager intent
 - **Custom Farm Loader** - save path redirection to external storage
 - **QuickSave** - options menu button integration

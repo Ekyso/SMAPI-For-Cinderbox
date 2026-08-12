@@ -25,6 +25,9 @@ public static class SmapiAndroidLauncher
     /// <summary>Callback invoked after every mod entry point has completed.</summary>
     public static Action? OnAfterModsInitialized { get; set; }
 
+    /// <summary>Callback invoked before returning to the title screen.</summary>
+    public static Action? OnReturningToTitle { get; set; }
+
     /// <summary>Initialize and launch SMAPI on Android.</summary>
     /// <param name="gameDlls">Directory containing game DLLs.</param>
     /// <param name="smapiInternal">Directory for SMAPI internal files.</param>
