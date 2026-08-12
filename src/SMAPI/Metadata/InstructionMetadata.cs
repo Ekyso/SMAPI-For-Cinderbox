@@ -77,7 +77,11 @@ internal class InstructionMetadata
         // rewrite for crossplatform compatibility
         if (rewriteMods)
         {
+#if SMAPI_FOR_ANDROID
             bool isMobile = Mobile.AndroidPaths.IsInitialized && Mobile.AndroidPaths.IsMobile;
+#else
+            bool isMobile = false;
+#endif
 
             // specific versions
             yield return new ReplaceReferencesRewriter()

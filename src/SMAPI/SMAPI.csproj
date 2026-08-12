@@ -10,8 +10,7 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <ApplicationIcon Condition="'$(TargetFramework)' != 'net10.0-android'"
-      >icon.ico</ApplicationIcon
-    >
+      >icon.ico</ApplicationIcon>
 
     <!--copy dependency DLLs to bin folder so we can include them in installer bundle -->
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -19,22 +18,23 @@
     <!-- tiered compilation breaks Harmony -->
     <TieredCompilation>false</TieredCompilation>
     <ApplicationManifest Condition="'$(TargetFramework)' != 'net10.0-android'"
-      >app.manifest</ApplicationManifest
-    >
+      >app.manifest</ApplicationManifest>
 
     <!-- Sibling repo roots (override via -p: if your layout differs) -->
     <CinderboxRoot Condition="'$(CinderboxRoot)' == ''"
-      >$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', 'Cinderbox'))</CinderboxRoot
-    >
+      >$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..', 'Cinderbox'))</CinderboxRoot>
     <DesktopLibsPath Condition="'$(DesktopLibsPath)' == ''"
-      >$(CinderboxRoot)libs/desktop/</DesktopLibsPath
-    >
+      >$(CinderboxRoot)libs/desktop/</DesktopLibsPath>
     <HarmonyStagingPath Condition="'$(HarmonyStagingPath)' == ''"
-      >$(CinderboxRoot)staging/harmony/</HarmonyStagingPath
-    >
+      >$(CinderboxRoot)staging/harmony/</HarmonyStagingPath>
   </PropertyGroup>
 
   <Import Project="..\..\build\common.targets" />
+
+  <!-- Mobile/ folder is Android-only: exclude from desktop builds -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net10.0-android'">
+    <Compile Remove="Mobile\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <!-- Mono.Cecil: Use NuGet package for desktop, thin Harmony ships its own Cecil DLLs for Android -->
@@ -100,7 +100,12 @@
   <ItemGroup>
     <ProjectReference Include="..\SMAPI.Toolkit.CoreInterfaces\SMAPI.Toolkit.CoreInterfaces.csproj" />
     <ProjectReference Include="..\SMAPI.Toolkit\SMAPI.Toolkit.csproj" />
-    <!-- Use thin Harmony DLL + MonoMod from staging/harmony/ -->
+    <!-- Desktop: use repo-local Harmony DLL (matches upstream SMAPI) -->
+    <Reference Include="0Harmony" Condition="'$(TargetFramework)' != 'net10.0-android'">
+      <HintPath>..\..\build\0Harmony.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <!-- Android: use thin Harmony DLL + MonoMod from staging/harmony/ -->
     <Reference Include="0Harmony" Condition="'$(TargetFramework)' == 'net10.0-android'">
       <HintPath>$(HarmonyStagingPath)0Harmony.dll</HintPath>
       <Private>true</Private>

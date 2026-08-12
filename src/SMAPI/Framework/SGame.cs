@@ -228,7 +228,11 @@ internal class SGame : Game1
         }
         catch (Exception ex)
         {
+#if SMAPI_FOR_ANDROID
             Android.Util.Log.Error("SMAPI", $"Game1.Initialize() FAILED: {ex}");
+#else
+            Console.Error.WriteLine($"Game1.Initialize() FAILED: {ex}");
+#endif
             throw;
         }
 

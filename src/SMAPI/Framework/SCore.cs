@@ -38,7 +38,6 @@ using StardewModdingAPI.Framework.Threading;
 using StardewModdingAPI.Framework.Utilities;
 using StardewModdingAPI.Integrations.GenericModConfigMenu;
 using StardewModdingAPI.Internal;
-using StardewModdingAPI.Mobile;
 using StardewModdingAPI.Toolkit;
 using StardewModdingAPI.Toolkit.Framework.BundledModData;
 using StardewModdingAPI.Toolkit.Framework.Clients.WebApi;
@@ -56,6 +55,10 @@ using xTile.Display;
 using LanguageCode = StardewValley.LocalizedContentManager.LanguageCode;
 using MiniMonoModHotfix = MonoMod.Utils.MiniMonoModHotfix;
 using PathUtilities = StardewModdingAPI.Toolkit.Utilities.PathUtilities;
+#if SMAPI_FOR_ANDROID
+using StardewModdingAPI.Mobile;
+#endif
+
 #if SMAPI_FOR_WINDOWS
 using Microsoft.Win32;
 #endif
@@ -1361,8 +1364,10 @@ internal class SCore : IDisposable
         EventManager events = this.EventManager;
         bool verbose = this.Monitor.IsVerbose;
 
+#if SMAPI_FOR_ANDROID
         // Start frame timing
         StardewModdingAPI.Mobile.AndroidGameLoopManager.BeginFrame();
+#endif
 
         // Apply results from background event processing
         _eventPipeline?.ApplyResults(maxPerFrame: 20);
@@ -2172,8 +2177,10 @@ internal class SCore : IDisposable
                     );
                 }
 
+#if SMAPI_FOR_ANDROID
                 // Mark update complete for frame timing
                 StardewModdingAPI.Mobile.AndroidGameLoopManager.MarkUpdateComplete();
+#endif
 
                 // Enqueue UpdateTicked event for background metrics collection
                 if (_useAsyncModEvents && _eventPipeline != null)
@@ -2563,8 +2570,10 @@ internal class SCore : IDisposable
         }
 #endif
 
+#if SMAPI_FOR_ANDROID
         // Mark render complete for frame timing metrics
         AndroidGameLoopManager.MarkRenderComplete();
+#endif
     }
 
     /// <summary>Raise a rendering/rendered event, temporarily opening the given sprite batch if needed to let mods draw to it.</summary>
