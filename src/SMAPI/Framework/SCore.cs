@@ -73,7 +73,7 @@ internal class SCore : IDisposable
     public static Action<Android.Views.SurfaceView>? WaitForSurfaceHandler;
 
     /// <summary>External callback to report loading progress (message, progress, errors, warnings) to the launcher overlay.</summary>
-    public static Action<string, float, int, int>? LoadingProgressHandler;
+    public static Func<string, float, int, int, Task>? LoadingProgressHandler;
 
     /// <summary>Counts of errors and warnings during mod loading, reported to the launcher.</summary>
     internal static int LoadingErrors;
@@ -413,7 +413,7 @@ internal class SCore : IDisposable
                     {
                         activity.SetContentView(gameView);
                         // Re-add loading overlay on top of the game surface
-                        SCore.LoadingProgressHandler?.Invoke(
+                        SCore.ReportLoadingProgress(
                             "Setting up display...",
                             0.0f,
                             SCore.LoadingErrors,
@@ -445,7 +445,7 @@ internal class SCore : IDisposable
                 }
 
                 // wait for Android surface
-                SCore.LoadingProgressHandler?.Invoke(
+                SCore.ReportLoadingProgress(
                     "Waiting for surface...",
                     0.0f,
                     SCore.LoadingErrors,
@@ -662,7 +662,7 @@ internal class SCore : IDisposable
                 }
 
                 // wait for GL context
-                SCore.LoadingProgressHandler?.Invoke(
+                SCore.ReportLoadingProgress(
                     "Waiting for GL context...",
                     0.0f,
                     SCore.LoadingErrors,
@@ -778,7 +778,7 @@ internal class SCore : IDisposable
                 });
 
                 // wait for game initialization
-                SCore.LoadingProgressHandler?.Invoke(
+                SCore.ReportLoadingProgress(
                     "Initializing game...",
                     0.0f,
                     SCore.LoadingErrors,
@@ -941,6 +941,22 @@ internal class SCore : IDisposable
     /*********
     ** Private methods
     *********/
+#if SMAPI_FOR_ANDROID
+    private static void ReportLoadingProgress(
+        string message,
+        float progress,
+        int errors,
+        int warnings
+    )
+    {
+        var handler = SCore.LoadingProgressHandler;
+        if (handler == null)
+            return;
+
+        handler.Invoke(message, progress, errors, warnings).GetAwaiter().GetResult();
+    }
+#endif
+
     /// <summary>Initialize mods before the first game asset is loaded. At this point the core content managers are loaded (so mods can load their own assets), but the game is mostly uninitialized.</summary>
     private void InitializeBeforeFirstAssetLoaded()
     {
@@ -1033,7 +1049,7 @@ internal class SCore : IDisposable
             SCore.LoadingErrors = 0;
             SCore.LoadingWarnings = 0;
             SCore.IsCountingLoadErrors = true;
-            SCore.LoadingProgressHandler?.Invoke(
+            SCore.ReportLoadingProgress(
                 "Loading mod metadata...",
                 0.0f,
                 SCore.LoadingErrors,
@@ -2566,7 +2582,10 @@ internal class SCore : IDisposable
         )
         {
             SCore.LoadingProgressHandler = null;
-            handler.Invoke("Ready!", 1.0f, SCore.LoadingErrors, SCore.LoadingWarnings);
+            handler
+                .Invoke("Ready!", 1.0f, SCore.LoadingErrors, SCore.LoadingWarnings)
+                .GetAwaiter()
+                .GetResult();
         }
 #endif
 
@@ -2661,15 +2680,12 @@ internal class SCore : IDisposable
     {
 #if SMAPI_FOR_ANDROID
         // Show asset names on the loading overlay during post-load init
-        if (SCore.LoadingProgressHandler != null)
-        {
-            SCore.LoadingProgressHandler.Invoke(
-                $"Loading {assetName.BaseName}...",
-                0.48f,
-                SCore.LoadingErrors,
-                SCore.LoadingWarnings
-            );
-        }
+        SCore.ReportLoadingProgress(
+            $"Loading {assetName.BaseName}...",
+            0.48f,
+            SCore.LoadingErrors,
+            SCore.LoadingWarnings
+        );
 #endif
 
         if (this.EventManager.AssetReady.HasListeners)
@@ -3421,7 +3437,7 @@ internal class SCore : IDisposable
     {
         this.Monitor.Log("Loading mods...", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
-        SCore.LoadingProgressHandler?.Invoke(
+        SCore.ReportLoadingProgress(
             "Loading mods...",
             0.16f,
             SCore.LoadingErrors,
@@ -3453,7 +3469,7 @@ internal class SCore : IDisposable
             {
 #if SMAPI_FOR_ANDROID
                 float progress = 0.16f + 0.12f * ((float)modIndex / mods.Length);
-                SCore.LoadingProgressHandler?.Invoke(
+                SCore.ReportLoadingProgress(
                     $"Loading {mod.DisplayName}...",
                     progress,
                     SCore.LoadingErrors,
@@ -3541,7 +3557,7 @@ internal class SCore : IDisposable
         // initialize loaded non-content-pack mods
         this.Monitor.Log("Launching mods...", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
-        SCore.LoadingProgressHandler?.Invoke(
+        SCore.ReportLoadingProgress(
             "Launching mods...",
             0.28f,
             SCore.LoadingErrors,
@@ -3557,7 +3573,7 @@ internal class SCore : IDisposable
         {
 #if SMAPI_FOR_ANDROID
             float entryProgress = 0.28f + 0.17f * ((float)entryCount / loadedMods.Count);
-            SCore.LoadingProgressHandler?.Invoke(
+            SCore.ReportLoadingProgress(
                 $"Launching {metadata.DisplayName}...",
                 entryProgress,
                 SCore.LoadingErrors,
@@ -3669,7 +3685,7 @@ internal class SCore : IDisposable
 #endif
         this.Monitor.Log("Mods loaded and ready!", LogLevel.Debug);
 #if SMAPI_FOR_ANDROID
-        SCore.LoadingProgressHandler?.Invoke(
+        SCore.ReportLoadingProgress(
             "Starting game...",
             0.45f,
             SCore.LoadingErrors,
