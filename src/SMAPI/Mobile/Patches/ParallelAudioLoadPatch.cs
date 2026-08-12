@@ -313,7 +313,7 @@ internal static class ParallelAudioLoadPatch
         if (
             _sfxCache.TryGetValue(path, out var cached)
             && !cached.Effect.IsDisposed
-            && AudioFileStamp.TryRead(path, out var currentStamp)
+            && SourceFileStamp.TryRead(path, out var currentStamp)
             && currentStamp == cached.SourceStamp
         )
         {
@@ -325,7 +325,7 @@ internal static class ParallelAudioLoadPatch
         return false;
     }
 
-    private sealed record CachedSoundEffect(SoundEffect Effect, AudioFileStamp SourceStamp);
+    private sealed record CachedSoundEffect(SoundEffect Effect, SourceFileStamp SourceStamp);
 
     private static bool ShouldLimitParallelismForMemory()
     {
@@ -359,7 +359,7 @@ internal static class ParallelAudioLoadPatch
         int BlockAlignment,
         int TotalPcmSamples,
         bool WasCacheHit,
-        AudioFileStamp SourceStamp
+        SourceFileStamp SourceStamp
     );
 
     /// <summary>Decode an OGG file to PCM or IMA4 audio data, using disk cache when available.</summary>
@@ -367,13 +367,13 @@ internal static class ParallelAudioLoadPatch
     {
         for (int attempt = 0; attempt < 2; attempt++)
         {
-            if (!AudioFileStamp.TryRead(absolutePath, out var sourceStamp))
+            if (!SourceFileStamp.TryRead(absolutePath, out var sourceStamp))
                 return null;
 
             DecodedAudio? audio = DecodeOggAudioOnce(absolutePath, useIma4, sourceStamp);
             if (
                 audio != null
-                && AudioFileStamp.TryRead(absolutePath, out var currentStamp)
+                && SourceFileStamp.TryRead(absolutePath, out var currentStamp)
                 && currentStamp == sourceStamp
             )
             {
@@ -400,7 +400,7 @@ internal static class ParallelAudioLoadPatch
     private static DecodedAudio? DecodeOggAudioOnce(
         string absolutePath,
         bool useIma4,
-        AudioFileStamp sourceStamp
+        SourceFileStamp sourceStamp
     )
     {
         try
@@ -482,7 +482,7 @@ internal static class ParallelAudioLoadPatch
     /// </summary>
     private static DecodedAudio? TryLoadIma4Cache(
         string oggPath,
-        AudioFileStamp sourceStamp
+        SourceFileStamp sourceStamp
     )
     {
         try
@@ -559,7 +559,7 @@ internal static class ParallelAudioLoadPatch
         int blockAlignment,
         int sampleRate,
         int totalPcmSamples,
-        AudioFileStamp sourceStamp
+        SourceFileStamp sourceStamp
     )
     {
         try

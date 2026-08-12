@@ -40,7 +40,7 @@ public static class SmapiAndroidLauncher
     /// <param name="useOptimizedAnimalUpdates">Reuse cached buffer for animal updates.</param>
     /// <param name="useOptimizedDelayedActions">Positional removal for delayed actions.</param>
     /// <param name="useOptimizedWeatherDrawing">Hoist loop-invariant weather drawing calculations.</param>
-    /// <param name="useRawFileCache">Cache decoded PNG/JSON/OGG data across invalidation cycles.</param>
+    /// <param name="useRawFileCache">Cache decoded PNG and JSON data across invalidation cycles.</param>
     /// <remarks>This should be called instead of directly creating GameRunner. SMAPI creates its own SGameRunner and manages the game lifecycle.</remarks>
     public static void Launch(
         string gameDlls,

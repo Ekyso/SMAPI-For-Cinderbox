@@ -7,7 +7,7 @@ using StardewModdingAPI.Framework.Content;
 namespace SMAPI.Tests.Core;
 
 [TestFixture]
-internal class AudioFileStampTests
+internal class SourceFileStampTests
 {
     [Test]
     public void TryRead_ReturnsSameStampWhenSourceIsUnchanged()
@@ -15,8 +15,8 @@ internal class AudioFileStampTests
         string path = CreateTempFile([1, 2, 3]);
         try
         {
-            AudioFileStamp.TryRead(path, out var first).Should().BeTrue();
-            AudioFileStamp.TryRead(path, out var second).Should().BeTrue();
+            SourceFileStamp.TryRead(path, out var first).Should().BeTrue();
+            SourceFileStamp.TryRead(path, out var second).Should().BeTrue();
 
             second.Should().Be(first);
         }
@@ -33,11 +33,11 @@ internal class AudioFileStampTests
         try
         {
             DateTime timestamp = File.GetLastWriteTimeUtc(path);
-            AudioFileStamp.TryRead(path, out var first).Should().BeTrue();
+            SourceFileStamp.TryRead(path, out var first).Should().BeTrue();
 
             File.WriteAllBytes(path, [1, 2, 3, 4]);
             File.SetLastWriteTimeUtc(path, timestamp);
-            AudioFileStamp.TryRead(path, out var second).Should().BeTrue();
+            SourceFileStamp.TryRead(path, out var second).Should().BeTrue();
 
             second.Should().NotBe(first);
         }
@@ -53,10 +53,10 @@ internal class AudioFileStampTests
         string path = CreateTempFile([1, 2, 3]);
         try
         {
-            AudioFileStamp.TryRead(path, out var first).Should().BeTrue();
+            SourceFileStamp.TryRead(path, out var first).Should().BeTrue();
 
             File.SetLastWriteTimeUtc(path, new DateTime(2030, 1, 2, 3, 4, 5, DateTimeKind.Utc));
-            AudioFileStamp.TryRead(path, out var second).Should().BeTrue();
+            SourceFileStamp.TryRead(path, out var second).Should().BeTrue();
 
             second.Should().NotBe(first);
         }
@@ -69,14 +69,14 @@ internal class AudioFileStampTests
     [Test]
     public void TryRead_ReturnsFalseForMissingFile()
     {
-        string path = Path.Combine(Path.GetTempPath(), $"smapi-audio-{Guid.NewGuid():N}.ogg");
+        string path = Path.Combine(Path.GetTempPath(), $"smapi-source-{Guid.NewGuid():N}.dat");
 
-        AudioFileStamp.TryRead(path, out _).Should().BeFalse();
+        SourceFileStamp.TryRead(path, out _).Should().BeFalse();
     }
 
     private static string CreateTempFile(byte[] contents)
     {
-        string path = Path.Combine(Path.GetTempPath(), $"smapi-audio-{Guid.NewGuid():N}.ogg");
+        string path = Path.Combine(Path.GetTempPath(), $"smapi-source-{Guid.NewGuid():N}.dat");
         File.WriteAllBytes(path, contents);
         return path;
     }

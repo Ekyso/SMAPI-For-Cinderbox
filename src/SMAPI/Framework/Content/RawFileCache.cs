@@ -1,4 +1,3 @@
-#if SMAPI_FOR_ANDROID
 using System;
 using System.Collections.Concurrent;
 
@@ -13,55 +12,55 @@ internal sealed class RawFileCache : IDisposable
     /*********
     ** Fields
     *********/
-    /// <summary>The cache storing decoded data keyed by absolute file path.</summary>
-    /// <remarks>
-    /// Values are <see cref="IRawTextureData"/> or <see cref="string"/>.
-    /// </remarks>
-    private readonly ConcurrentDictionary<string, object> _cache
+    /// <summary>The cache storing decoded data and its source-file stamp by absolute path.</summary>
+    private readonly ConcurrentDictionary<string, CacheEntry> _cache
         = new(StringComparer.Ordinal); // case-sensitive for Android/Linux filesystem
 
 
     /*********
     ** Public methods
     *********/
-    /// <summary>Try to get cached raw texture data for a PNG file.</summary>
-    /// <param name="absolutePath">The absolute file path.</param>
-    /// <param name="data">The cached texture data, if found.</param>
-    /// <returns>Whether the data was found in cache.</returns>
-    public bool TryGetRawTexture(string absolutePath, out IRawTextureData? data)
+    /// <summary>Get cached data when the source is unchanged, or load a stable copy from disk.</summary>
+    /// <typeparam name="T">The decoded data type.</typeparam>
+    /// <param name="absolutePath">The absolute source file path.</param>
+    /// <param name="loader">Load and decode the source file.</param>
+    public T GetOrLoad<T>(string absolutePath, Func<T> loader)
+        where T : class
     {
-        if (this._cache.TryGetValue(absolutePath, out object? value) && value is IRawTextureData texture)
+        if (
+            this._cache.TryGetValue(absolutePath, out CacheEntry? cached)
+            && cached != null
+            && cached.Data is T value
+            && SourceFileStamp.TryRead(absolutePath, out SourceFileStamp currentStamp)
+            && currentStamp == cached.SourceStamp
+        )
         {
-            data = texture;
-            return true;
+            return value;
         }
 
-        data = null;
-        return false;
-    }
+        this._cache.TryRemove(absolutePath, out _);
 
-    /// <summary>Try to get a cached JSON string.</summary>
-    /// <param name="absolutePath">The absolute file path.</param>
-    /// <param name="json">The cached JSON string, if found.</param>
-    /// <returns>Whether the data was found in cache.</returns>
-    public bool TryGetJsonString(string absolutePath, out string? json)
-    {
-        if (this._cache.TryGetValue(absolutePath, out object? value) && value is string str)
+        T loaded = null!;
+        for (int attempt = 0; attempt < 2; attempt++)
         {
-            json = str;
-            return true;
+            bool hadStamp = SourceFileStamp.TryRead(
+                absolutePath,
+                out SourceFileStamp beforeLoad
+            );
+            loaded = loader();
+
+            if (
+                hadStamp
+                && SourceFileStamp.TryRead(absolutePath, out SourceFileStamp afterLoad)
+                && beforeLoad == afterLoad
+            )
+            {
+                this._cache[absolutePath] = new CacheEntry(loaded, afterLoad);
+                return loaded;
+            }
         }
 
-        json = null;
-        return false;
-    }
-
-    /// <summary>Store decoded data in the cache.</summary>
-    /// <param name="absolutePath">The absolute file path.</param>
-    /// <param name="data">The decoded data (<see cref="IRawTextureData"/> or <see cref="string"/>).</param>
-    public void Set(string absolutePath, object data)
-    {
-        this._cache[absolutePath] = data;
+        return loaded;
     }
 
     /// <summary>Clear all cached data.</summary>
@@ -75,5 +74,6 @@ internal sealed class RawFileCache : IDisposable
     {
         this._cache.Clear();
     }
+
+    private sealed record CacheEntry(object Data, SourceFileStamp SourceStamp);
 }
-#endif

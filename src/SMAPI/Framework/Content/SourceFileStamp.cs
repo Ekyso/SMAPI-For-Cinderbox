@@ -2,9 +2,9 @@ using System.IO;
 
 namespace StardewModdingAPI.Framework.Content;
 
-internal readonly record struct AudioFileStamp(long Length, long LastWriteTimeUtcTicks)
+internal readonly record struct SourceFileStamp(long Length, long LastWriteTimeUtcTicks)
 {
-    public static bool TryRead(string path, out AudioFileStamp stamp)
+    public static bool TryRead(string path, out SourceFileStamp stamp)
     {
         try
         {
@@ -15,7 +15,7 @@ internal readonly record struct AudioFileStamp(long Length, long LastWriteTimeUt
                 return false;
             }
 
-            stamp = new AudioFileStamp(file.Length, file.LastWriteTimeUtc.Ticks);
+            stamp = new SourceFileStamp(file.Length, file.LastWriteTimeUtc.Ticks);
             return true;
         }
         catch

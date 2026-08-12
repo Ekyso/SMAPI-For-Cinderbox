@@ -293,13 +293,12 @@ internal sealed class ModContentManager : BaseContentManager
         // cache raw JSON to avoid re-reading from disk on each invalidation cycle
         if (this.Coordinator.RawFileCache != null)
         {
-            if (!this.Coordinator.RawFileCache.TryGetJsonString(file.FullName, out string? json))
-            {
-                json = File.ReadAllText(file.FullName);
-                this.Coordinator.RawFileCache.Set(file.FullName, json);
-            }
+            string json = this.Coordinator.RawFileCache.GetOrLoad(
+                file.FullName,
+                () => File.ReadAllText(file.FullName)
+            );
 
-            T? asset = this.JsonHelper.Deserialize<T>(json!);
+            T? asset = this.JsonHelper.Deserialize<T>(json);
             if (asset == null)
                 this.ThrowLoadError(
                     assetName,
@@ -362,11 +361,22 @@ internal sealed class ModContentManager : BaseContentManager
     private IRawTextureData LoadRawImageData(FileInfo file, bool forRawData)
     {
 #if SMAPI_FOR_ANDROID
-        // use cached raw texture data if available
-        if (this.Coordinator.RawFileCache?.TryGetRawTexture(file.FullName, out var cached) == true)
-            return cached!;
+        if (this.Coordinator.RawFileCache != null)
+        {
+            return this.Coordinator.RawFileCache.GetOrLoad(
+                file.FullName,
+                () => this.DecodeRawImageData(file)
+            );
+        }
 #endif
 
+        return this.DecodeRawImageData(file);
+    }
+
+    /// <summary>Decode raw image data from a PNG file.</summary>
+    /// <param name="file">The PNG file to decode.</param>
+    private IRawTextureData DecodeRawImageData(FileInfo file)
+    {
         // load raw data
         int width;
         int height;
@@ -396,14 +406,7 @@ internal sealed class ModContentManager : BaseContentManager
                     : new Color(r: pixel.Red, g: pixel.Green, b: pixel.Blue, alpha: pixel.Alpha);
         }
 
-        var result = new RawTextureData(width, height, pixels);
-
-#if SMAPI_FOR_ANDROID
-        // cache for future loads
-        this.Coordinator.RawFileCache?.Set(file.FullName, result);
-#endif
-
-        return result;
+        return new RawTextureData(width, height, pixels);
     }
 
     /// <summary>Load an unpacked image file (<c>.tbin</c> or <c>.tmx</c>).</summary>
