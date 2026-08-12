@@ -2249,9 +2249,7 @@ internal class SCore : IDisposable
                 );
             }
 
-            AndroidPatcher.ApplyPerformancePatches(
-                useOptimizedWeatherDrawing: AndroidPaths.UseOptimizedWeatherDrawing
-            );
+            AndroidPatcher.ApplyGameInitializedPatches();
         }
         catch (Exception ex)
         {

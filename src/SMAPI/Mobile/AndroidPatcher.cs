@@ -1226,13 +1226,7 @@ internal static class AndroidPatcher
         return false; // skip original (storage migration)
     }
 
-    /// <summary>
-    /// Apply performance patches after the game is loaded.
-    /// Called from SCore.InitializePerformanceFeatures once game DLLs are available.
-    /// </summary>
-    internal static void ApplyPerformancePatches(
-        bool useOptimizedWeatherDrawing
-    )
+    internal static void ApplyGameInitializedPatches()
     {
         if (Harmony == null)
         {
@@ -1242,11 +1236,6 @@ internal static class AndroidPatcher
 
         try
         {
-            if (useOptimizedWeatherDrawing)
-            {
-                WeatherDrawOptimizationPatch.Apply(Harmony);
-            }
-
 #if SMAPI_FOR_ANDROID
             ParallelAudioLoadPatch.Apply(Harmony);
             ModDataSafeAccessPatch.Apply(Harmony);

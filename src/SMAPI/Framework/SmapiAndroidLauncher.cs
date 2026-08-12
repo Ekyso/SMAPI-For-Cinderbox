@@ -34,7 +34,6 @@ public static class SmapiAndroidLauncher
     /// <param name="enableEventProfiling">Enable profiler for mod event handlers.</param>
     /// <param name="eventProfilingThreshold">Profiler threshold in ms (default 4).</param>
     /// <param name="performanceLogging">Enable performance logging.</param>
-    /// <param name="useOptimizedWeatherDrawing">Hoist loop-invariant weather drawing calculations.</param>
     /// <param name="useRawFileCache">Cache decoded PNG and JSON data across invalidation cycles.</param>
     /// <remarks>This should be called instead of directly creating GameRunner. SMAPI creates its own SGameRunner and manages the game lifecycle.</remarks>
     public static void Launch(
@@ -52,7 +51,6 @@ public static class SmapiAndroidLauncher
         bool enableEventProfiling = false,
         int eventProfilingThreshold = 4,
         bool performanceLogging = false,
-        bool useOptimizedWeatherDrawing = false,
         bool useRawFileCache = true
     )
     {
@@ -82,7 +80,6 @@ public static class SmapiAndroidLauncher
                 enableEventProfiling,
                 eventProfilingThreshold,
                 performanceLogging,
-                useOptimizedWeatherDrawing,
                 useRawFileCache
             );
 

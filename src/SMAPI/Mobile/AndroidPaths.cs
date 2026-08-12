@@ -64,9 +64,6 @@ internal static class AndroidPaths
     /// <summary>Enable performance metrics logging.</summary>
     public static bool PerformanceLogging { get; private set; } = false;
 
-    /// <summary>Hoist loop-invariant calculations in weather drawing.</summary>
-    public static bool UseOptimizedWeatherDrawing { get; private set; } = false;
-
     /// <summary>Cache decoded PNG/JSON/OGG data across invalidation cycles.</summary>
     public static bool UseRawFileCache { get; private set; } = true;
 
@@ -120,7 +117,6 @@ internal static class AndroidPaths
         bool enableEventProfiling,
         int eventProfilingThreshold,
         bool performanceLogging,
-        bool useOptimizedWeatherDrawing,
         bool useRawFileCache
     )
     {
@@ -128,7 +124,6 @@ internal static class AndroidPaths
         EnableEventProfiling = enableEventProfiling;
         EventProfilingThreshold = eventProfilingThreshold;
         PerformanceLogging = performanceLogging;
-        UseOptimizedWeatherDrawing = useOptimizedWeatherDrawing;
         UseRawFileCache = useRawFileCache;
     }
 }
