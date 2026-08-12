@@ -182,12 +182,6 @@ internal class SCore : IDisposable
     /// <summary>The last <see cref="ProcessTicksElapsed"/> for which display events were raised.</summary>
     private readonly PerScreen<uint> LastRenderEventTick = new();
 
-    /****
-    ** Performance features
-    ****/
-    /// <summary>Whether to pool mod event args objects to reduce GC.</summary>
-    private bool _useEventArgsPooling = false;
-
     /*********
     ** Accessors
     *********/
@@ -2104,46 +2098,10 @@ internal class SCore : IDisposable
                 bool isOneSecond = SCore.TicksElapsed % 60 == 0;
                 events.UnvalidatedUpdateTicking.RaiseEmpty();
 
-                // Use object pooling for update ticking events if enabled
-                if (_useEventArgsPooling)
-                {
-                    var tickingArgs = Framework.Events.EventArgsPool.UpdateTicking.Rent();
-                    try
-                    {
-                        events.UpdateTicking.Raise(tickingArgs);
-                    }
-                    finally
-                    {
-                        Framework.Events.EventArgsPool.UpdateTicking.Return(tickingArgs);
-                    }
-                }
-                else
-                {
-                    events.UpdateTicking.RaiseEmpty();
-                }
+                events.UpdateTicking.RaiseEmpty();
 
                 if (isOneSecond)
-                {
-                    if (_useEventArgsPooling)
-                    {
-                        var oneSecondArgs =
-                            Framework.Events.EventArgsPool.OneSecondUpdateTicking.Rent();
-                        try
-                        {
-                            events.OneSecondUpdateTicking.Raise(oneSecondArgs);
-                        }
-                        finally
-                        {
-                            Framework.Events.EventArgsPool.OneSecondUpdateTicking.Return(
-                                oneSecondArgs
-                            );
-                        }
-                    }
-                    else
-                    {
-                        events.OneSecondUpdateTicking.RaiseEmpty();
-                    }
-                }
+                    events.OneSecondUpdateTicking.RaiseEmpty();
 
                 try
                 {
@@ -2165,46 +2123,10 @@ internal class SCore : IDisposable
 
                 events.UnvalidatedUpdateTicked.RaiseEmpty();
 
-                // Use object pooling for update ticked events if enabled
-                if (_useEventArgsPooling)
-                {
-                    var tickedArgs = Framework.Events.EventArgsPool.UpdateTicked.Rent();
-                    try
-                    {
-                        events.UpdateTicked.Raise(tickedArgs);
-                    }
-                    finally
-                    {
-                        Framework.Events.EventArgsPool.UpdateTicked.Return(tickedArgs);
-                    }
-                }
-                else
-                {
-                    events.UpdateTicked.RaiseEmpty();
-                }
+                events.UpdateTicked.RaiseEmpty();
 
                 if (isOneSecond)
-                {
-                    if (_useEventArgsPooling)
-                    {
-                        var oneSecondTickedArgs =
-                            Framework.Events.EventArgsPool.OneSecondUpdateTicked.Rent();
-                        try
-                        {
-                            events.OneSecondUpdateTicked.Raise(oneSecondTickedArgs);
-                        }
-                        finally
-                        {
-                            Framework.Events.EventArgsPool.OneSecondUpdateTicked.Return(
-                                oneSecondTickedArgs
-                            );
-                        }
-                    }
-                    else
-                    {
-                        events.OneSecondUpdateTicked.RaiseEmpty();
-                    }
-                }
+                    events.OneSecondUpdateTicked.RaiseEmpty();
             }
 
             /*********
@@ -2234,11 +2156,7 @@ internal class SCore : IDisposable
     {
         try
         {
-            _useEventArgsPooling = AndroidPaths.UseEventArgsPooling;
             bool performanceLogging = AndroidPaths.PerformanceLogging;
-
-            if (_useEventArgsPooling)
-                this.Monitor.Log("Object pooling enabled", LogLevel.Debug);
 
             if (performanceLogging)
             {
@@ -2257,8 +2175,6 @@ internal class SCore : IDisposable
                 $"Error initializing performance features: {ex.Message}",
                 LogLevel.Warn
             );
-            // Defaults: all features disabled for safety
-            _useEventArgsPooling = false;
         }
     }
 #endif

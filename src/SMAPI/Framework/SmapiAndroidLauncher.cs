@@ -30,7 +30,6 @@ public static class SmapiAndroidLauncher
     /// <param name="saves">Directory for save files.</param>
     /// <param name="mods">Directory for mods.</param>
     /// <param name="externalRoot">External storage root.</param>
-    /// <param name="useEventArgsPooling">Enable mod event args pooling.</param>
     /// <param name="enableEventProfiling">Enable profiler for mod event handlers.</param>
     /// <param name="eventProfilingThreshold">Profiler threshold in ms (default 4).</param>
     /// <param name="performanceLogging">Enable performance logging.</param>
@@ -47,7 +46,6 @@ public static class SmapiAndroidLauncher
         string externalRoot,
         string gameFiles = "",
         bool isMobile = false,
-        bool useEventArgsPooling = true,
         bool enableEventProfiling = false,
         int eventProfilingThreshold = 4,
         bool performanceLogging = false,
@@ -76,7 +74,6 @@ public static class SmapiAndroidLauncher
             );
 
             AndroidPaths.InitializeConfig(
-                useEventArgsPooling,
                 enableEventProfiling,
                 eventProfilingThreshold,
                 performanceLogging,
