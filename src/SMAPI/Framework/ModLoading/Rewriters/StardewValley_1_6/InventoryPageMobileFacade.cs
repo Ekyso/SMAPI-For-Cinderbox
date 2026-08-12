@@ -12,7 +12,7 @@ public class InventoryPageMobileFacade : InventoryPage, IRewriteFacade
     /*********
     ** Public methods
     *********/
-    public static bool ShouldShowJunimoNoteIcon()
+    public new static bool ShouldShowJunimoNoteIcon()
     {
         if (
             Game1.player.hasOrWillReceiveMail("canReadJunimoText")

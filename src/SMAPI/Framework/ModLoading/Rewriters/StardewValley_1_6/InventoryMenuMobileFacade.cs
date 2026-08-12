@@ -11,7 +11,7 @@ public class InventoryMenuMobileFacade : InventoryMenu, IRewriteFacade
     /*********
     ** Public methods
     *********/
-    public void SetPosition(int x, int y)
+    public new void SetPosition(int x, int y)
     {
         base.movePosition(-base.xPositionOnScreen, -base.yPositionOnScreen);
         base.movePosition(x, y);

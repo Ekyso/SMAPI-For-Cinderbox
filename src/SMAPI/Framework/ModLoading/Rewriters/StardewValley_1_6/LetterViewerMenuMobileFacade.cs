@@ -12,7 +12,7 @@ public class LetterViewerMenuMobileFacade : LetterViewerMenu, IRewriteFacade
     /*********
     ** Public methods
     *********/
-    public void OnPageChange()
+    public new void OnPageChange()
     {
         base.forwardButton.visible = base.page < base.mailMessage.Count - 1;
         base.backButton.visible = base.page > 0;

@@ -14,7 +14,7 @@ public class SocialPageMobileFacade : SocialPage, IRewriteFacade
     /*********
     ** Public methods
     *********/
-    public void drawNPCSlotHeart(
+    public new void drawNPCSlotHeart(
         SpriteBatch b,
         int npcIndex,
         SocialPage.SocialEntry entry,

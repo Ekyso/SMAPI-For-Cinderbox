@@ -109,8 +109,6 @@ internal sealed class SInputState : InputState
             SInputState.FillPressedButtons(pressedButtons, keyboard, mouse, controller);
 
             // apply overrides
-            bool hasOverrides = false;
-
             // merge persistent held buttons into one-shot set for this frame
             foreach (var key in this.PersistentPressedKeys)
                 this.CustomPressedKeys.Add(key);

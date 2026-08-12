@@ -59,7 +59,6 @@
     <PackageReference Include="Pathoschild.Http.FluentClient" />
     <PackageReference Include="Pintail" />
     <PackageReference Include="Platonymous.TMXTile" />
-    <PackageReference Include="System.Reflection.Emit" />
   </ItemGroup>
 
   <ItemGroup>

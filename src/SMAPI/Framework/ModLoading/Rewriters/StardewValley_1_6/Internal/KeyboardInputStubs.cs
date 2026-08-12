@@ -26,6 +26,15 @@ public delegate void KeyEventHandler(object? sender, KeyEventArgs e);
 /// since there's no Win32 keyboard hook - which is correct for a touch device.</summary>
 public static class KeyboardInput
 {
-    public static event KeyEventHandler? KeyDown;
-    public static event KeyEventHandler? KeyUp;
+    public static event KeyEventHandler? KeyDown
+    {
+        add { }
+        remove { }
+    }
+
+    public static event KeyEventHandler? KeyUp
+    {
+        add { }
+        remove { }
+    }
 }

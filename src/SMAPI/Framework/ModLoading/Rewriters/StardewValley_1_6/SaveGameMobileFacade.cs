@@ -86,7 +86,7 @@ public class SaveGameMobileFacade : SaveGame, IRewriteFacade
     /*********
     ** Methods
     *********/
-    public static void ensureFolderStructureExists()
+    public new static void ensureFolderStructureExists()
     {
         string path =
             SaveGame.FilterFileName(Game1.GetSaveGameName()) + "_" + Game1.uniqueIDForThisGame;

@@ -13,6 +13,11 @@ repo. It imports the other MSBuild files as needed.
     <AssemblySearchPaths>$(AssemblySearchPaths);{GAC}</AssemblySearchPaths>
     <DebugSymbols>true</DebugSymbols>
 
+    <!-- Desktop Stardew Valley requires SMAPI's .NET 6 target. -->
+    <CheckEolTargetFramework Condition="'$(TargetFramework)' == 'net6.0'"
+      >false</CheckEolTargetFramework
+    >
+
     <!--embed symbols for error stack trace line numbers on Linux/macOS: https://github.com/dotnet/runtime/issues/39987-->
     <DebugType>embedded</DebugType>
 

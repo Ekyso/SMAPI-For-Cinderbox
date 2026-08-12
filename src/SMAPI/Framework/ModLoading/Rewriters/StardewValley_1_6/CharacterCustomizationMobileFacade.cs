@@ -126,7 +126,7 @@ public class CharacterCustomizationMobileFacade : CharacterCustomization, IRewri
     /*********
     ** Methods
     *********/
-    public bool canLeaveMenu()
+    public new bool canLeaveMenu()
     {
         if (
             base.source != CharacterCustomization.Source.ClothesDye
