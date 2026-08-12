@@ -3443,7 +3443,6 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_ANDROID
         if (Mobile.AndroidPatcher.Harmony != null)
         {
-            Mobile.Patches.UnofficialModUpdateMenuPatch.Apply(Mobile.AndroidPatcher.Harmony);
         }
 #endif
 
