@@ -27,7 +27,6 @@ Runtime Harmony patches for mods that need Android-specific fixes:
 - **FashionSense** - search box and name validation for soft keyboard input
 - **Lookup Anything** - facing-tile detection when using virtual gamepad
 - **Portraiture** - HDP portrait texture caching to avoid per-frame GPU re-creation
-- **SpaceCore** - draw transpiler fix and Nullable\<Rectangle> mismatch on Mono
 - **DailyScreenshot** - screenshot path and Android file manager intent
 - **Custom Farm Loader** - save path redirection to external storage
 - **QuickSave** - options menu button integration

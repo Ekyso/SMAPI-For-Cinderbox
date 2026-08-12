@@ -3440,7 +3440,6 @@ internal class SCore : IDisposable
 #if SMAPI_FOR_ANDROID
         if (Mobile.AndroidPatcher.Harmony != null)
         {
-            Mobile.Patches.SpaceCorePatch3Fix.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.LookupAnythingPatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.FashionSensePatches.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.PortraiturePatch.Apply(Mobile.AndroidPatcher.Harmony);
