@@ -3439,13 +3439,6 @@ internal class SCore : IDisposable
         SmapiAndroidLauncher.OnAfterModsInitialized?.Invoke();
 #endif
 
-        // Apply Android mod compatibility fixes after all mods have loaded and patched
-#if SMAPI_FOR_ANDROID
-        if (Mobile.AndroidPatcher.Harmony != null)
-        {
-        }
-#endif
-
 #if SMAPI_FOR_ANDROID
         this.Monitor.Log(
             $"Memory: {Mobile.MemoryDiagnostics.Snapshot("mods loaded and ready")}",
