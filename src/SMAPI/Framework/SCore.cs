@@ -2321,9 +2321,7 @@ internal class SCore : IDisposable
                 );
             }
 
-            // Apply Harmony performance patches (sprite optimization, parallel audio)
             AndroidPatcher.ApplyPerformancePatches(
-                useOptimizedSpriteUpdates: AndroidPaths.UseOptimizedSpriteUpdates,
                 useOptimizedAnimalUpdates: AndroidPaths.UseOptimizedAnimalUpdates,
                 useOptimizedDelayedActions: AndroidPaths.UseOptimizedDelayedActions,
                 useOptimizedWeatherDrawing: AndroidPaths.UseOptimizedWeatherDrawing

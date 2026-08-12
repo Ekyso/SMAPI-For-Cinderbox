@@ -1231,7 +1231,6 @@ internal static class AndroidPatcher
     /// Called from SCore.InitializePerformanceFeatures once game DLLs are available.
     /// </summary>
     internal static void ApplyPerformancePatches(
-        bool useOptimizedSpriteUpdates,
         bool useOptimizedAnimalUpdates,
         bool useOptimizedDelayedActions,
         bool useOptimizedWeatherDrawing
@@ -1245,11 +1244,6 @@ internal static class AndroidPatcher
 
         try
         {
-            if (useOptimizedSpriteUpdates)
-            {
-                SpriteUpdateOptimizationPatch.Apply(Harmony);
-            }
-
             if (useOptimizedAnimalUpdates)
             {
                 AnimalUpdateOptimizationPatch.Apply(Harmony);

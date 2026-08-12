@@ -70,9 +70,6 @@ internal static class AndroidPaths
     /// <summary>Enable performance metrics logging.</summary>
     public static bool PerformanceLogging { get; private set; } = false;
 
-    /// <summary>Optimize sprite removal algorithm in location updates.</summary>
-    public static bool UseOptimizedSpriteUpdates { get; private set; } = true;
-
     /// <summary>Reuse cached buffer for animal updates instead of per-frame ToArray().</summary>
     public static bool UseOptimizedAnimalUpdates { get; private set; } = false;
 
@@ -137,7 +134,6 @@ internal static class AndroidPaths
         bool enableEventProfiling,
         int eventProfilingThreshold,
         bool performanceLogging,
-        bool useOptimizedSpriteUpdates,
         bool useOptimizedAnimalUpdates,
         bool useOptimizedDelayedActions,
         bool useOptimizedWeatherDrawing,
@@ -150,7 +146,6 @@ internal static class AndroidPaths
         EnableEventProfiling = enableEventProfiling;
         EventProfilingThreshold = eventProfilingThreshold;
         PerformanceLogging = performanceLogging;
-        UseOptimizedSpriteUpdates = useOptimizedSpriteUpdates;
         UseOptimizedAnimalUpdates = useOptimizedAnimalUpdates;
         UseOptimizedDelayedActions = useOptimizedDelayedActions;
         UseOptimizedWeatherDrawing = useOptimizedWeatherDrawing;
