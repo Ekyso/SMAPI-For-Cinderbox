@@ -180,6 +180,19 @@ internal class InstructionMetadata
                 .MapType("LocationWeather", typeof(LocationWeather))
                 .MapType("WaterTiles", typeof(WaterTiles))
                 .MapType("StardewValley.Game1/MusicContext", typeof(MusicContext))
+#if SMAPI_FOR_ANDROID
+                .When(
+                    isMobile,
+                    r =>
+                        r.MapType(
+                            "StardewValley.Game1/BundleType",
+                            typeof(Game1).Assembly.GetType(
+                                "StardewValley.BundleType",
+                                throwOnError: true
+                            )!
+                        )
+                )
+#endif
                 .MapType("StardewValley.ModDataDictionary", typeof(ModDataDictionary))
                 .MapType("StardewValley.ModHooks", typeof(ModHooks))
                 .MapType("StardewValley.Network.IWorldState", typeof(NetWorldState))
