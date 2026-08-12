@@ -8,16 +8,16 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
 
 - **PC mod compatibility**  
   Runs upstream PC SMAPI on Android, reporting as Linux so desktop mods use correct code paths.
-- **Android game lifecycle**  
-  MonoGame surface creation, GL context management, and render thread coordination.
+- **Android SMAPI lifecycle**
+  Launches SMAPI inside Cinderbox and coordinates game-thread work with the Android host.
 - **Async logging**  
   Background log queue to avoid blocking the game thread.
 - **Content redirection**  
   Asset paths redirected to external storage. Raw file cache persists decoded PNG/JSON data across invalidation cycles.
 - **Assembly resolution**  
   Rewrites Assembly.Location for APK-bundled assemblies. Cecil resolver stubs for metadata-only resolution.
-- **Performance patches**  
-  O(n) sprite compaction, buffered animal updates, positional delayed action removal, hoisted weather drawing, parallel OGG decoding with IMA4 disk caching, event args pooling.
+- **Parallel audio loading**
+  Decodes OGG assets concurrently with a device-scaled worker count and IMA4 disk caching.
 
 ## Project Structure
 
@@ -25,11 +25,11 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
 src/SMAPI/
   Mobile/                          # Android-specific code
     AndroidGameLoopManager.cs      # Game loop callbacks and timing
-    AndroidPatcher.cs              # Harmony setup and platform patches
+    AndroidPatcher.cs              # SMAPI environment and facade patches
     AndroidSModHooks.cs            # Main thread task scheduling
-    SmapiAndroidLauncher.cs        # Entry point for Android launch
-    Patches/                       # Per-mod compatibility patches
+    Patches/                       # Rewriter facade support and parallel audio
   Framework/
+    SmapiAndroidLauncher.cs        # Entry point used by Cinderbox
     Content/RawFileCache.cs        # Decoded file cache across invalidations
     Logging/AsyncLogQueue.cs       # Background log processing
     ModLoading/Rewriters/          # Assembly.Location rewriter
