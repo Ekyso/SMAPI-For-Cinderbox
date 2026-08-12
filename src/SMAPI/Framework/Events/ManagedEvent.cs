@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if SMAPI_FOR_ANDROID
 using System.Diagnostics;
+#endif
 using System.Linq;
 using System.Reflection;
 using StardewModdingAPI.Events;
@@ -110,6 +112,14 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
         if (!this.HasListeners)
             return;
 
+#if SMAPI_FOR_ANDROID
+        if (AndroidPaths.EnableEventProfiling)
+        {
+            this.RaiseProfiled(args, AndroidPaths.EventProfilingThreshold);
+            return;
+        }
+#endif
+
         // raise event
         foreach (ManagedEventHandler<TEventArgs> handler in this.GetHandlers())
         {
@@ -117,26 +127,7 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
 
             try
             {
-#if SMAPI_FOR_ANDROID
-                if (AndroidPaths.EnableEventProfiling)
-                {
-                    Stopwatch sw = Stopwatch.StartNew();
-                    handler.Handler(null, args);
-                    sw.Stop();
-
-                    if (sw.ElapsedMilliseconds > AndroidPaths.EventProfilingThreshold)
-                    {
-                        handler.SourceMod.LogAsMod(
-                            $"This mod's event handler '{handler.Handler.Method.Name}' for the {this.EventName} event took {sw.ElapsedMilliseconds}ms, which exceeds the {AndroidPaths.EventProfilingThreshold}ms warning threshold. This may cause performance issues or frame stutters.",
-                            LogLevel.Warn
-                        );
-                    }
-                }
-                else
-                    handler.Handler(null, args);
-#else
                 handler.Handler(null, args);
-#endif
             }
             catch (Exception ex)
             {
@@ -156,6 +147,14 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
         if (!this.HasListeners)
             return;
 
+#if SMAPI_FOR_ANDROID
+        if (AndroidPaths.EnableEventProfiling)
+        {
+            this.RaiseProfiled(invoke, AndroidPaths.EventProfilingThreshold);
+            return;
+        }
+#endif
+
         // raise event
         foreach (ManagedEventHandler<TEventArgs> handler in this.GetHandlers())
         {
@@ -163,26 +162,7 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
 
             try
             {
-#if SMAPI_FOR_ANDROID
-                if (AndroidPaths.EnableEventProfiling)
-                {
-                    Stopwatch sw = Stopwatch.StartNew();
-                    invoke(handler.SourceMod, args => handler.Handler(null, args));
-                    sw.Stop();
-
-                    if (sw.ElapsedMilliseconds > AndroidPaths.EventProfilingThreshold)
-                    {
-                        handler.SourceMod.LogAsMod(
-                            $"This mod's event handler '{handler.Handler.Method.Name}' for the {this.EventName} event took {sw.ElapsedMilliseconds}ms, which exceeds the {AndroidPaths.EventProfilingThreshold}ms warning threshold. This may cause performance issues or frame stutters.",
-                            LogLevel.Warn
-                        );
-                    }
-                }
-                else
-                    invoke(handler.SourceMod, args => handler.Handler(null, args));
-#else
                 invoke(handler.SourceMod, args => handler.Handler(null, args));
-#endif
             }
             catch (Exception ex)
             {
@@ -198,6 +178,73 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
     /*********
     ** Private methods
     *********/
+#if SMAPI_FOR_ANDROID
+    private void RaiseProfiled(TEventArgs args, int warningThreshold)
+    {
+        foreach (ManagedEventHandler<TEventArgs> handler in this.GetHandlers())
+        {
+            Context.HeuristicModsRunningCode.Push(handler.SourceMod);
+
+            try
+            {
+                long startTimestamp = Stopwatch.GetTimestamp();
+                handler.Handler(null, args);
+                this.LogSlowHandler(handler, startTimestamp, warningThreshold);
+            }
+            catch (Exception ex)
+            {
+                this.LogError(handler, ex);
+            }
+            finally
+            {
+                Context.HeuristicModsRunningCode.TryPop(out _);
+            }
+        }
+    }
+
+    private void RaiseProfiled(
+        Action<IModMetadata, Action<TEventArgs>> invoke,
+        int warningThreshold
+    )
+    {
+        foreach (ManagedEventHandler<TEventArgs> handler in this.GetHandlers())
+        {
+            Context.HeuristicModsRunningCode.Push(handler.SourceMod);
+
+            try
+            {
+                long startTimestamp = Stopwatch.GetTimestamp();
+                invoke(handler.SourceMod, args => handler.Handler(null, args));
+                this.LogSlowHandler(handler, startTimestamp, warningThreshold);
+            }
+            catch (Exception ex)
+            {
+                this.LogError(handler, ex);
+            }
+            finally
+            {
+                Context.HeuristicModsRunningCode.TryPop(out _);
+            }
+        }
+    }
+
+    private void LogSlowHandler(
+        ManagedEventHandler<TEventArgs> handler,
+        long startTimestamp,
+        int warningThreshold
+    )
+    {
+        long elapsedMilliseconds = EventProfilingTimer.GetElapsedMilliseconds(startTimestamp);
+        if (elapsedMilliseconds <= warningThreshold)
+            return;
+
+        handler.SourceMod.LogAsMod(
+            $"This mod's event handler '{handler.Handler.Method.Name}' for the {this.EventName} event took {elapsedMilliseconds}ms, which exceeds the {warningThreshold}ms warning threshold. This may cause performance issues or frame stutters.",
+            LogLevel.Warn
+        );
+    }
+#endif
+
     /// <summary>Log an exception from an event handler.</summary>
     /// <param name="handler">The event handler instance.</param>
     /// <param name="ex">The exception that was raised.</param>
