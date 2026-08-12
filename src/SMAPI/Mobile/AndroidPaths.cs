@@ -64,9 +64,6 @@ internal static class AndroidPaths
     /// <summary>Enable performance metrics logging.</summary>
     public static bool PerformanceLogging { get; private set; } = false;
 
-    /// <summary>Positional removal for delayed actions instead of Contains+Remove.</summary>
-    public static bool UseOptimizedDelayedActions { get; private set; } = false;
-
     /// <summary>Hoist loop-invariant calculations in weather drawing.</summary>
     public static bool UseOptimizedWeatherDrawing { get; private set; } = false;
 
@@ -123,7 +120,6 @@ internal static class AndroidPaths
         bool enableEventProfiling,
         int eventProfilingThreshold,
         bool performanceLogging,
-        bool useOptimizedDelayedActions,
         bool useOptimizedWeatherDrawing,
         bool useRawFileCache
     )
@@ -132,7 +128,6 @@ internal static class AndroidPaths
         EnableEventProfiling = enableEventProfiling;
         EventProfilingThreshold = eventProfilingThreshold;
         PerformanceLogging = performanceLogging;
-        UseOptimizedDelayedActions = useOptimizedDelayedActions;
         UseOptimizedWeatherDrawing = useOptimizedWeatherDrawing;
         UseRawFileCache = useRawFileCache;
     }
