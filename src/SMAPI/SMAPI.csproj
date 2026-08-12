@@ -90,7 +90,7 @@
 
   <ItemGroup>
     <PackageReference Include="SkiaSharp" />
-    <!-- NVorbis: Used for OGG audio preloading in RawFileCache (Android only) -->
+    <!-- NVorbis: Used for OGG decoding in the Android parallel audio loader. -->
     <PackageReference Include="NVorbis" Condition="'$(TargetFramework)' == 'net10.0-android'" />
     <!-- DeepCloner: Embedded in desktop SDV but missing from mobile. Mods reference Force.DeepCloner types. -->
     <PackageReference Include="DeepCloner" Condition="'$(TargetFramework)' == 'net10.0-android'" />

@@ -61,7 +61,7 @@ internal static class AndroidPaths
     /// <summary>Enable performance metrics logging.</summary>
     public static bool PerformanceLogging { get; private set; } = false;
 
-    /// <summary>Cache decoded PNG/JSON/OGG data across invalidation cycles.</summary>
+    /// <summary>Cache decoded PNG and raw JSON data across invalidation cycles.</summary>
     public static bool UseRawFileCache { get; private set; } = true;
 
     /// <summary>

@@ -87,7 +87,7 @@ internal class ContentCoordinator : IDisposable
         new();
 
 #if SMAPI_FOR_ANDROID
-    /// <summary>Shared cache for decoded PNG/JSON/OGG file data, or null if disabled.</summary>
+    /// <summary>Shared cache for decoded PNG and raw JSON file data, or null if disabled.</summary>
     internal readonly RawFileCache? RawFileCache;
 #endif
 
