@@ -52,12 +52,6 @@ internal static class AndroidPaths
     /// <summary>Directory containing patch dependencies (BCL facades, reference assemblies) for Mono.Cecil type resolution.</summary>
     public static string PatchDeps { get; private set; } = string.Empty;
 
-    /// <summary>Enable concurrent event pipeline for mod event processing.</summary>
-    public static bool UseAsyncModEvents { get; private set; } = true;
-
-    /// <summary>Number of threads for the mod event pipeline (0 = auto).</summary>
-    public static int ModEventThreads { get; private set; } = 0;
-
     /// <summary>Enable object pooling for mod event args to reduce GC pressure.</summary>
     public static bool UseEventArgsPooling { get; private set; } = true;
 
@@ -128,8 +122,6 @@ internal static class AndroidPaths
     /// Initialize performance config. Called by SmapiAndroidLauncher with values from IridiumConfig.
     /// </summary>
     public static void InitializeConfig(
-        bool useAsyncModEvents,
-        int modEventThreads,
         bool useEventArgsPooling,
         bool enableEventProfiling,
         int eventProfilingThreshold,
@@ -140,8 +132,6 @@ internal static class AndroidPaths
         bool useRawFileCache
     )
     {
-        UseAsyncModEvents = useAsyncModEvents;
-        ModEventThreads = modEventThreads;
         UseEventArgsPooling = useEventArgsPooling;
         EnableEventProfiling = enableEventProfiling;
         EventProfilingThreshold = eventProfilingThreshold;

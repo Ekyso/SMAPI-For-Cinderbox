@@ -48,7 +48,6 @@ src/SMAPI/
   Framework/
     Content/RawFileCache.cs        # Decoded file cache across invalidations
     Logging/AsyncLogQueue.cs       # Background log processing
-    Threading/EventPipeline.cs     # Background mod event processing
     ModLoading/Rewriters/          # Assembly.Location rewriter
 ```
 

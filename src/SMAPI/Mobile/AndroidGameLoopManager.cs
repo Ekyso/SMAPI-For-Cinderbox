@@ -197,9 +197,6 @@ internal static class AndroidGameLoopManager
         var log = new StringBuilder();
         log.AppendLine("[Performance Metrics]");
         log.AppendLine($"  Frame Timing: {GetMetricsSummary()}");
-        log.AppendLine(
-            $"  Event Pipeline: {StardewModdingAPI.Framework.Threading.EventPipelineMetrics.GetSummary()}"
-        );
 
         try
         {
@@ -221,7 +218,5 @@ internal static class AndroidGameLoopManager
         catch { }
 
         _performanceMonitor.Log(log.ToString().TrimEnd(), LogLevel.Info);
-
-        StardewModdingAPI.Framework.Threading.EventPipelineMetrics.Reset();
     }
 }

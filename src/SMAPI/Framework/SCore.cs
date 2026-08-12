@@ -34,7 +34,6 @@ using StardewModdingAPI.Framework.Reflection;
 using StardewModdingAPI.Framework.Rendering;
 using StardewModdingAPI.Framework.Serialization;
 using StardewModdingAPI.Framework.StateTracking.Snapshots;
-using StardewModdingAPI.Framework.Threading;
 using StardewModdingAPI.Framework.Utilities;
 using StardewModdingAPI.Integrations.GenericModConfigMenu;
 using StardewModdingAPI.Internal;
@@ -186,20 +185,8 @@ internal class SCore : IDisposable
     /****
     ** Performance features
     ****/
-    /// <summary>The event pipeline for processing mod events on background threads.</summary>
-    private EventPipeline? _eventPipeline;
-
-    /// <summary>A reusable snapshot of game state for worker threads.</summary>
-    private readonly GameStateSnapshot _gameStateSnapshot = new();
-
-    /// <summary>Whether to process mod events on background threads.</summary>
-    private bool _useAsyncModEvents;
-
     /// <summary>Whether to pool mod event args objects to reduce GC.</summary>
-    private bool _useEventArgsPooling;
-
-    /// <summary>Whether to log performance metrics periodically.</summary>
-    private bool _performanceLogging;
+    private bool _useEventArgsPooling = false;
 
     /*********
     ** Accessors
@@ -904,10 +891,6 @@ internal class SCore : IDisposable
             }
         }
 
-        // dispose performance features
-        _eventPipeline?.Dispose();
-        _eventPipeline = null;
-
         // dispose core components
         this.IsGameRunning = false;
         if (this.ExitState == ExitState.None || isError)
@@ -1384,9 +1367,6 @@ internal class SCore : IDisposable
         // Start frame timing
         StardewModdingAPI.Mobile.AndroidGameLoopManager.BeginFrame();
 #endif
-
-        // Apply results from background event processing
-        _eventPipeline?.ApplyResults(maxPerFrame: 20);
 
         try
         {
@@ -2124,21 +2104,6 @@ internal class SCore : IDisposable
                 bool isOneSecond = SCore.TicksElapsed % 60 == 0;
                 events.UnvalidatedUpdateTicking.RaiseEmpty();
 
-                // Capture game state snapshot for background workers (if async events enabled)
-                if (_useAsyncModEvents && _eventPipeline != null)
-                {
-                    _gameStateSnapshot.Capture();
-                    _eventPipeline.EnqueueEvent(
-                        new UpdateTickingEvent
-                        {
-                            TickNumber = (uint)SCore.TicksElapsed,
-                            GameTime = gameTime,
-                            Snapshot = _gameStateSnapshot,
-                            EnqueuedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp(),
-                        }
-                    );
-                }
-
                 // Use object pooling for update ticking events if enabled
                 if (_useEventArgsPooling)
                 {
@@ -2197,21 +2162,6 @@ internal class SCore : IDisposable
                 // Mark update complete for frame timing
                 StardewModdingAPI.Mobile.AndroidGameLoopManager.MarkUpdateComplete();
 #endif
-
-                // Enqueue UpdateTicked event for background metrics collection
-                if (_useAsyncModEvents && _eventPipeline != null)
-                {
-                    _gameStateSnapshot.Capture(); // Capture post-update state
-                    _eventPipeline.EnqueueEvent(
-                        new UpdateTickedEvent
-                        {
-                            TickNumber = (uint)SCore.TicksElapsed,
-                            GameTime = gameTime,
-                            Snapshot = _gameStateSnapshot,
-                            EnqueuedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp(),
-                        }
-                    );
-                }
 
                 events.UnvalidatedUpdateTicked.RaiseEmpty();
 
@@ -2284,35 +2234,13 @@ internal class SCore : IDisposable
     {
         try
         {
-            _useAsyncModEvents = AndroidPaths.UseAsyncModEvents;
             _useEventArgsPooling = AndroidPaths.UseEventArgsPooling;
-            _performanceLogging = AndroidPaths.PerformanceLogging;
-
-            if (_useAsyncModEvents)
-            {
-                int workerCount = EventPipeline.CalculateOptimalWorkerCount(
-                    AndroidPaths.ModEventThreads
-                );
-                _eventPipeline = new EventPipeline(
-                    processEvent: ProcessEventOnWorker,
-                    configuredWorkerCount: AndroidPaths.ModEventThreads
-                );
-
-                this.Monitor.Log(
-                    $"Async event pipeline enabled with {workerCount} workers "
-                        + $"(device has {EventPipeline.DeviceCoreCount} cores)",
-                    LogLevel.Debug
-                );
-            }
-            else
-            {
-                this.Monitor.Log("Async event pipeline disabled by config", LogLevel.Debug);
-            }
+            bool performanceLogging = AndroidPaths.PerformanceLogging;
 
             if (_useEventArgsPooling)
                 this.Monitor.Log("Object pooling enabled", LogLevel.Debug);
 
-            if (_performanceLogging)
+            if (performanceLogging)
             {
                 AndroidGameLoopManager.EnablePerformanceLogging(this.Monitor);
                 this.Monitor.Log(
@@ -2334,70 +2262,8 @@ internal class SCore : IDisposable
                 LogLevel.Warn
             );
             // Defaults: all features disabled for safety
-            _useAsyncModEvents = false;
             _useEventArgsPooling = false;
-            _performanceLogging = false;
         }
-    }
-
-    /// <summary>Process a game event on a worker thread.</summary>
-    /// <param name="evt">The event to process.</param>
-    private void ProcessEventOnWorker(GameEvent evt)
-    {
-        // Measure queue latency
-        long now = System.Diagnostics.Stopwatch.GetTimestamp();
-        double queueLatencyMs =
-            (now - evt.EnqueuedTimestamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
-
-        // Start processing timer
-        var processingStart = System.Diagnostics.Stopwatch.GetTimestamp();
-        string eventType = "";
-
-        // Process the event based on type
-        // Note: We intentionally do NOT raise actual mod events here because most mods
-        // aren't thread-safe. Instead, we use workers for metrics collection and
-        // pre-computing safe, read-only analysis using the snapshot.
-        switch (evt)
-        {
-            case UpdateTickingEvent e:
-                eventType = "UpdateTicking";
-                // Safe read-only operations using the snapshot
-                // Example: Check if we need to trigger any time-based actions
-                if (e.Snapshot.IsWorldReady)
-                {
-                    // Pre-compute any analysis that could help the main thread
-                    // This runs on worker thread with snapshot data
-                    _ = e.Snapshot.TimeOfDay; // Access snapshot data safely
-                }
-                break;
-
-            case UpdateTickedEvent e:
-                eventType = "UpdateTicked";
-                // Safe read-only operations using the snapshot
-                if (e.Snapshot.IsWorldReady)
-                {
-                    _ = e.Snapshot.CurrentLocationName; // Access snapshot data safely
-                }
-                break;
-        }
-
-        // Measure processing time
-        double processingTimeMs =
-            (System.Diagnostics.Stopwatch.GetTimestamp() - processingStart)
-            * 1000.0
-            / System.Diagnostics.Stopwatch.Frequency;
-
-        // Queue metrics to be recorded on main thread
-        _eventPipeline?.EnqueueResult(
-            new MetricsResult
-            {
-                ModId = "SMAPI",
-                EventType = eventType,
-                QueueLatencyMs = queueLatencyMs,
-                ProcessingTimeMs = processingTimeMs,
-                TickNumber = evt.TickNumber,
-            }
-        );
     }
 #endif
 
