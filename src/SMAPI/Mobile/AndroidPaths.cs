@@ -64,9 +64,6 @@ internal static class AndroidPaths
     /// <summary>Enable performance metrics logging.</summary>
     public static bool PerformanceLogging { get; private set; } = false;
 
-    /// <summary>Reuse cached buffer for animal updates instead of per-frame ToArray().</summary>
-    public static bool UseOptimizedAnimalUpdates { get; private set; } = false;
-
     /// <summary>Positional removal for delayed actions instead of Contains+Remove.</summary>
     public static bool UseOptimizedDelayedActions { get; private set; } = false;
 
@@ -126,7 +123,6 @@ internal static class AndroidPaths
         bool enableEventProfiling,
         int eventProfilingThreshold,
         bool performanceLogging,
-        bool useOptimizedAnimalUpdates,
         bool useOptimizedDelayedActions,
         bool useOptimizedWeatherDrawing,
         bool useRawFileCache
@@ -136,7 +132,6 @@ internal static class AndroidPaths
         EnableEventProfiling = enableEventProfiling;
         EventProfilingThreshold = eventProfilingThreshold;
         PerformanceLogging = performanceLogging;
-        UseOptimizedAnimalUpdates = useOptimizedAnimalUpdates;
         UseOptimizedDelayedActions = useOptimizedDelayedActions;
         UseOptimizedWeatherDrawing = useOptimizedWeatherDrawing;
         UseRawFileCache = useRawFileCache;

@@ -2250,7 +2250,6 @@ internal class SCore : IDisposable
             }
 
             AndroidPatcher.ApplyPerformancePatches(
-                useOptimizedAnimalUpdates: AndroidPaths.UseOptimizedAnimalUpdates,
                 useOptimizedDelayedActions: AndroidPaths.UseOptimizedDelayedActions,
                 useOptimizedWeatherDrawing: AndroidPaths.UseOptimizedWeatherDrawing
             );
