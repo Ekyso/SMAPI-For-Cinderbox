@@ -3436,6 +3436,10 @@ internal class SCore : IDisposable
         // unlock mod integrations
         this.ModRegistry.AreAllModsInitialized = true;
 
+#if SMAPI_FOR_ANDROID
+        SmapiAndroidLauncher.OnAfterModsInitialized?.Invoke();
+#endif
+
         // Apply Android mod compatibility fixes after all mods have loaded and patched
 #if SMAPI_FOR_ANDROID
         if (Mobile.AndroidPatcher.Harmony != null)
