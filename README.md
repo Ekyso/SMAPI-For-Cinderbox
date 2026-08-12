@@ -26,7 +26,6 @@ Runtime Harmony patches for mods that need Android-specific fixes:
 - **AlternativeTextures** - soft keyboard activation for search boxes
 - **FashionSense** - search box and name validation for soft keyboard input
 - **Lookup Anything** - facing-tile detection when using virtual gamepad
-- **MobilePhone** - viewport correction for UI positioning with zoom
 - **Portraiture** - HDP portrait texture caching to avoid per-frame GPU re-creation
 - **SpaceCore** - draw transpiler fix and Nullable\<Rectangle> mismatch on Mono
 - **DailyScreenshot** - screenshot path and Android file manager intent

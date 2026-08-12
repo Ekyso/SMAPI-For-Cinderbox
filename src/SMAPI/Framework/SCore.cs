@@ -3445,7 +3445,6 @@ internal class SCore : IDisposable
             Mobile.Patches.FashionSensePatches.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.PortraiturePatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.CustomFarmLoaderPatch.Apply(Mobile.AndroidPatcher.Harmony);
-            Mobile.Patches.MobilePhonePatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.QuickSavePatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.UnofficialModUpdateMenuPatch.Apply(Mobile.AndroidPatcher.Harmony);
             Mobile.Patches.DailyScreenshotPatch.Apply(Mobile.AndroidPatcher.Harmony);
