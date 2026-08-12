@@ -1,6 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -24,54 +22,25 @@ internal static class AndroidGameLoopManager
     static Queue<OnGameUpdatingDelegate> queueOnGameUpdatingToAdd = new();
     static Queue<OnGameUpdatingDelegate> queueOnGameUpdatingToRemove = new();
 
-    // Frame timing infrastructure
-    private static readonly Stopwatch _frameTimer = new();
-    private static double _lastUpdateMs;
-    private static double _lastRenderMs;
-    private static readonly Queue<double> _recentFrameTimes = new(60);
-
-    private const double TargetFrameMs = 16.67; // 60fps
-    private const double UpdateBudgetMs = 10.0;
-
-    /// <summary>Average frame time in milliseconds over the last 60 frames.</summary>
-    public static double AverageFrameMs =>
-        _recentFrameTimes.Count > 0 ? _recentFrameTimes.Average() : 0;
-
-    /// <summary>Last update phase duration in milliseconds.</summary>
-    public static double LastUpdateMs => _lastUpdateMs;
-
-    /// <summary>Last render phase duration in milliseconds.</summary>
-    public static double LastRenderMs => _lastRenderMs;
-
-    /// <summary>True if the last update exceeded the budget.</summary>
-    public static bool IsOverBudget => _lastUpdateMs > UpdateBudgetMs;
+    private static PerformanceMetricsSession? _performanceMetrics;
 
     /// <summary>Begin timing a new frame.</summary>
     internal static void BeginFrame()
     {
-        _frameTimer.Restart();
+        _performanceMetrics?.BeginFrame();
     }
 
     /// <summary>Mark the update phase as complete and record timing.</summary>
     internal static void MarkUpdateComplete()
     {
-        _lastUpdateMs = _frameTimer.Elapsed.TotalMilliseconds;
+        _performanceMetrics?.MarkUpdateComplete();
     }
 
-    /// <summary>Mark the render phase as complete and record timing.</summary>
-    internal static void MarkRenderComplete()
+    /// <summary>Mark the complete frame and record its total duration.</summary>
+    internal static void MarkFrameComplete()
     {
-        _lastRenderMs = _frameTimer.Elapsed.TotalMilliseconds;
-        _recentFrameTimes.Enqueue(_lastRenderMs);
-        while (_recentFrameTimes.Count > 60)
-            _recentFrameTimes.Dequeue();
-
-        TryLogPerformanceMetrics();
+        _performanceMetrics?.MarkFrameComplete();
     }
-
-    /// <summary>Get a summary of frame timing metrics.</summary>
-    internal static string GetMetricsSummary() =>
-        $"Update: {_lastUpdateMs:F1}ms, Render: {_lastRenderMs:F1}ms, Avg: {AverageFrameMs:F1}ms";
 
     /// <summary>Register a callback to run during game updates. Must be called from the main thread.</summary>
     internal static void RegisterOnGameUpdating(OnGameUpdatingDelegate onGameUpdate)
@@ -140,83 +109,87 @@ internal static class AndroidGameLoopManager
         }
     }
 
-    static Stopwatch TimerLogMemory = Stopwatch.StartNew();
-
-    private static void PrintMemory()
-    {
-        const int refreshTime = 1000;
-        if (TimerLogMemory.Elapsed.TotalMilliseconds < refreshTime)
-            return;
-
-        TimerLogMemory.Restart();
-
-        var mainActivity = SMAPIActivityTool.MainActivity;
-        ActivityManager? activityManager =
-            mainActivity!.GetSystemService(Service.ActivityService) as ActivityManager;
-        var memoryInfo = new ActivityManager.MemoryInfo();
-        activityManager!.GetMemoryInfo(memoryInfo);
-
-        StringBuilder log = new();
-        log.AppendLine(" Log Mem Info (Android):");
-        log.AppendLine($"Total Mem: {memoryInfo.TotalMem.KbToMB():F3} MB");
-        log.AppendLine($"Available  Mem: {memoryInfo.AvailMem.KbToMB():F3} MB");
-        log.AppendLine($"Is Low Mem: {memoryInfo.LowMemory}");
-        var monitor = SCore.Instance?.SMAPIMonitor;
-        if (monitor != null)
-            monitor.Log(log.ToString(), LogLevel.Trace);
-    }
-
     static float KbToMB(this long val) => (float)val / (1024f * 1024f);
-
-    // Performance logging infrastructure
-    private static bool _performanceLoggingEnabled;
-    private static IMonitor? _performanceMonitor;
-    private static readonly Stopwatch _performanceLogTimer = new();
-    private const double PerformanceLogIntervalMs = 60000; // 60 seconds
 
     /// <summary>Enable periodic performance metrics logging.</summary>
     /// <param name="monitor">The monitor to log to.</param>
     internal static void EnablePerformanceLogging(IMonitor monitor)
     {
-        _performanceLoggingEnabled = true;
-        _performanceMonitor = monitor;
-        _performanceLogTimer.Restart();
+        _performanceMetrics = new PerformanceMetricsSession(monitor);
     }
 
-    /// <summary>Log performance metrics if enabled and interval has elapsed.</summary>
-    internal static void TryLogPerformanceMetrics()
+    private sealed class PerformanceMetricsSession
     {
-        if (!_performanceLoggingEnabled || _performanceMonitor == null)
-            return;
+        private const int FrameWindowSize = 60;
+        private const double LogIntervalMilliseconds = 60000;
 
-        if (_performanceLogTimer.Elapsed.TotalMilliseconds < PerformanceLogIntervalMs)
-            return;
+        private readonly IMonitor _monitor;
+        private readonly Stopwatch _frameTimer = new();
+        private readonly Stopwatch _logTimer = Stopwatch.StartNew();
+        private readonly Queue<double> _recentFrameTimes = new(FrameWindowSize);
+        private double _lastUpdateMilliseconds;
+        private double _lastFrameMilliseconds;
 
-        _performanceLogTimer.Restart();
-
-        var log = new StringBuilder();
-        log.AppendLine("[Performance Metrics]");
-        log.AppendLine($"  Frame Timing: {GetMetricsSummary()}");
-
-        try
+        public PerformanceMetricsSession(IMonitor monitor)
         {
-            var mainActivity = SMAPIActivityTool.MainActivity;
-            if (mainActivity != null)
+            _monitor = monitor;
+        }
+
+        public void BeginFrame()
+        {
+            _frameTimer.Restart();
+        }
+
+        public void MarkUpdateComplete()
+        {
+            _lastUpdateMilliseconds = _frameTimer.Elapsed.TotalMilliseconds;
+        }
+
+        public void MarkFrameComplete()
+        {
+            _lastFrameMilliseconds = _frameTimer.Elapsed.TotalMilliseconds;
+            _recentFrameTimes.Enqueue(_lastFrameMilliseconds);
+            while (_recentFrameTimes.Count > FrameWindowSize)
+                _recentFrameTimes.Dequeue();
+
+            TryLog();
+        }
+
+        private void TryLog()
+        {
+            if (_logTimer.Elapsed.TotalMilliseconds < LogIntervalMilliseconds)
+                return;
+
+            _logTimer.Restart();
+
+            double averageFrameMilliseconds =
+                _recentFrameTimes.Count > 0 ? _recentFrameTimes.Average() : 0;
+            var log = new StringBuilder();
+            log.AppendLine("[Performance Metrics]");
+            log.AppendLine(
+                $"  Frame Timing: Update: {_lastUpdateMilliseconds:F1}ms, Frame: {_lastFrameMilliseconds:F1}ms, Avg frame: {averageFrameMilliseconds:F1}ms"
+            );
+
+            try
             {
-                ActivityManager? activityManager =
-                    mainActivity.GetSystemService(Service.ActivityService) as ActivityManager;
-                if (activityManager != null)
+                var mainActivity = SMAPIActivityTool.MainActivity;
+                if (mainActivity != null)
                 {
-                    var memoryInfo = new ActivityManager.MemoryInfo();
-                    activityManager.GetMemoryInfo(memoryInfo);
-                    log.AppendLine(
-                        $"  Memory: {memoryInfo.AvailMem.KbToMB():F1}MB available / {memoryInfo.TotalMem.KbToMB():F1}MB total{(memoryInfo.LowMemory ? " [LOW]" : "")}"
-                    );
+                    ActivityManager? activityManager =
+                        mainActivity.GetSystemService(Service.ActivityService) as ActivityManager;
+                    if (activityManager != null)
+                    {
+                        var memoryInfo = new ActivityManager.MemoryInfo();
+                        activityManager.GetMemoryInfo(memoryInfo);
+                        log.AppendLine(
+                            $"  Memory: {memoryInfo.AvailMem.KbToMB():F1}MB available / {memoryInfo.TotalMem.KbToMB():F1}MB total{(memoryInfo.LowMemory ? " [LOW]" : "")}"
+                        );
+                    }
                 }
             }
-        }
-        catch { }
+            catch { }
 
-        _performanceMonitor.Log(log.ToString().TrimEnd(), LogLevel.Info);
+            _monitor.Log(log.ToString().TrimEnd(), LogLevel.Info);
+        }
     }
 }

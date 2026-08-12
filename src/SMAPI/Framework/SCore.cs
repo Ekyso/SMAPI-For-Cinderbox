@@ -2366,8 +2366,8 @@ internal class SCore : IDisposable
 #endif
 
 #if SMAPI_FOR_ANDROID
-        // Mark render complete for frame timing metrics
-        AndroidGameLoopManager.MarkRenderComplete();
+        // Mark the complete frame for timing metrics.
+        AndroidGameLoopManager.MarkFrameComplete();
 #endif
     }
 
