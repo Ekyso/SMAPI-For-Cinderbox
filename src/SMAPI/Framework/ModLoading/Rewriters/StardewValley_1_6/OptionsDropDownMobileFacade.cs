@@ -42,7 +42,7 @@ public class OptionsDropDownMobileFacade : OptionsDropDown, IRewriteFacade
 
         if (isExpanded)
         {
-            IClickableMenu.drawTextureBox(
+            IClickableMenuMobileFacade.drawTextureBox(
                 b,
                 Game1.mouseCursors,
                 dropDownBGSource,
@@ -107,7 +107,7 @@ public class OptionsDropDownMobileFacade : OptionsDropDown, IRewriteFacade
         }
         else
         {
-            IClickableMenu.drawTextureBox(
+            IClickableMenuMobileFacade.drawTextureBox(
                 b,
                 Game1.mouseCursors,
                 dropDownBGSource,

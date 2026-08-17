@@ -108,7 +108,9 @@ internal static class LowLevelEnvironmentUtility
     private static bool IsRunningAndroid()
     {
 #if SMAPI_FOR_ANDROID
-        return false; // report as Linux so PC mods work correctly
+        // Preserve the Linux compatibility identity used by toolkit callers in desktop-game
+        // mode. The Android launcher resolves the selected game's public platform separately.
+        return false;
 #else
         using Process process = new()
         {

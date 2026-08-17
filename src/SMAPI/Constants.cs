@@ -52,9 +52,18 @@ internal static class EarlyConstants
     );
 #endif
 
-    /// <summary>The target game platform.</summary>
-    internal static GamePlatform Platform { get; } =
-        (GamePlatform)Enum.Parse(typeof(GamePlatform), LowLevelEnvironmentUtility.DetectPlatform());
+    /// <summary>The platform detected from the host environment.</summary>
+    private static readonly GamePlatform DetectedPlatform = (GamePlatform)Enum.Parse(
+        typeof(GamePlatform),
+        LowLevelEnvironmentUtility.DetectPlatform()
+    );
+
+    /// <summary>The target game platform exposed to mods.</summary>
+    internal static GamePlatform Platform => EarlyConstants.GetPlatformIdentity().TargetPlatform;
+
+    /// <summary>The platform identity used when applying cross-platform compatibility rewrites to mods.</summary>
+    internal static GamePlatform ModCompatibilityPlatform =>
+        EarlyConstants.GetPlatformIdentity().ModCompatibilityPlatform;
 
     /// <summary>The game framework running the game.</summary>
     internal static GameFramework GameFramework { get; } = GameFramework.MonoGame;
@@ -74,6 +83,28 @@ internal static class EarlyConstants
 
     /// <summary>SMAPI's current raw semantic version.</summary>
     internal static string RawApiVersion = "4.5.2.5";
+
+    /*********
+    ** Private methods
+    *********/
+    /// <summary>Resolve the active-game and mod-compatibility platform identities.</summary>
+    private static GamePlatformIdentity GetPlatformIdentity()
+    {
+#if SMAPI_FOR_ANDROID
+        AndroidPaths.ThrowIfNotInitialized();
+        return GamePlatformIdentity.Resolve(
+            EarlyConstants.DetectedPlatform,
+            usesAndroidLauncher: true,
+            isMobileGame: AndroidPaths.IsMobile
+        );
+#else
+        return GamePlatformIdentity.Resolve(
+            EarlyConstants.DetectedPlatform,
+            usesAndroidLauncher: false,
+            isMobileGame: false
+        );
+#endif
+    }
 }
 
 /// <summary>Contains SMAPI's constants and assumptions.</summary>
@@ -99,7 +130,7 @@ public static class Constants
     public static ISemanticVersion? MaximumGameVersion { get; } = null;
 
     /// <summary>The target game platform.</summary>
-    public static GamePlatform TargetPlatform { get; } = EarlyConstants.Platform;
+    public static GamePlatform TargetPlatform => EarlyConstants.Platform;
 
     /// <summary>The game framework running the game.</summary>
     public static GameFramework GameFramework { get; } = EarlyConstants.GameFramework;
@@ -230,7 +261,11 @@ public static class Constants
     internal static ISemanticVersion GameVersion { get; } = new GameVersion(Game1.version);
 
     /// <summary>The target game platform as a SMAPI toolkit constant.</summary>
-    internal static Platform Platform { get; } = (Platform)Constants.TargetPlatform;
+    internal static Platform Platform => (Platform)Constants.TargetPlatform;
+
+    /// <summary>The platform identity used when applying cross-platform compatibility rewrites to mods.</summary>
+    internal static Platform ModCompatibilityPlatform =>
+        (Platform)EarlyConstants.ModCompatibilityPlatform;
 
     /*********
     ** Internal methods

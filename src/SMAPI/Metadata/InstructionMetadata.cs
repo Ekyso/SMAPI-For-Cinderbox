@@ -65,10 +65,12 @@ internal class InstructionMetadata
     /// <param name="paranoidMode">Whether to detect paranoid mode issues.</param>
     /// <param name="rewriteMods">Whether to get handlers which rewrite mods for compatibility.</param>
     /// <param name="logTechnicalDetailsForBrokenMods">Whether to include more technical details about broken mods in the TRACE logs. This is mainly useful for creating compatibility rewriters.</param>
+    /// <param name="activeGameIsMobile">The active game mode, or <c>null</c> to infer it from <see cref="Constants.TargetPlatform"/>.</param>
     public IEnumerable<IInstructionHandler> GetHandlers(
         bool paranoidMode,
         bool rewriteMods,
-        bool logTechnicalDetailsForBrokenMods
+        bool logTechnicalDetailsForBrokenMods,
+        bool? activeGameIsMobile = null
     )
     {
         /****
@@ -77,11 +79,8 @@ internal class InstructionMetadata
         // rewrite for crossplatform compatibility
         if (rewriteMods)
         {
-#if SMAPI_FOR_ANDROID
-            bool isMobile = Mobile.AndroidPaths.IsInitialized && Mobile.AndroidPaths.IsMobile;
-#else
-            bool isMobile = false;
-#endif
+            bool isMobile =
+                activeGameIsMobile ?? Constants.TargetPlatform == GamePlatform.Android;
 
             // specific versions
             yield return new ReplaceReferencesRewriter()
@@ -272,7 +271,7 @@ internal class InstructionMetadata
                 .MapFacade<Hat, HatFacade>()
                 .MapFacade<HoeDirt, HoeDirtFacade>()
                 .MapFacade<HUDMessage, HudMessageFacade>()
-                .MapFacade<IClickableMenu, IClickableMenuFacade>()
+                .When(!isMobile, r => r.MapFacade<IClickableMenu, IClickableMenuFacade>())
                 .When(isMobile, r => r.MapFacade<IClickableMenu, IClickableMenuMobileFacade>())
                 .When(
                     isMobile,
@@ -358,22 +357,26 @@ internal class InstructionMetadata
                             .MapMethod(
                                 "System.Void StardewValley.Menus.ShopMenu::UseNoTabs()",
                                 typeof(ShopMenuMobileFacade),
-                                nameof(ShopMenuMobileFacade.UseNoTabs)
+                                nameof(ShopMenuMobileFacade.UseNoTabs),
+                                [typeof(ShopMenu)]
                             )
                             .MapMethod(
                                 "System.Void StardewValley.Menus.ShopMenu::UseCatalogueTabs()",
                                 typeof(ShopMenuMobileFacade),
-                                nameof(ShopMenuMobileFacade.UseCatalogueTabs)
+                                nameof(ShopMenuMobileFacade.UseCatalogueTabs),
+                                [typeof(ShopMenu)]
                             )
                             .MapMethod(
                                 "System.Void StardewValley.Menus.ShopMenu::UseFurnitureCatalogueTabs()",
                                 typeof(ShopMenuMobileFacade),
-                                nameof(ShopMenuMobileFacade.UseFurnitureCatalogueTabs)
+                                nameof(ShopMenuMobileFacade.UseFurnitureCatalogueTabs),
+                                [typeof(ShopMenu)]
                             )
                             .MapMethod(
                                 "System.Void StardewValley.Menus.ShopMenu::UseDresserTabs()",
                                 typeof(ShopMenuMobileFacade),
-                                nameof(ShopMenuMobileFacade.UseDresserTabs)
+                                nameof(ShopMenuMobileFacade.UseDresserTabs),
+                                [typeof(ShopMenu)]
                             )
                 )
                 .MapFacade<Sign, SignFacade>()

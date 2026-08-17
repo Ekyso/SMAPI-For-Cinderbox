@@ -56,13 +56,13 @@ internal class AssemblyLoader : IDisposable
     ** Public methods
     *********/
     /// <summary>Construct an instance.</summary>
-    /// <param name="targetPlatform">The current game platform.</param>
+    /// <param name="modCompatibilityPlatform">The platform identity to use for cross-platform mod compatibility.</param>
     /// <param name="monitor">Encapsulates monitoring and logging.</param>
     /// <param name="paranoidMode">Whether to detect paranoid mode issues.</param>
     /// <param name="rewriteMods">Whether to rewrite mods for compatibility.</param>
     /// <param name="logTechnicalDetailsForBrokenMods">Whether to include more technical details about broken mods in the TRACE logs. This is mainly useful for creating compatibility rewriters.</param>
     public AssemblyLoader(
-        Platform targetPlatform,
+        Platform modCompatibilityPlatform,
         IMonitor monitor,
         bool paranoidMode,
         bool rewriteMods,
@@ -72,7 +72,9 @@ internal class AssemblyLoader : IDisposable
         this.Monitor = monitor;
         this.RewriteMods = rewriteMods;
         this.LogTechnicalDetailsForBrokenMods = logTechnicalDetailsForBrokenMods;
-        this.AssemblyMap = this.TrackForDisposal(Constants.GetAssemblyMap(targetPlatform));
+        this.AssemblyMap = this.TrackForDisposal(
+            Constants.GetAssemblyMap(modCompatibilityPlatform)
+        );
 
         // init resolver
         this.AssemblyDefinitionResolver = this.TrackForDisposal(new AssemblyDefinitionResolver());

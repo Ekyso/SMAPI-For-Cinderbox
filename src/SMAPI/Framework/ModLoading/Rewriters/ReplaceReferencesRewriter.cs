@@ -501,10 +501,32 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
                     toMethod = newMethod;
                 }
 
+                // An instance method-group or constrained interface call has a different stack
+                // contract from the static helper facades used by some mappings. Leave those
+                // unresolved instead of emitting invalid IL; they need a dedicated, proven
+                // transform if a concrete mod requires them.
+                bool mapsInstanceToStatic =
+                    toMethod.IsStatic && fromMember is MethodReference { HasThis: true };
+                if (
+                    mapsInstanceToStatic
+                    && (
+                        instruction.OpCode == OpCodes.Ldvirtftn
+                        || (
+                            instruction.OpCode == OpCodes.Callvirt
+                            && instruction.Previous?.OpCode == OpCodes.Constrained
+                        )
+                    )
+                )
+                {
+                    return false;
+                }
+
                 // rewrite
                 instruction.Operand = module.ImportReference(toMethod);
 
                 if (instruction.OpCode == OpCodes.Newobj) // rewriting constructor to static method
+                    instruction.OpCode = OpCodes.Call;
+                else if (instruction.OpCode == OpCodes.Callvirt && toMethod.IsStatic)
                     instruction.OpCode = OpCodes.Call;
 
                 return this.OnRewritten(fromMember, "method");

@@ -66,6 +66,8 @@ public static class SmapiAndroidLauncher
 
         try
         {
+            // Initialize the active game mode before any deferred Constants access. The mode
+            // determines whether mods see Android (mobile game) or Linux (desktop game).
             AndroidPaths.Initialize(
                 gameDlls,
                 patchDeps,
