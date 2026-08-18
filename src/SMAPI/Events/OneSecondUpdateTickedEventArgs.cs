@@ -10,7 +10,12 @@ public class OneSecondUpdateTickedEventArgs : EventArgs
     ** Accessors
     *********/
     /// <summary>The number of ticks elapsed since the game started, including the current tick.</summary>
-    public uint Ticks => SCore.TicksElapsed;
+    public uint Ticks =>
+#if SMAPI_FOR_ANDROID
+        SCore.PublicLifecycleTicksElapsed;
+#else
+        SCore.TicksElapsed;
+#endif
 
 
     /*********

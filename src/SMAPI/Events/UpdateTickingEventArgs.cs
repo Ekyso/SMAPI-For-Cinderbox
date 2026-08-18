@@ -10,7 +10,12 @@ public class UpdateTickingEventArgs : EventArgs
     ** Accessors
     *********/
     /// <summary>The number of ticks elapsed since the game started, excluding the upcoming tick.</summary>
-    public uint Ticks => SCore.TicksElapsed;
+    public uint Ticks =>
+#if SMAPI_FOR_ANDROID
+        SCore.PublicLifecycleTicksElapsed;
+#else
+        SCore.TicksElapsed;
+#endif
 
     /// <summary>Whether <see cref="Ticks"/> is a multiple of 60, which happens approximately once per second.</summary>
     public bool IsOneSecond => this.Ticks % 60 == 0;

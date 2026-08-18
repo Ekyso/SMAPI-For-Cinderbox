@@ -196,6 +196,18 @@ internal class SCore : IDisposable
     /// <summary>The number of game update ticks which have already executed. This is similar to <see cref="Game1.ticks"/>, but incremented more consistently for every tick.</summary>
     internal static uint TicksElapsed { get; private set; }
 
+#if SMAPI_FOR_ANDROID
+    /// <summary>The internal tick on which Android started exposing public lifecycle events to mods.</summary>
+    private static uint FirstPublicLifecycleTick;
+
+    /// <summary>The number of public lifecycle ticks elapsed since Android finished initializing mods.</summary>
+    internal static uint PublicLifecycleTicksElapsed =>
+        AndroidLifecycleEventGate.GetPublicTicks(
+            SCore.TicksElapsed,
+            SCore.FirstPublicLifecycleTick
+        );
+#endif
+
     /// <summary>A specialized form of <see cref="TicksElapsed"/> which is incremented each time SMAPI performs a processing tick (whether that's a game update, one wait cycle while synchronizing code, etc).</summary>
     internal static uint ProcessTicksElapsed { get; private set; }
 
@@ -2000,14 +2012,39 @@ internal class SCore : IDisposable
                 /*********
                 ** Game update
                 *********/
-                // game launched (not raised for secondary players in split-screen mode)
-                if (instance.IsFirstTick && !Context.IsGameLaunched)
+#if SMAPI_FOR_ANDROID
+                // Keep internal Android startup timing tied to the first base-game tick. The
+                // public lifecycle below may need to wait until mod entry points finish.
+                if (instance.IsFirstTick)
                 {
+                    SCore.GameInitializedEvent?.Set();
+                    this.InitializePerformanceFeatures();
+                }
+#endif
+
+                // game launched (not raised for secondary players in split-screen mode)
+#if SMAPI_FOR_ANDROID
+                // Android starts its render loop before the callback which loads mods. Since that
+                // callback runs inside the base update, the first tick can otherwise raise
+                // GameLaunched and UpdateTicking before any mod has subscribed, then raise
+                // UpdateTicked immediately after mod entry points finish. Wait for mod loading
+                // to complete, then raise the event at the start of the next update tick.
+                if (
+                    AndroidLifecycleEventGate.CanRaiseGameLaunched(
+                        Context.IsGameLaunched,
+                        this.ModRegistry.AreAllModsInitialized
+                    )
+                )
+#else
+                if (instance.IsFirstTick && !Context.IsGameLaunched)
+#endif
+                {
+#if SMAPI_FOR_ANDROID
+                    SCore.FirstPublicLifecycleTick = SCore.TicksElapsed;
+#endif
                     Context.IsGameLaunched = true;
 #if SMAPI_FOR_ANDROID
-                    SCore.GameInitializedEvent?.Set();
                     SCore.IsCountingLoadErrors = false;
-                    this.InitializePerformanceFeatures();
 #endif
 
                     if (events.GameLaunched.HasListeners)
@@ -2095,12 +2132,27 @@ internal class SCore : IDisposable
             ** Game update tick
             *********/
             {
+#if SMAPI_FOR_ANDROID
+                bool isOneSecond = SCore.PublicLifecycleTicksElapsed % 60 == 0;
+                // See the GameLaunched check above. Don't expose a partial lifecycle tick to
+                // mods when their entry points finish during runUpdate().
+                bool canRaiseModLifecycleEvents =
+                    AndroidLifecycleEventGate.CanRaisePublicUpdateEvents(Context.IsGameLaunched);
+#else
                 bool isOneSecond = SCore.TicksElapsed % 60 == 0;
+#endif
                 events.UnvalidatedUpdateTicking.RaiseEmpty();
 
+#if SMAPI_FOR_ANDROID
+                if (canRaiseModLifecycleEvents)
+#endif
                 events.UpdateTicking.RaiseEmpty();
 
+#if SMAPI_FOR_ANDROID
+                if (canRaiseModLifecycleEvents && isOneSecond)
+#else
                 if (isOneSecond)
+#endif
                     events.OneSecondUpdateTicking.RaiseEmpty();
 
                 try
@@ -2123,9 +2175,16 @@ internal class SCore : IDisposable
 
                 events.UnvalidatedUpdateTicked.RaiseEmpty();
 
+#if SMAPI_FOR_ANDROID
+                if (canRaiseModLifecycleEvents)
+#endif
                 events.UpdateTicked.RaiseEmpty();
 
+#if SMAPI_FOR_ANDROID
+                if (canRaiseModLifecycleEvents && isOneSecond)
+#else
                 if (isOneSecond)
+#endif
                     events.OneSecondUpdateTicked.RaiseEmpty();
             }
 
@@ -3224,7 +3283,7 @@ internal class SCore : IDisposable
         List<IModMetadata> skippedMods = [];
         using (
             AssemblyLoader modAssemblyLoader = new(
-                Constants.Platform,
+                Constants.ModCompatibilityPlatform,
                 this.Monitor,
                 this.Settings.ParanoidWarnings,
                 this.Settings.RewriteMods,
