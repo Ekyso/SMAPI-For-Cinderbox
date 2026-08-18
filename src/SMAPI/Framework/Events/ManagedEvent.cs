@@ -239,7 +239,14 @@ internal class ManagedEvent<TEventArgs> : IManagedEvent
             return;
 
         handler.SourceMod.LogAsMod(
-            $"This mod's event handler '{handler.Handler.Method.Name}' for the {this.EventName} event took {elapsedMilliseconds}ms, which exceeds the {warningThreshold}ms warning threshold. This may cause performance issues or frame stutters.",
+            EventProfilingWarningFormatter.Format(
+                handler.SourceMod.DisplayName,
+                handler.SourceMod.Manifest.UniqueID,
+                handler.Handler.Method,
+                this.EventName,
+                elapsedMilliseconds,
+                warningThreshold
+            ),
             LogLevel.Warn
         );
     }
