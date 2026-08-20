@@ -137,6 +137,12 @@ internal class SCore : IDisposable
 
     /// <summary>Event signaled when the game finishes initializing.</summary>
     private static ManualResetEventSlim? GameInitializedEvent;
+
+    /// <summary>The mobile game's completion flag for its incremental initial content load.</summary>
+    private static readonly FieldInfo? FinishedIncrementalLoadField = typeof(Game1).GetField(
+        "FinishedIncrementalLoad",
+        BindingFlags.NonPublic | BindingFlags.Static
+    );
 #endif
 
     /****
@@ -2022,12 +2028,14 @@ internal class SCore : IDisposable
                 // Android starts its render loop before the callback which loads mods. Since that
                 // callback runs inside the base update, the first tick can otherwise raise
                 // GameLaunched and UpdateTicking before any mod has subscribed, then raise
-                // UpdateTicked immediately after mod entry points finish. Wait for mod loading
-                // to complete, then raise the event at the start of the next update tick.
+                // UpdateTicked immediately after mod entry points finish. The mobile game also
+                // loads content incrementally, so its temporary player doesn't exist until that
+                // process completes. Wait for both before exposing the public lifecycle.
                 if (
                     AndroidLifecycleEventGate.CanRaiseGameLaunched(
                         Context.IsGameLaunched,
-                        this.ModRegistry.AreAllModsInitialized
+                        this.ModRegistry.AreAllModsInitialized,
+                        SCore.IsInitialContentLoaded()
                     )
                 )
 #else
@@ -2203,6 +2211,22 @@ internal class SCore : IDisposable
                 );
         }
     }
+
+#if SMAPI_FOR_ANDROID
+    /// <summary>Whether the active game finished the initial content load required by public mod lifecycle events.</summary>
+    private static bool IsInitialContentLoaded()
+    {
+        bool? finishedIncrementalLoad =
+            SCore.FinishedIncrementalLoadField?.GetValue(null) is bool isFinished
+                ? isFinished
+                : null;
+        return AndroidLifecycleEventGate.IsInitialContentLoaded(
+            Constants.TargetPlatform,
+            finishedIncrementalLoad,
+            Game1.player?.team != null
+        );
+    }
+#endif
 
 #if SMAPI_FOR_ANDROID
     /// <summary>Initialize performance features based on AndroidPaths config.</summary>
