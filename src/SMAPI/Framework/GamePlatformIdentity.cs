@@ -19,9 +19,10 @@ internal readonly record struct GamePlatformIdentity(
         if (!usesAndroidLauncher)
             return new(detectedPlatform, detectedPlatform);
 
-        return new(
-            TargetPlatform: isMobileGame ? GamePlatform.Android : GamePlatform.Linux,
-            ModCompatibilityPlatform: GamePlatform.Linux
-        );
+        GamePlatform activeGamePlatform = isMobileGame
+            ? GamePlatform.Android
+            : GamePlatform.Linux;
+
+        return new(activeGamePlatform, activeGamePlatform);
     }
 }

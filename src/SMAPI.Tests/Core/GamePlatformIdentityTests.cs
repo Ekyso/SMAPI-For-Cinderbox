@@ -12,7 +12,7 @@ internal class GamePlatformIdentityTests
     [TestCase(true, GamePlatform.Android)]
     public void Resolve_UsesActiveGameForAndroidLaunches(
         bool isMobileGame,
-        GamePlatform expectedTargetPlatform
+        GamePlatform expectedPlatform
     )
     {
         GamePlatformIdentity identity = GamePlatformIdentity.Resolve(
@@ -21,8 +21,8 @@ internal class GamePlatformIdentityTests
             isMobileGame: isMobileGame
         );
 
-        identity.TargetPlatform.Should().Be(expectedTargetPlatform);
-        identity.ModCompatibilityPlatform.Should().Be(GamePlatform.Linux);
+        identity.TargetPlatform.Should().Be(expectedPlatform);
+        identity.ModCompatibilityPlatform.Should().Be(expectedPlatform);
     }
 
     [TestCase(GamePlatform.Linux)]

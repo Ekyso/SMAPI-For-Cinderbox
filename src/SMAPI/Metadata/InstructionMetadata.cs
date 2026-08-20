@@ -82,6 +82,13 @@ internal class InstructionMetadata
             bool isMobile =
                 activeGameIsMobile ?? Constants.TargetPlatform == GamePlatform.Android;
 
+#if SMAPI_FOR_ANDROID
+            // Keep the Android host identity private to Cinderbox. Mods should observe the
+            // selected desktop/mobile game platform instead of the process host platform.
+            yield return new OperatingSystemRewriter();
+            yield return new ConsoleColorRewriter();
+#endif
+
             // specific versions
             yield return new ReplaceReferencesRewriter()
                 /****
