@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using Microsoft.Xna.Framework;
 using StardewModdingAPI.Framework.Input;
 using StardewModdingAPI.Framework.StateTracking;
@@ -56,8 +55,8 @@ internal class WatcherCore
     *********/
     /// <summary>Construct an instance.</summary>
     /// <param name="inputState">Manages input visible to the game.</param>
-    /// <param name="gameLocations">The observable list of game locations.</param>
-    public WatcherCore(SInputState inputState, ObservableCollection<GameLocation> gameLocations)
+    /// <param name="gameLocations">The live list of game locations.</param>
+    public WatcherCore(SInputState inputState, ICollection<GameLocation> gameLocations)
     {
         // init watchers
         this.CursorWatcher = WatcherFactory.ForEquatable(nameof(inputState.CursorPosition), () => inputState.CursorPosition);

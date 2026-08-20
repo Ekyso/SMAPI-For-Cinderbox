@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using StardewModdingAPI.Framework.StateTracking.Comparers;
 using StardewModdingAPI.Framework.StateTracking.FieldWatchers;
 using StardewValley;
@@ -71,9 +70,9 @@ internal class WorldLocationsTracker : IWatcher
     /// <param name="locations">The game's list of locations.</param>
     /// <param name="activeMineLocations">The game's list of active mine locations.</param>
     /// <param name="activeVolcanoLocations">The game's list of active volcano locations.</param>
-    public WorldLocationsTracker(ObservableCollection<GameLocation> locations, IList<MineShaft> activeMineLocations, IList<VolcanoDungeon> activeVolcanoLocations)
+    public WorldLocationsTracker(ICollection<GameLocation> locations, IList<MineShaft> activeMineLocations, IList<VolcanoDungeon> activeVolcanoLocations)
     {
-        this.LocationListWatcher = WatcherFactory.ForObservableCollection($"{this.Name}.{nameof(locations)}", locations);
+        this.LocationListWatcher = WatcherFactory.ForReferenceCollection($"{this.Name}.{nameof(locations)}", locations);
         this.MineLocationListWatcher = WatcherFactory.ForReferenceList($"{this.Name}.{nameof(activeMineLocations)}", activeMineLocations);
         this.VolcanoLocationListWatcher = WatcherFactory.ForReferenceList($"{this.Name}.{nameof(activeVolcanoLocations)}", activeVolcanoLocations);
     }

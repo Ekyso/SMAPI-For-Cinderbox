@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
@@ -283,22 +284,18 @@ internal class SGame : Game1
         {
             this.Input.TrueUpdate();
 #if SMAPI_FOR_ANDROID
-            // Mobile Game1._locations is List<GameLocation>, desktop is ObservableCollection.
-            // Access via reflection to avoid JIT crash from field type mismatch.
+            // Game1._locations may be a List<GameLocation> or ObservableCollection<GameLocation>,
+            // depending on the game assembly. Keep the live collection so location changes made
+            // after this first tick are visible to SMAPI's world tracker.
             var locationsField = typeof(Game1).GetField(
                 "_locations",
                 BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public
             );
             var locationsValue = locationsField?.GetValue(this);
-            ObservableCollection<GameLocation> locationsForWatcher;
-            if (locationsValue is ObservableCollection<GameLocation> observable)
-                locationsForWatcher = observable;
-            else if (
-                locationsValue is System.Collections.Generic.IEnumerable<GameLocation> enumerable
-            )
-                locationsForWatcher = new ObservableCollection<GameLocation>(enumerable);
-            else
-                locationsForWatcher = new ObservableCollection<GameLocation>();
+            if (locationsValue is not ICollection<GameLocation> locationsForWatcher)
+                throw new InvalidOperationException(
+                    "Can't access the game's live location collection."
+                );
             this.Watchers = new WatcherCore(this.Input, locationsForWatcher);
 #else
             this.Watchers = new WatcherCore(
