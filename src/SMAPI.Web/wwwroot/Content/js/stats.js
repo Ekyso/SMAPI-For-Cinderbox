@@ -1189,15 +1189,21 @@ smapi.statsPage = function (options) {
     }
 
     /**
-     * Get a copy of an object with all its keys lowercased.
+     * Get a copy of an object with all its keys lowercased, combining numeric values whose keys only differ by case.
      * @param {object} row The object to map.
      * @returns {object}
      */
     function lowercaseKeys(row) {
         const copy = {};
 
-        for (const [key, value] of Object.entries(row))
-            copy[key.toLowerCase()] = value;
+        for (const [key, value] of Object.entries(row)) {
+            const normalizedKey = key.toLowerCase();
+            const existingValue = copy[normalizedKey];
+
+            copy[normalizedKey] = typeof existingValue === "number" && typeof value === "number"
+                ? existingValue + value
+                : value;
+        }
 
         return copy;
     }

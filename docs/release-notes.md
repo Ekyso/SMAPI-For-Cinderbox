@@ -13,7 +13,7 @@
 
 * For the web UI:
   * Added [mod stats page](https://smapi.io/stats) (see [announcement](https://www.patreon.com/pathoschild/posts/new-mod-dataset-161970558)).
-  * Deprecated the [mod compatibility list](https://smapi.io/stats) (see [announcement](https://www.patreon.com/pathoschild/posts/162629586)).
+  * Deprecated the [mod compatibility list](https://smapi.io/mods) (see [announcement](https://www.patreon.com/pathoschild/posts/162629586)).
 
 * For tool maintainers:
   * Added the [open mod dataset](https://github.com/Pathoschild/StardewModDataset).
