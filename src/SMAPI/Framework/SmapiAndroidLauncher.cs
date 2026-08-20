@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Threading;
 using StardewModdingAPI.Mobile;
 using StardewModdingAPI.Framework.ModLoading.Rewriters;
+using StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
 
 namespace StardewModdingAPI.Framework;
 
@@ -19,14 +20,18 @@ public static class SmapiAndroidLauncher
     /// <summary>The SMAPI core instance.</summary>
     private static SCore? _core;
 
-    /// <summary>Callback invoked after the Harmony bridge is initialized but before the game runs.</summary>
-    public static Action? OnAfterHarmonyBridgeInitialized { get; set; }
+    /// <summary>Callback invoked after launcher paths and rewrite helpers are ready, but before SMAPI starts.</summary>
+    public static Action? OnBeforeSmapiStart { get; set; }
 
     /// <summary>Callback invoked after every mod entry point has completed.</summary>
     public static Action? OnAfterModsInitialized { get; set; }
 
     /// <summary>Callback invoked before returning to the title screen.</summary>
     public static Action? OnReturningToTitle { get; set; }
+
+    /// <summary>The narrow SMAPI facade-runtime contract consumed by the Android host.</summary>
+    public static IMobileFacadeRuntime MobileFacadeRuntime { get; } =
+        MobileFacadeRuntimeBridge.Instance;
 
     /// <summary>Initialize and launch SMAPI on Android.</summary>
     /// <param name="gameDlls">Directory containing game DLLs.</param>
@@ -94,18 +99,11 @@ public static class SmapiAndroidLauncher
             AndroidLogger.Log($"[SMAPI] Data path: {AndroidPaths.StardewData}");
             AndroidLogger.Log($"[SMAPI] Logs path: {AndroidPaths.SmapiLogs}");
 
-            // initialize Android-specific components
-            AndroidPatcher.Setup();
-
-            // apply mobile-specific patches before SCore construction
-            if (isMobile)
-                AndroidPatcher.ApplyMobilePatches();
-
             // initialize AssemblyLocationHelper for mod rewriting
             AssemblyLocationHelper.Initialize(AndroidPaths.GameDllsPath, AndroidPaths.Mods);
 
-            // invoke callback for core patch registration
-            OnAfterHarmonyBridgeInitialized?.Invoke();
+            // let the host register platform integrations before SCore construction
+            OnBeforeSmapiStart?.Invoke();
 
             // track main thread
             AndroidMainThread.Init(Array.Empty<string>());

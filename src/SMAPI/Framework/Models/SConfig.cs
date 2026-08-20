@@ -30,7 +30,6 @@ internal class SConfig
         [nameof(SConfig.LogTechnicalDetailsForBrokenMods)] = false,
         [nameof(SConfig.RewriteMods)] = true,
         [nameof(SConfig.EnableConfigMenu)] = true,
-        [nameof(SConfig.FixHarmony)] = true,
         [nameof(SConfig.UseCaseInsensitivePaths)] =
             Constants.Platform is Platform.Android or Platform.Linux,
         [nameof(SConfig.SuppressHarmonyDebugMode)] = true,
@@ -92,9 +91,6 @@ internal class SConfig
     /// <summary>Whether SMAPI should add an in-game config menu through Generic Mod Config Menu.</summary>
     public bool EnableConfigMenu { get; set; }
 
-    /// <summary>Whether to apply fixes to Harmony so it works with Stardew Valley.</summary>
-    public bool FixHarmony { get; set; }
-
     /// <summary>Whether to make SMAPI file APIs case-insensitive, even on Linux.</summary>
     public bool UseCaseInsensitivePaths { get; set; }
 
@@ -142,7 +138,6 @@ internal class SConfig
     /// <param name="verboseLogging"><inheritdoc cref="VerboseLogging" path="/summary" /></param>
     /// <param name="rewriteMods"><inheritdoc cref="RewriteMods" path="/summary" /></param>
     /// <param name="enableConfigMenu"><inheritdoc cref="EnableConfigMenu" path="/summary" /></param>
-    /// <param name="fixHarmony"><inheritdoc cref="FixHarmony" path="/summary" /></param>
     /// <param name="useCaseInsensitivePaths"><inheritdoc cref="UseCaseInsensitivePaths" path="/summary" /></param>
     /// <param name="logNetworkTraffic"><inheritdoc cref="LogNetworkTraffic" path="/summary" /></param>
     /// <param name="logTechnicalDetailsForBrokenMods"><inheritdoc cref="LogTechnicalDetailsForBrokenMods" path="/summary" /></param>
@@ -166,7 +161,6 @@ internal class SConfig
         string[]? verboseLogging,
         bool? rewriteMods,
         bool? enableConfigMenu,
-        bool? fixHarmony,
         bool? useCaseInsensitivePaths,
         bool? logNetworkTraffic,
         bool? logTechnicalDetailsForBrokenMods,
@@ -207,7 +201,6 @@ internal class SConfig
         this.RewriteMods = rewriteMods ?? (bool)SConfig.DefaultValues[nameof(this.RewriteMods)];
         this.EnableConfigMenu =
             enableConfigMenu ?? (bool)SConfig.DefaultValues[nameof(this.EnableConfigMenu)];
-        this.FixHarmony = fixHarmony ?? (bool)SConfig.DefaultValues[nameof(this.FixHarmony)];
         this.UseCaseInsensitivePaths =
             useCaseInsensitivePaths
             ?? (bool)SConfig.DefaultValues[nameof(this.UseCaseInsensitivePaths)];

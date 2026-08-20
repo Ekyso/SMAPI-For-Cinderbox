@@ -16,8 +16,8 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
   Asset paths redirected to external storage. Raw file cache persists decoded PNG/JSON data across invalidation cycles.
 - **Assembly resolution**  
   Rewrites Assembly.Location for APK-bundled assemblies. Cecil resolver stubs for metadata-only resolution.
-- **Parallel audio loading**
-  Decodes OGG assets concurrently with a device-scaled worker count and IMA4 disk caching.
+- **Mobile API rewriting**
+  Rewrites desktop mod API calls to explicit mobile facades without applying host-owned Harmony patches.
 
 ## Project Structure
 
@@ -25,14 +25,12 @@ Android port of [SMAPI](https://github.com/Pathoschild/SMAPI) 4.5.2 for use with
 src/SMAPI/
   Mobile/                          # Android-specific code
     AndroidGameLoopManager.cs      # Game loop callbacks and timing
-    AndroidPatcher.cs              # SMAPI environment and facade patches
     AndroidSModHooks.cs            # Main thread task scheduling
-    Patches/                       # Rewriter facade support and parallel audio
   Framework/
-    SmapiAndroidLauncher.cs        # Entry point used by Cinderbox
+    SmapiAndroidLauncher.cs        # Entry point and narrow host contracts used by Cinderbox
     Content/RawFileCache.cs        # Decoded file cache across invalidations
     Logging/AsyncLogQueue.cs       # Background log processing
-    ModLoading/Rewriters/          # Assembly.Location rewriter
+    ModLoading/Rewriters/          # Mod IL rewriters and mobile API facades
 ```
 
 ## License

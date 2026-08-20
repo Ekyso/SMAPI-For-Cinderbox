@@ -65,13 +65,6 @@ in future SMAPI versions.
     "RewriteMods": true,
 
     /**
-     * Whether to fix the library mods use to patch game code, so it works with Stardew Valley.
-     *
-     * If you disable this, mods which use Harmony are likely to cause game crashes.
-     */
-    "FixHarmony": true,
-
-    /**
      * Whether to make SMAPI file APIs case-insensitive (even if the filesystem is case-sensitive).
      *
      * If null, it's only enabled on Android and Linux.

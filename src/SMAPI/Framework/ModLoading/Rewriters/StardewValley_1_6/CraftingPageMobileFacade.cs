@@ -11,7 +11,7 @@ namespace StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
 /// Desktop CraftingPage has an embedded InventoryMenu, heldItem for cursor-held items,
 /// and a trashCan button. Mobile crafts directly to player inventory without these.
 /// This facade provides real data-backed fields: inventory points to player items,
-/// heldItem reflects the last crafted item, trashCan is a positioned component.</summary>
+/// heldItem is facade-local compatibility state, and trashCan is a positioned component.</summary>
 /// <remarks>This is public to support SMAPI rewriting and should never be referenced directly by mods. See remarks on <see cref="ReplaceReferencesRewriter"/> for more info.</remarks>
 public class CraftingPageMobileFacade : CraftingPage, IRewriteFacade
 {
@@ -37,8 +37,8 @@ public class CraftingPageMobileFacade : CraftingPage, IRewriteFacade
     ** Properties - MapFacade rewrites field references to property get/set calls
     *********/
     /// <summary>Desktop heldItem - the item currently held by the cursor.
-    /// On mobile, crafted items go directly to inventory. This field is set
-    /// by a Harmony postfix on clickCraftingRecipe to reflect the last crafted item.</summary>
+    /// Mobile crafting places the real item directly into the player's inventory, so this
+    /// facade state defaults to <c>null</c> and is only changed when rewritten mod code sets it.</summary>
     public new Item? heldItem
     {
         get => GetOrCreate((CraftingPage)(object)this).HeldItem;

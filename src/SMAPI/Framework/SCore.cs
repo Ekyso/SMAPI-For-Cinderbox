@@ -52,7 +52,6 @@ using StardewValley.Objects;
 using StardewValley.SDKs;
 using xTile.Display;
 using LanguageCode = StardewValley.LocalizedContentManager.LanguageCode;
-using MiniMonoModHotfix = MonoMod.Utils.MiniMonoModHotfix;
 using PathUtilities = StardewModdingAPI.Toolkit.Utilities.PathUtilities;
 #if SMAPI_FOR_ANDROID
 using StardewModdingAPI.Mobile;
@@ -344,10 +343,6 @@ internal class SCore : IDisposable
                 onGameExiting: this.OnGameExiting
             );
             GameRunner.instance = this.Game;
-
-            // fix Harmony for mods
-            if (this.Settings.FixHarmony)
-                MiniMonoModHotfix.Apply();
 
             // set window titles
             this.UpdateWindowTitles();
@@ -2226,7 +2221,6 @@ internal class SCore : IDisposable
                 );
             }
 
-            AndroidPatcher.ApplyGameInitializedPatches();
         }
         catch (Exception ex)
         {
@@ -3381,8 +3375,7 @@ internal class SCore : IDisposable
             loadedMods,
             skippedMods,
             this.Settings.ParanoidWarnings,
-            this.Settings.LogTechnicalDetailsForBrokenMods,
-            this.Settings.FixHarmony
+            this.Settings.LogTechnicalDetailsForBrokenMods
         );
 
         // initialize translations

@@ -91,9 +91,9 @@ the `SMAPI` project with debugging from Visual Studio or Rider should launch SMA
 debugger attached, so you can intercept errors and step through the code being executed.
 
 ### Custom Harmony build
-SMAPI uses [a custom build of Harmony](https://github.com/Pathoschild/Harmony#readme), which is
-included in the `build` folder. To use a different build, just replace `0Harmony.dll` in that
-folder before compiling.
+SMAPI distributes [a custom build of Harmony](https://github.com/Pathoschild/Harmony#readme) for
+mods and the Cinderbox host. SMAPI itself doesn't apply first-party runtime patches. To use a
+different build, replace `0Harmony.dll` in the `build` folder before compiling.
 
 ## Prepare a release
 ### Automated build pipeline

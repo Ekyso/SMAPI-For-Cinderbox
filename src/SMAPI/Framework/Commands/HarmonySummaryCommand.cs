@@ -19,7 +19,7 @@ internal class HarmonySummaryCommand : IInternalCommand
     /// <summary>The human-readable documentation shown when the player runs the built-in 'help' command.</summary>
     public string Description { get; } =
         """
-        Harmony is a library which rewrites game code, used by SMAPI and some mods. This command lists current Harmony patches.
+        Harmony is a library which rewrites game code, supplied by SMAPI and used by Cinderbox and some mods. This command lists current Harmony patches.
 
         Usage: harmony_summary
         List all Harmony patches.
