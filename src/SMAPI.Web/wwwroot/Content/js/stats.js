@@ -20,23 +20,24 @@ smapi.statsPage = function (options) {
         modsByType: {
             // display names for each mod type (omitted mod types are shown as-is)
             labels: {
-                "SMAPI": "SMAPI (C#)",
-                "Pathoschild.ContentPatcher": "Content Patcher",
-                "XNB": "XNB",
-                "PeacefulEnd.AlternativeTextures": "Alternative Textures",
-                "spacechase0.JsonAssets": "Json Assets",
-                "PeacefulEnd.FashionSense": "Fashion Sense",
-                "Digus.ProducerFrameworkMod": "Producer Framework Mod",
-                "DIGUS.MailFrameworkMod": "Mail Framework Mod",
-                "Esca.FarmTypeManager": "Farm Type Manager",
-                "Cherry.ShopTileFramework": "Shop Tile Framework",
-                "Platonymous.TMXLoader": "TMXL",
+                // keys must be lowercase
+                "smapi": "SMAPI (C#)",
+                "pathoschild.contentpatcher": "Content Patcher",
+                "xnb": "XNB",
+                "peacefulend.alternativetextures": "Alternative Textures",
+                "spacechase0.jsonassets": "Json Assets",
+                "peacefulend.fashionsense": "Fashion Sense",
+                "digus.producerframeworkmod": "Producer Framework Mod",
+                "digus.mailframeworkmod": "Mail Framework Mod",
+                "esca.farmtypemanager": "Farm Type Manager",
+                "cherry.shoptileframework": "Shop Tile Framework",
+                "platonymous.tmxloader": "TMXL",
                 "cat.betterartisangoodicons": "Better Artisan Good Icons",
-                "spacechase0.DynamicGameAssets": "Dynamic Game Assets",
-                "Platonymous.CustomFurniture": "Custom Furniture",
-                "Platonymous.CustomMusic": "Custom Music",
-                "leroymilo.FurnitureFramework": "Furniture Framework",
-                "Paritee.BetterFarmAnimalVariety": "Better Farm Animal Variety",
+                "spacechase0.dynamicgameassets": "Dynamic Game Assets",
+                "platonymous.customfurniture": "Custom Furniture",
+                "platonymous.custommusic": "Custom Music",
+                "leroymilo.furnitureframework": "Furniture Framework",
+                "paritee.betterfarmanimalvariety": "Better Farm Animal Variety",
                 "other": "other (<100 packs)"
             },
 
@@ -85,12 +86,13 @@ smapi.statsPage = function (options) {
         costs: {
             // colors for each service (omitted entries cycle through the colorPalette)
             colors: {
-                "GitHub": "#ddcc77",         // gold
-                "MongoDB": "#aa4499",        // magenta
-                "Azure hosting": "#db4437",  // muted rose
-                "Amazon hosting": "#332288", // dark indigo
-                "Amazon SSL": "#44aa99",     // turquoise
-                "Amazon domains": "#117733"   // dark green
+                // keys must be lowercase
+                "github": "#ddcc77",         // gold
+                "mongodb": "#aa4499",        // magenta
+                "azure hosting": "#db4437",  // muted rose
+                "amazon hosting": "#332288", // dark indigo
+                "amazon ssl": "#44aa99",     // turquoise
+                "amazon domains": "#117733"   // dark green
             },
 
             // notable events which may affect costs, indexed by their date in smapi-costs.jsonl
@@ -271,7 +273,7 @@ smapi.statsPage = function (options) {
                 this.modsByType.loadFailed = true; // override on success
                 if (modsByTypeRows) {
                     try {
-                        const rows = modsByTypeRows;
+                        const rows = modsByTypeRows.map(lowercaseKeys);
 
                         // parse data
                         const lastRow = rows[rows.length - 1];
@@ -302,7 +304,7 @@ smapi.statsPage = function (options) {
 
                             this.modsByType.total = total;
                             this.modsByType.topThree = topThree;
-                            this.modsByType.xnbPercent = getPercent(curData.lastRow["XNB"], total);
+                            this.modsByType.xnbPercent = getPercent(curData.lastRow["xnb"], total);
                         }
 
                         // derive 'new mods this month' stats
@@ -585,7 +587,7 @@ smapi.statsPage = function (options) {
                                 {
                                     id: "modsByTypeOverTimeExcludingOutliers",
                                     title: "Mods by type over time (excluding SMAPI and Content Patcher)",
-                                    modTypes: curData.modTypes.filter(key => isSpecificModType(key) && key !== "SMAPI" && key !== "Pathoschild.ContentPatcher")
+                                    modTypes: curData.modTypes.filter(key => isSpecificModType(key) && key !== "smapi" && key !== "pathoschild.contentpatcher")
                                 }
                             ];
 
@@ -1137,7 +1139,7 @@ smapi.statsPage = function (options) {
      * @returns {string}
      */
     function getLabel(lookup, key) {
-        return lookup[key] ?? key;
+        return lookup[key.toLowerCase()] ?? key;
     }
 
     /**
@@ -1147,7 +1149,7 @@ smapi.statsPage = function (options) {
      * @returns {string}
      */
     function getColor(lookup, key) {
-        return lookup[key] ?? "#808080";
+        return lookup[key.toLowerCase()] ?? "#808080";
     }
 
     /**
@@ -1187,6 +1189,20 @@ smapi.statsPage = function (options) {
     }
 
     /**
+     * Get a copy of an object with all its keys lowercased.
+     * @param {object} row The object to map.
+     * @returns {object}
+     */
+    function lowercaseKeys(row) {
+        const copy = {};
+
+        for (const [key, value] of Object.entries(row))
+            copy[key.toLowerCase()] = value;
+
+        return copy;
+    }
+
+    /**
      * Get the unique keys from a column-per-key row, sorted by their value in the latest row.
      * @param {array<object>} rows The parsed rows over time.
      * @returns {array<string>}
@@ -1217,7 +1233,9 @@ smapi.statsPage = function (options) {
      */
     function assignColors(colorMap, keys) {
         let index = 0;
-        for (const key of keys) {
+        for (const rawKey of keys) {
+            const key = rawKey.toLowerCase();
+
             if (!colorMap[key])
                 colorMap[key] = config.colorPalette[index++ % config.colorPalette.length];
         }

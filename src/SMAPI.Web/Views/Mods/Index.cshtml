@@ -43,6 +43,10 @@ else
         </div>
     </noscript>
 
+    <div class="deprecation-warning">
+        This list is no longer comprehensively updated each month, and its future is in doubt.<br />See <a href="https://www.patreon.com/pathoschild/posts/162629586"><em>Sunset on the mod compatibility list</em></a> for more info.
+    </div>
+
     @if (Model.IsStale)
     {
         <div class="error">Showing data from @staleAge.Humanize(maxUnit: TimeUnit.Hour, minUnit: TimeUnit.Minute) ago. (Couldn't fetch newer data; the GitHub API may be offline.)</div>

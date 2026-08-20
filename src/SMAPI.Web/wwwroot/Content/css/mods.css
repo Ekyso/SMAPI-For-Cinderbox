@@ -49,6 +49,15 @@ div.error {
     font-weight: bold;
 }
 
+div.deprecation-warning {
+    margin-top: 0.5em;
+    padding: 1em;
+    display: inline-block;
+    border: 1px solid red;
+    border-left-width: 1em;
+    font-weight: bold;
+}
+
 /*********
 ** Mod list
 *********/
