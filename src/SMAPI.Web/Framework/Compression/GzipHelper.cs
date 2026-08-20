@@ -84,7 +84,7 @@ internal class GzipHelper : IGzipHelper
             byte[] buffer = new byte[dataLength];
             memoryStream.Position = 0;
             using (GZipStream gZipStream = new(memoryStream, CompressionMode.Decompress))
-                gZipStream.Read(buffer, 0, buffer.Length);
+                gZipStream.ReadExactly(buffer);
 
             // return original string
             return Encoding.UTF8.GetString(buffer);
