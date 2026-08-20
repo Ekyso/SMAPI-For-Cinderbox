@@ -68,7 +68,7 @@ internal class PathUtilitiesTests
             SegmentsLimit3: ["unc", "path"],
 
             NormalizedOnWindows: @"\\unc\path",
-            NormalizedOnUnix: "/unc/path" // there's no good way to normalize this on Unix since UNC paths aren't supported; path normalization is meant for asset names anyway, so this test only ensures it returns some sort of sane value
+            NormalizedOnUnix: @"\\unc/path" // preserve the UNC prefix, but normalize separators for the current platform
         ),
 
         // Linux absolute path
@@ -178,7 +178,7 @@ internal class PathUtilitiesTests
     [TestCaseSource(nameof(PathUtilitiesTests.SamplePaths))]
     public void NormalizeAssetName(SamplePath path)
     {
-        if (Path.IsPathRooted(path.OriginalPath) || path.OriginalPath.StartsWith('/') || path.OriginalPath.StartsWith('\\'))
+        if (PathUtilitiesTests.IsAbsolutePathOnAnyPlatform(path.OriginalPath))
             Assert.Ignore("Absolute paths can't be used as asset names.");
 
         // act
@@ -255,9 +255,9 @@ internal class PathUtilitiesTests
         ExpectedResult = @"../../Content"
     )]
     [TestCase(
-        @"~/.steam/steam/steamapps/common/Stardew Valley/Mods/Automate",
+        @"/home/.steam/steam/steamapps/common/Stardew Valley/Mods/Automate",
         @"/mnt/another-drive",
-        ExpectedResult = @"/mnt/another-drive"
+        ExpectedResult = @"../../../../../../../../mnt/another-drive"
     )]
     [TestCase(
         @"~/same/path",
@@ -267,7 +267,7 @@ internal class PathUtilitiesTests
     [TestCase(
         @"~/parent",
         @"~/PARENT/child",
-        ExpectedResult = @"child" // note: incorrect on Linux and sometimes macOS, but not worth the complexity of detecting whether the filesystem is case-sensitive for SMAPI's purposes
+        ExpectedResult = @"../PARENT/child"
     )]
 #endif
     public string GetRelativePath(string sourceDir, string targetPath)
@@ -331,6 +331,25 @@ internal class PathUtilitiesTests
     public string CreateSlug(string input)
     {
         return PathUtilities.CreateSlug(input);
+    }
+
+
+    /*********
+    ** Private methods
+    *********/
+    /// <summary>Get whether a path is absolute in Windows or Unix syntax, regardless of the current test platform.</summary>
+    /// <param name="path">The path to check.</param>
+    private static bool IsAbsolutePathOnAnyPlatform(string path)
+    {
+        return Path.IsPathRooted(path)
+            || path.StartsWith('/')
+            || path.StartsWith('\\')
+            || (
+                path.Length >= 3
+                && char.IsLetter(path[0])
+                && path[1] == ':'
+                && path[2] is '/' or '\\'
+            );
     }
 
 

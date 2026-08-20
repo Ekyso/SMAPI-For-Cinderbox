@@ -284,7 +284,9 @@ internal class InstructionMetadata
                     isMobile,
                     r =>
                         r.MapFacade<InventoryMenu, InventoryMenuMobileFacade>()
-                            .MapFacade<InventoryPage, InventoryPageMobileFacade>()
+                            .MapFacade<InventoryPage, InventoryPageMobileFacade>(
+                                rewriteResolvedMembers: true
+                            )
                             // Keyboard input types: Win32-only on desktop, don't exist on mobile
                             .MapType(
                                 "StardewValley.KeyboardInput",

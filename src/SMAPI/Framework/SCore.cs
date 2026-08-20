@@ -2891,8 +2891,6 @@ internal class SCore : IDisposable
         {
             try
             {
-                // create client
-                using WebApiClient client = new(this.Settings.WebApiBaseUrl, Constants.ApiVersion);
                 this.Monitor.Log("Checking for updates...");
 
                 // check SMAPI version
@@ -2901,23 +2899,16 @@ internal class SCore : IDisposable
                     string? updateUrl = null;
                     try
                     {
-                        // fetch update check
-                        IDictionary<string, ModEntryModel> response = await client.GetModInfoAsync(
-                            mods:
-                            [
-                                new ModSearchEntryModel(
-                                    "Pathoschild.SMAPI",
-                                    Constants.ApiVersion,
-                                    [$"GitHub:{this.Settings.GitHubProjectName}"]
-                                ),
-                            ],
-                            apiVersion: Constants.ApiVersion,
-                            gameVersion: Constants.GameVersion,
-                            platform: Constants.Platform
+                        // fetch latest stable release directly from GitHub
+                        using GitHubReleaseClient client = new(Constants.ApiVersion);
+                        GitHubReleaseInfo release = await client.GetLatestReleaseAsync(
+                            this.Settings.GitHubProjectName
                         );
-                        ModEntryModel updateInfo = response.Single().Value;
-                        updateFound = updateInfo.SuggestedUpdate?.Version;
-                        updateUrl = updateInfo.SuggestedUpdate?.Url;
+                        if (release.Version.IsNewerThan(Constants.ApiVersion))
+                        {
+                            updateFound = release.Version;
+                            updateUrl = release.Url;
+                        }
 
                         // log message
                         if (updateFound != null)
@@ -2927,16 +2918,6 @@ internal class SCore : IDisposable
                             );
                         else
                             this.Monitor.Log("   SMAPI okay.");
-
-                        // show errors
-                        if (updateInfo.Errors.Any())
-                        {
-                            this.Monitor.Log(
-                                "Couldn't check for a new version of SMAPI. This won't affect your game, but you may not be notified of new versions if this keeps happening.",
-                                LogLevel.Warn
-                            );
-                            this.Monitor.Log($"Error: {string.Join("\n", updateInfo.Errors)}");
-                        }
                     }
                     catch (Exception ex)
                     {
@@ -2964,6 +2945,10 @@ internal class SCore : IDisposable
                 {
                     try
                     {
+                        using WebApiClient client = new(
+                            this.Settings.WebApiBaseUrl,
+                            Constants.ApiVersion
+                        );
                         HashSet<string> suppressUpdateChecks = this.Settings.SuppressUpdateChecks;
 
                         // prepare search model

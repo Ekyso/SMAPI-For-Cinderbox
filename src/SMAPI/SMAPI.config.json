@@ -91,7 +91,7 @@ in future SMAPI versions.
     /**
      * SMAPI's GitHub project name, used to perform update checks.
      */
-    "GitHubProjectName": "Pathoschild/SMAPI",
+    "GitHubProjectName": "Ekyso/SMAPI-For-Cinderbox",
 
     /**
      * The base URL for SMAPI's web API, used to perform update checks.

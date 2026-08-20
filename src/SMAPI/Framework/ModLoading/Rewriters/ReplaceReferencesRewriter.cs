@@ -61,6 +61,9 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <summary>The new members to reference, indexed by the old member's full name.</summary>
     private readonly Dictionary<string, MemberInfo> MemberMap = new();
 
+    /// <summary>The mapped members which should be rewritten even when they exist in the runtime assembly.</summary>
+    private readonly HashSet<string> RewriteResolvedMembers = new();
+
     /*********
     ** Public methods
     *********/
@@ -293,25 +296,34 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <typeparam name="TFromType">The type to which references should be rewritten.</typeparam>
     /// <typeparam name="TFacade">The facade type to which to point matching references.</typeparam>
     /// <param name="mapDefaultConstructor">If the facade has a public constructor with no parameters, whether to rewrite references to empty constructors to use that one. (This is needed because .NET has no way to distinguish between an implicit and explicit constructor.)</param>
+    /// <param name="rewriteResolvedMembers">Whether mapped members should be rewritten even if they exist in the runtime assembly. This is intended for platform members which resolve successfully but don't provide usable values.</param>
     public ReplaceReferencesRewriter MapFacade<TFromType, TFacade>(
-        bool mapDefaultConstructor = false
+        bool mapDefaultConstructor = false,
+        bool rewriteResolvedMembers = false
     )
         where TFacade : TFromType, IRewriteFacade
     {
         if (typeof(IRewriteFacade).IsAssignableFrom(typeof(TFromType)))
             throw new InvalidOperationException("Can't rewrite a rewrite facade.");
 
-        return this.MapFacade(typeof(TFromType).FullName!, typeof(TFacade), mapDefaultConstructor);
+        return this.MapFacade(
+            typeof(TFromType).FullName!,
+            typeof(TFacade),
+            mapDefaultConstructor,
+            rewriteResolvedMembers
+        );
     }
 
     /// <summary>Rewrite field, property, constructor, and method references to point to a matching equivalent on another class.</summary>
     /// <param name="fromTypeName">The full name of the type to which references should be rewritten.</param>
     /// <param name="toType">The facade type to which to point matching references.</param>
     /// <param name="mapDefaultConstructor">If the facade has a public constructor with no parameters, whether to rewrite references to empty constructors to use that one. (This is needed because .NET has no way to distinguish between an implicit and explicit constructor.)</param>
+    /// <param name="rewriteResolvedMembers">Whether mapped members should be rewritten even if they exist in the runtime assembly. This is intended for platform members which resolve successfully but don't provide usable values.</param>
     public ReplaceReferencesRewriter MapFacade(
         string fromTypeName,
         Type toType,
-        bool mapDefaultConstructor = false
+        bool mapDefaultConstructor = false,
+        bool rewriteResolvedMembers = false
     )
     {
         // properties
@@ -332,7 +344,8 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
                 this.MapMember(
                     $"{propertyType} {fromTypeName}::get_{property.Name}()",
                     get,
-                    "method"
+                    "method",
+                    rewriteResolvedMembers
                 );
 
             // add setter
@@ -341,14 +354,16 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
                 this.MapMember(
                     $"System.Void {fromTypeName}::set_{property.Name}({propertyType})",
                     set,
-                    "method"
+                    "method",
+                    rewriteResolvedMembers
                 );
 
             // add field => property
             this.MapMember(
                 $"{propertyType} {fromTypeName}::{property.Name}",
                 property,
-                "field-to-property"
+                "field-to-property",
+                rewriteResolvedMembers
             );
         }
 
@@ -369,7 +384,7 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             {
                 string fromFullName =
                     $"{this.FormatCecilType(method.ReturnType)} {fromTypeName}::{method.Name}({this.FormatCecilParameterList(method.GetParameters())})";
-                this.MapMember(fromFullName, method, "method");
+                this.MapMember(fromFullName, method, "method", rewriteResolvedMembers);
             }
 
             // map constructor to static methods
@@ -377,7 +392,7 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             {
                 string fromFullName =
                     $"System.Void {fromTypeName}::.ctor({this.FormatCecilParameterList(method.GetParameters())})";
-                this.MapMember(fromFullName, method, "method");
+                this.MapMember(fromFullName, method, "method", rewriteResolvedMembers);
             }
         }
 
@@ -394,7 +409,12 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             if (!mapDefaultConstructor && parameters.Length == 0)
                 continue;
 
-            this.MapMember(fromFullName, constructor, "constructor");
+            this.MapMember(
+                fromFullName,
+                constructor,
+                "constructor",
+                rewriteResolvedMembers
+            );
         }
 
         return this;
@@ -441,7 +461,8 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             return false;
 
         // get target member
-        if (!this.MemberMap.TryGetValue(fromMember.FullName, out MemberInfo? mappedToMethod))
+        string mappedMemberName = fromMember.FullName;
+        if (!this.MemberMap.TryGetValue(mappedMemberName, out MemberInfo? mappedToMethod))
         {
             // If this is a generic type, there's two cases where the above might not match:
             //   1. we mapped an open generic type like "Netcode.NetFieldBase`2::op_Implicit" without specific
@@ -453,17 +474,17 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             // "Netcode.NetFieldBase`2" (without type args) by using `GetElementType().FullName` instead.
             if (fromMember.DeclaringType is not GenericInstanceType)
                 return false;
-            if (
-                !this.MemberMap.TryGetValue(
-                    $"{fromMember.DeclaringType.GetElementType().FullName}::{fromMember.Name}",
-                    out mappedToMethod
-                )
-            )
+            mappedMemberName =
+                $"{fromMember.DeclaringType.GetElementType().FullName}::{fromMember.Name}";
+            if (!this.MemberMap.TryGetValue(mappedMemberName, out mappedToMethod))
                 return false;
         }
 
         // apply options
-        if (fromMember.Resolve() is not null)
+        if (
+            !this.RewriteResolvedMembers.Contains(mappedMemberName)
+            && fromMember.Resolve() is not null
+        )
             return false;
 
         // apply
@@ -569,10 +590,12 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
     /// <param name="fromFullName">The full member name, like <c>Microsoft.Xna.Framework.Vector2 StardewValley.Character::getTileLocation()</c>.</param>
     /// <param name="toMember">The new member to reference.</param>
     /// <param name="typeLabel">A human-readable label for the reference type, like 'field' or 'method'.</param>
+    /// <param name="rewriteResolved">Whether to rewrite the member even if it resolves in the runtime assembly.</param>
     private ReplaceReferencesRewriter MapMember(
         string fromFullName,
         MemberInfo toMember,
-        string typeLabel
+        string typeLabel,
+        bool rewriteResolved = false
     )
     {
         // validate parameters
@@ -591,6 +614,9 @@ internal class ReplaceReferencesRewriter : BaseInstructionHandler
             throw new InvalidOperationException(
                 $"The '{fromFullName}' {typeLabel} is already mapped."
             );
+
+        if (rewriteResolved)
+            this.RewriteResolvedMembers.Add(fromFullName);
 
         return this;
     }
