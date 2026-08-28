@@ -45,10 +45,11 @@ internal sealed class MobileFacadeRuntimeBridge : IMobileFacadeRuntime
     {
         var extra = MenuWithInventoryMobileFacade.GetOrCreate(menu);
         extra.HoverAmount = 0;
+        Item? heldItem = MenuWithInventoryMobileFacade.GetHeldItem(menu);
 
-        if (menu.trashCan?.containsPoint(x, y) == true && menu.heldItem != null)
+        if (menu.trashCan?.containsPoint(x, y) == true && heldItem != null)
         {
-            int price = Utility.getTrashReclamationPrice(menu.heldItem, Game1.player);
+            int price = Utility.getTrashReclamationPrice(heldItem, Game1.player);
             if (price > 0)
                 extra.HoverAmount = price;
         }

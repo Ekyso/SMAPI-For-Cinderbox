@@ -162,7 +162,10 @@ public class ItemGrabMenuMobileFacade : ItemGrabMenu, IRewriteFacade
                 menu.snapCursorToCurrentSnappedComponent();
         }
 
-        menu.heldItem = source.heldItem;
+        MenuWithInventoryMobileFacade.SetHeldItem(
+            menu,
+            MenuWithInventoryMobileFacade.GetHeldItem(source)
+        );
 
         return menu;
     }

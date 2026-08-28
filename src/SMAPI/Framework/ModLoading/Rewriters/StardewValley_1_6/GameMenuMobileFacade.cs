@@ -1,4 +1,4 @@
-using System.Linq;
+using System;
 using System.Reflection;
 using StardewModdingAPI.Framework.ModLoading.Framework;
 using StardewValley.Menus;
@@ -14,16 +14,21 @@ public class GameMenuMobileFacade : GameMenu, IRewriteFacade
     /*********
     ** Fields
     *********/
-    // Mobile's 2-param constructor: (int startingTab, int extra)
-    // Desktop's 3-param: (int startingTab, int extra, bool playOpeningSound)
-    // The extra playOpeningSound param doesn't exist on mobile.
-    private static readonly ConstructorInfo? MobileTwoParamCtor = typeof(GameMenu)
-        .GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-        .FirstOrDefault(c =>
-        {
-            var p = c.GetParameters();
-            return p.Length == 2 && p[0].ParameterType == typeof(int);
-        });
+    private static readonly ConstructorInfo? DesktopBooleanConstructor = typeof(GameMenu).GetConstructor(
+        [typeof(bool)]
+    );
+
+    private static readonly ConstructorInfo? MobileBooleanConstructor = typeof(GameMenu).GetConstructor(
+        [typeof(bool), typeof(bool)]
+    );
+
+    private static readonly ConstructorInfo? DesktopTabConstructor = typeof(GameMenu).GetConstructor(
+        [typeof(int), typeof(int), typeof(bool)]
+    );
+
+    private static readonly ConstructorInfo? MobileTabConstructor = typeof(GameMenu).GetConstructor(
+        [typeof(int), typeof(int)]
+    );
 
     /*********
     ** Public methods
@@ -33,7 +38,15 @@ public class GameMenuMobileFacade : GameMenu, IRewriteFacade
     // Map: playOpeningSound is ignored, standardTabs = true, optionsOnly = false
     public static GameMenu Constructor(bool playOpeningSound = true)
     {
-        return new GameMenu();
+        if (DesktopBooleanConstructor != null)
+            return (GameMenu)DesktopBooleanConstructor.Invoke([playOpeningSound]);
+        if (MobileBooleanConstructor != null)
+            return (GameMenu)MobileBooleanConstructor.Invoke([true, false]);
+
+        throw new MissingMethodException(
+            typeof(GameMenu).FullName,
+            ".ctor with desktop or mobile boolean parameters"
+        );
     }
 
     // Desktop: GameMenu(int startingTab, int extra = -1, bool playOpeningSound = true)
@@ -45,9 +58,18 @@ public class GameMenuMobileFacade : GameMenu, IRewriteFacade
         bool playOpeningSound = true
     )
     {
-        if (MobileTwoParamCtor != null)
-            return (GameMenu)MobileTwoParamCtor.Invoke(new object[] { startingTab, extra });
-        return new GameMenu();
+        if (DesktopTabConstructor != null)
+        {
+            return (GameMenu)
+                DesktopTabConstructor.Invoke([startingTab, extra, playOpeningSound]);
+        }
+        if (MobileTabConstructor != null)
+            return (GameMenu)MobileTabConstructor.Invoke([startingTab, extra]);
+
+        throw new MissingMethodException(
+            typeof(GameMenu).FullName,
+            ".ctor with desktop or mobile tab parameters"
+        );
     }
 
     /*********

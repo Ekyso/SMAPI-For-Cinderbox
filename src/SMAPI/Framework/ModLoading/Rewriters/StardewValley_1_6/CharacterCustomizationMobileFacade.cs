@@ -1,9 +1,11 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using StardewModdingAPI.Framework.ModLoading.Framework;
 using StardewValley;
 using StardewValley.Menus;
+using StardewValley.Objects;
 
 namespace StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
 
@@ -25,6 +27,14 @@ public class CharacterCustomizationMobileFacade : CharacterCustomization, IRewri
     private static readonly FieldInfo? FarmnameBoxCCField = GetCustomizerField("farmnameBoxCC");
     private static readonly FieldInfo? FavThingBoxCCField = GetCustomizerField("favThingBoxCC");
     private static readonly FieldInfo? EyeColorPickerField = GetCustomizerField("eyeColorPicker");
+
+    private static readonly ConstructorInfo? DesktopConstructor = typeof(CharacterCustomization).GetConstructor(
+        [typeof(CharacterCustomization.Source), typeof(bool)]
+    );
+
+    private static readonly ConstructorInfo? MobileConstructor = typeof(CharacterCustomization).GetConstructor(
+        [typeof(CharacterCustomization.Source), typeof(bool), typeof(Clothing)]
+    );
 
     private class EyePickerHolder
     {
@@ -126,6 +136,25 @@ public class CharacterCustomizationMobileFacade : CharacterCustomization, IRewri
     /*********
     ** Methods
     *********/
+    public static CharacterCustomization Constructor(
+        CharacterCustomization.Source source,
+        bool multiplayerServer = false
+    )
+    {
+        if (DesktopConstructor != null)
+        {
+            return (CharacterCustomization)
+                DesktopConstructor.Invoke([source, multiplayerServer]);
+        }
+        if (MobileConstructor != null)
+            return (CharacterCustomization)MobileConstructor.Invoke([source, false, null]);
+
+        throw new MissingMethodException(
+            typeof(CharacterCustomization).FullName,
+            ".ctor with desktop or mobile parameters"
+        );
+    }
+
     public new bool canLeaveMenu()
     {
         if (

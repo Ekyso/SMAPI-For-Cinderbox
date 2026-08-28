@@ -34,13 +34,15 @@ public class ShopMenuFacade : ShopMenu, IRewriteFacade
         string? context = null
     )
     {
-        return new ShopMenu(
+        return ShopMenuMobileFacade.CreateDictionary(
             ShopMenuFacade.GetShopId(context),
             ShopMenuFacade.ToItemStockInformation(itemPriceAndStock),
             currency,
             who,
             ToOnPurchaseDelegate(on_purchase),
-            on_sell
+            on_sell,
+            true,
+            context
         );
     }
 
@@ -77,14 +79,15 @@ public class ShopMenuFacade : ShopMenu, IRewriteFacade
         bool playOpenSound = true
     )
     {
-        return new ShopMenu(
+        return ShopMenuMobileFacade.CreateDictionary(
             shopId,
             itemPriceAndStock,
             currency,
             who,
             ToOnPurchaseDelegate(on_purchase),
             on_sell,
-            playOpenSound
+            playOpenSound,
+            null
         );
     }
 

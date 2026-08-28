@@ -1,8 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using StardewModdingAPI.Framework.ModLoading.Framework;
 using StardewValley;
+using StardewValley.Inventories;
 using StardewValley.Menus;
 
 namespace StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
@@ -15,6 +19,31 @@ namespace StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
 /// <remarks>This is public to support SMAPI rewriting and should never be referenced directly by mods. See remarks on <see cref="ReplaceReferencesRewriter"/> for more info.</remarks>
 public class CraftingPageMobileFacade : CraftingPage, IRewriteFacade
 {
+    private static readonly ConstructorInfo? DesktopConstructor = typeof(CraftingPage).GetConstructor(
+        [
+            typeof(int),
+            typeof(int),
+            typeof(int),
+            typeof(int),
+            typeof(bool),
+            typeof(bool),
+            typeof(List<IInventory>),
+        ]
+    );
+
+    private static readonly ConstructorInfo? MobileConstructor = typeof(CraftingPage).GetConstructor(
+        [
+            typeof(int),
+            typeof(int),
+            typeof(int),
+            typeof(int),
+            typeof(bool),
+            typeof(bool),
+            typeof(List<IInventory>),
+            typeof(int),
+        ]
+    );
+
     /*********
     ** Per-instance storage
     *********/
@@ -31,6 +60,37 @@ public class CraftingPageMobileFacade : CraftingPage, IRewriteFacade
     internal static ExtraFields GetOrCreate(CraftingPage page)
     {
         return Storage.GetOrCreateValue(page);
+    }
+
+    public static CraftingPage Constructor(
+        int x,
+        int y,
+        int width,
+        int height,
+        bool cooking = false,
+        bool standaloneMenu = false,
+        List<IInventory>? materialContainers = null
+    )
+    {
+        if (DesktopConstructor != null)
+        {
+            return (CraftingPage)
+                DesktopConstructor.Invoke(
+                    [x, y, width, height, cooking, standaloneMenu, materialContainers]
+                );
+        }
+        if (MobileConstructor != null)
+        {
+            return (CraftingPage)
+                MobileConstructor.Invoke(
+                    [x, y, width, height, cooking, standaloneMenu, materialContainers, 300]
+                );
+        }
+
+        throw new MissingMethodException(
+            typeof(CraftingPage).FullName,
+            ".ctor with desktop or mobile parameters"
+        );
     }
 
     /*********
@@ -54,7 +114,7 @@ public class CraftingPageMobileFacade : CraftingPage, IRewriteFacade
             var extra = GetOrCreate((CraftingPage)(object)this);
             if (extra.Inventory == null)
             {
-                extra.Inventory = new InventoryMenu(
+                extra.Inventory = InventoryMenuMobileFacade.Create(
                     base.xPositionOnScreen
                         + IClickableMenu.spaceToClearSideBorder
                         + IClickableMenu.borderWidth,

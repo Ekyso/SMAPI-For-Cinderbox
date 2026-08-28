@@ -24,6 +24,55 @@ public class ShopMenuMobileFacade : ShopMenu, IRewriteFacade
         BindingFlags.Public | BindingFlags.Instance
     )!;
 
+    private static readonly ConstructorInfo? DesktopListConstructor = typeof(ShopMenu).GetConstructor(
+        [
+            typeof(string),
+            typeof(List<ISalable>),
+            typeof(int),
+            typeof(string),
+            typeof(ShopMenu.OnPurchaseDelegate),
+            typeof(Func<ISalable, bool>),
+            typeof(bool),
+        ]
+    );
+
+    private static readonly ConstructorInfo? MobileListConstructor = typeof(ShopMenu).GetConstructor(
+        [
+            typeof(string),
+            typeof(List<ISalable>),
+            typeof(int),
+            typeof(string),
+            typeof(ShopMenu.OnPurchaseDelegate),
+            typeof(Func<ISalable, bool>),
+            typeof(string),
+        ]
+    );
+
+    private static readonly ConstructorInfo? DesktopDictionaryConstructor = typeof(ShopMenu).GetConstructor(
+        [
+            typeof(string),
+            typeof(Dictionary<ISalable, ItemStockInformation>),
+            typeof(int),
+            typeof(string),
+            typeof(ShopMenu.OnPurchaseDelegate),
+            typeof(Func<ISalable, bool>),
+            typeof(bool),
+        ]
+    );
+
+    private static readonly ConstructorInfo? MobileDictionaryConstructor = typeof(ShopMenu).GetConstructor(
+        [
+            typeof(string),
+            typeof(Dictionary<ISalable, ItemStockInformation>),
+            typeof(int),
+            typeof(string),
+            typeof(ShopMenu.OnPurchaseDelegate),
+            typeof(Func<ISalable, bool>),
+            typeof(bool),
+            typeof(string),
+        ]
+    );
+
     /*********
     ** Tab methods - static helpers called via MapMethod.
     ** Desktop has these as instance methods with ShopTabClickableTextureComponent + Filter delegates.
@@ -149,13 +198,15 @@ public class ShopMenuMobileFacade : ShopMenu, IRewriteFacade
         string? context = null
     )
     {
-        return new ShopMenu(
+        return CreateList(
             ShopMenuFacade.GetShopId(context),
             itemsForSale,
             currency,
             who,
             ShopMenuFacade.ToOnPurchaseDelegate(on_purchase),
-            on_sell
+            on_sell,
+            true,
+            context
         );
     }
 
@@ -170,13 +221,56 @@ public class ShopMenuMobileFacade : ShopMenu, IRewriteFacade
         bool playOpenSound = true
     )
     {
-        return new ShopMenu(
+        return CreateList(
             shopId,
             itemsForSale,
             currency,
             who,
             ShopMenuFacade.ToOnPurchaseDelegate(on_purchase),
-            on_sell
+            on_sell,
+            playOpenSound,
+            null
+        );
+    }
+
+    internal static ShopMenu CreateDictionary(
+        string shopId,
+        Dictionary<ISalable, ItemStockInformation> itemPriceAndStock,
+        int currency,
+        string? who,
+        ShopMenu.OnPurchaseDelegate? onPurchase,
+        Func<ISalable, bool>? onSell,
+        bool playOpenSound,
+        string? context
+    )
+    {
+        if (DesktopDictionaryConstructor != null)
+        {
+            return (ShopMenu)
+                DesktopDictionaryConstructor.Invoke(
+                    [shopId, itemPriceAndStock, currency, who, onPurchase, onSell, playOpenSound]
+                );
+        }
+        if (MobileDictionaryConstructor != null)
+        {
+            return (ShopMenu)
+                MobileDictionaryConstructor.Invoke(
+                    [
+                        shopId,
+                        itemPriceAndStock,
+                        currency,
+                        who,
+                        onPurchase,
+                        onSell,
+                        playOpenSound,
+                        context,
+                    ]
+                );
+        }
+
+        throw new MissingMethodException(
+            typeof(ShopMenu).FullName,
+            ".ctor with desktop or mobile dictionary parameters"
         );
     }
 
@@ -187,6 +281,38 @@ public class ShopMenuMobileFacade : ShopMenu, IRewriteFacade
         : base(null, null, null)
     {
         RewriteHelper.ThrowFakeConstructorCalled();
+    }
+
+    private static ShopMenu CreateList(
+        string shopId,
+        List<ISalable> itemsForSale,
+        int currency,
+        string? who,
+        ShopMenu.OnPurchaseDelegate? onPurchase,
+        Func<ISalable, bool>? onSell,
+        bool playOpenSound,
+        string? context
+    )
+    {
+        if (DesktopListConstructor != null)
+        {
+            return (ShopMenu)
+                DesktopListConstructor.Invoke(
+                    [shopId, itemsForSale, currency, who, onPurchase, onSell, playOpenSound]
+                );
+        }
+        if (MobileListConstructor != null)
+        {
+            return (ShopMenu)
+                MobileListConstructor.Invoke(
+                    [shopId, itemsForSale, currency, who, onPurchase, onSell, context]
+                );
+        }
+
+        throw new MissingMethodException(
+            typeof(ShopMenu).FullName,
+            ".ctor with desktop or mobile list parameters"
+        );
     }
 
     private static ShopTabClickableTextureComponent MakeTab(

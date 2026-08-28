@@ -1,3 +1,5 @@
+using System;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using StardewModdingAPI.Framework.ModLoading.Framework;
 using StardewValley;
@@ -11,6 +13,41 @@ namespace StardewModdingAPI.Framework.ModLoading.Rewriters.StardewValley_1_6;
 /// <remarks>This is public to support SMAPI rewriting and should never be referenced directly by mods. See remarks on <see cref="ReplaceReferencesRewriter"/> for more info.</remarks>
 public class MenuWithInventoryMobileFacade : MenuWithInventory, IRewriteFacade
 {
+    private static readonly ConstructorInfo? DesktopConstructor = typeof(MenuWithInventory).GetConstructor(
+        [
+            typeof(InventoryMenu.highlightThisItem),
+            typeof(bool),
+            typeof(bool),
+            typeof(int),
+            typeof(int),
+            typeof(int),
+            typeof(ItemExitBehavior),
+            typeof(bool),
+        ]
+    );
+
+    private static readonly ConstructorInfo? MobileConstructor = typeof(MenuWithInventory).GetConstructor(
+        [
+            typeof(InventoryMenu.highlightThisItem),
+            typeof(bool),
+            typeof(bool),
+            typeof(int),
+            typeof(int),
+            typeof(int),
+            typeof(int),
+        ]
+    );
+
+    private static readonly FieldInfo? HeldItemField = typeof(MenuWithInventory).GetField(
+        "heldItem",
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+    );
+
+    private static readonly PropertyInfo? HeldItemProperty = typeof(MenuWithInventory).GetProperty(
+        "heldItem",
+        BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance
+    );
+
     /*********
     ** Per-instance storage for missing fields
     *********/
@@ -33,12 +70,8 @@ public class MenuWithInventoryMobileFacade : MenuWithInventory, IRewriteFacade
     *********/
     public new Item? heldItem
     {
-        get => base.heldItem;
-        set
-        {
-            value?.onDetachedFromParent();
-            base.heldItem = value;
-        }
+        get => GetHeldItem((MenuWithInventory)(object)this);
+        set => SetHeldItem((MenuWithInventory)(object)this, value);
     }
 
     /*********
@@ -63,7 +96,7 @@ public class MenuWithInventoryMobileFacade : MenuWithInventory, IRewriteFacade
     }
 
     /*********
-    ** Constructor - desktop 8-param to mobile 3-param
+    ** Constructor
     *********/
     public static MenuWithInventory Constructor(
         InventoryMenu.highlightThisItem? highlighterMethod = null,
@@ -76,7 +109,38 @@ public class MenuWithInventoryMobileFacade : MenuWithInventory, IRewriteFacade
         bool allowExitWithHeldItem = false
     )
     {
-        var menu = new MenuWithInventory(highlighterMethod, okButton, trashCan);
+        MenuWithInventory menu;
+        if (DesktopConstructor != null)
+        {
+            menu = (MenuWithInventory)
+                DesktopConstructor.Invoke(
+                    [
+                        highlighterMethod,
+                        okButton,
+                        trashCan,
+                        inventoryXOffset,
+                        inventoryYOffset,
+                        menuOffsetHack,
+                        heldItemExitBehavior,
+                        allowExitWithHeldItem,
+                    ]
+                );
+        }
+        else if (MobileConstructor != null)
+        {
+            menu = (MenuWithInventory)
+                MobileConstructor.Invoke(
+                    [highlighterMethod, okButton, trashCan, 0, 0, 1280, 720]
+                );
+        }
+        else
+        {
+            throw new MissingMethodException(
+                typeof(MenuWithInventory).FullName,
+                ".ctor with desktop or mobile parameters"
+            );
+        }
+
         var extra = GetOrCreate(menu);
         extra.HeldItemExitBehavior = heldItemExitBehavior;
         extra.AllowExitWithHeldItem = allowExitWithHeldItem;
@@ -88,34 +152,63 @@ public class MenuWithInventoryMobileFacade : MenuWithInventory, IRewriteFacade
     *********/
     internal static void RescueHeldItemOnExit(MenuWithInventory menu)
     {
-        if (menu.heldItem == null)
+        Item? heldItem = GetHeldItem(menu);
+        if (heldItem == null)
             return;
 
         var extra = GetOrCreate(menu);
         switch (extra.HeldItemExitBehavior)
         {
             case ItemExitBehavior.ReturnToPlayer:
-                menu.heldItem = Game1.player.addItemToInventory(menu.heldItem);
+                heldItem = Game1.player.addItemToInventory(heldItem);
                 break;
             case ItemExitBehavior.ReturnToMenu:
-                menu.heldItem = menu.inventory.tryToAddItem(menu.heldItem);
+                heldItem = InventoryMenuMobileFacade.TryToAddItem(menu.inventory, heldItem);
                 break;
             case ItemExitBehavior.Discard:
-                menu.heldItem = null;
+                heldItem = null;
                 break;
         }
 
-        if (menu.heldItem != null)
+        SetHeldItem(menu, heldItem);
+        if (heldItem != null)
         {
             Game1.playSound("throwDownITem");
             Game1.createItemDebris(
-                menu.heldItem,
+                heldItem,
                 Game1.player.getStandingPosition(),
                 Game1.player.FacingDirection
             );
-            menu.inventory.onAddItem?.Invoke(menu.heldItem, Game1.player);
-            menu.heldItem = null;
+            menu.inventory.onAddItem?.Invoke(heldItem, Game1.player);
+            SetHeldItem(menu, null);
         }
+    }
+
+    internal static Item? GetHeldItem(MenuWithInventory menu)
+    {
+        if (HeldItemField != null)
+            return HeldItemField.GetValue(menu) as Item;
+        if (HeldItemProperty != null)
+            return HeldItemProperty.GetValue(menu) as Item;
+
+        throw new MissingMemberException(typeof(MenuWithInventory).FullName, "heldItem");
+    }
+
+    internal static void SetHeldItem(MenuWithInventory menu, Item? value)
+    {
+        if (HeldItemField != null)
+        {
+            value?.onDetachedFromParent();
+            HeldItemField.SetValue(menu, value);
+            return;
+        }
+        if (HeldItemProperty != null)
+        {
+            HeldItemProperty.SetValue(menu, value);
+            return;
+        }
+
+        throw new MissingMemberException(typeof(MenuWithInventory).FullName, "heldItem");
     }
 
     /*********
