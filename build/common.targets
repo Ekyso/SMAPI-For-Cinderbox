@@ -32,8 +32,7 @@ repo. It imports the other MSBuild files as needed.
     <DefineConstants Condition="$(TargetFramework.Contains('android'))"
       >$(DefineConstants);SMAPI_FOR_ANDROID</DefineConstants
     >
-    <CopyToGameFolder Condition="!$(TargetFramework.Contains('android'))">true</CopyToGameFolder>
-    <CopyToGameFolder Condition="$(TargetFramework.Contains('android'))">false</CopyToGameFolder>
+    <CopyToGameFolder Condition="'$(CopyToGameFolder)' == ''">false</CopyToGameFolder>
 
     <JavaSdkDirectory
       Condition="$(TargetFramework.Contains('android')) and '$(JavaSdkDirectory)' == '' and '$(JAVA_HOME)' != ''"
